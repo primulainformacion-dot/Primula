@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Prímula</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#333;}
+.sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:#1a1f36;display:flex;flex-direction:column;overflow-y:auto;}
+.logo{padding:24px 20px;border-bottom:1px solid #2d3355;}
+.logo h2{color:#fff;font-size:20px;font-weight:700;}
+.logo span{color:#6c7ae0;font-size:12px;}
+.nav-section{padding:12px 0;}
+.nav-label{color:#6b7280;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 20px 8px;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:9px 20px;color:#9ca3af;cursor:pointer;transition:all 0.2s;border-left:3px solid transparent;font-size:13px;}
+.nav-item:hover{background:#2d3355;color:#fff;}
+.nav-item.active{background:#2d3355;color:#fff;border-left:3px solid #6c7ae0;}
+.main{margin-left:240px;padding:28px;min-height:100vh;}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
+.topbar h1{font-size:22px;font-weight:700;color:#1a1f36;}
+.topbar span{color:#9ca3af;font-size:13px;}
+.user-pill{background:#fff;border-radius:30px;padding:8px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+.avatar{width:32px;height:32px;background:#6c7ae0;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;}
+.section{display:none;}
+.section.active{display:block;}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.card-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.badge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;}
+.badge.up{background:#dcfce7;color:#16a34a;}
+.badge.neutral{background:#fef9c3;color:#ca8a04;}
+.badge.down{background:#fee2e2;color:#dc2626;}
+.card h3{font-size:22px;font-weight:700;color:#1a1f36;}
+.card p{font-size:12px;color:#9ca3af;margin-top:2px;}
+.panel{background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:18px;}
+.panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.panel-header h4{font-size:15px;font-weight:700;color:#1a1f36;}
+.btn{font-size:13px;padding:8px 16px;border-radius:8px;background:#6c7ae0;color:#fff;border:none;cursor:pointer;font-weight:600;}
+.btn:hover{background:#5563d0;}
+.btn-outline{background:#fff;color:#6c7ae0;border:2px solid #6c7ae0;}
+.btn-outline:hover{background:#f5f6ff;}
+.btn-sm{font-size:12px;padding:5px 12px;border-radius:7px;background:#6c7ae0;color:#fff;border:none;cursor:pointer;font-weight:600;}
+.search-bar{display:flex;gap:10px;margin-bottom:18px;align-items:center;flex-wrap:wrap;}
+.search-bar input{flex:1;min-width:180px;padding:9px 14px;border:2px solid #f3f4f6;border-radius:10px;font-size:13px;outline:none;}
+.search-bar input:focus{border-color:#6c7ae0;}
+.filter-select{padding:9px 12px;border:2px solid #f3f4f6;border-radius:10px;font-size:12px;outline:none;color:#374151;}
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;min-width:600px;}
+th{font-size:10px;text-transform:uppercase;color:#9ca3af;font-weight:600;padding:0 8px 10px 0;text-align:left;letter-spacing:0.4px;white-space:nowrap;}
+td{font-size:12px;padding:9px 8px 9px 0;border-top:1px solid #f3f4f6;color:#374151;vertical-align:middle;}
+.status{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600;white-space:nowrap;}
+.status.activo,.status.listo,.status.cobrado,.status.ok{background:#dcfce7;color:#16a34a;}
+.status.proceso,.status.aprobado{background:#dbeafe;color:#2563eb;}
+.status.pendiente,.status.bajo{background:#fef9c3;color:#ca8a04;}
+.status.entregado,.status.inactivo{background:#f3f4f6;color:#6b7280;}
+.status.urgente{background:#fee2e2;color:#dc2626;}
+.status.critico{background:#fee2e2;color:#dc2626;}
+.td-actions{display:flex;gap:6px;}
+.btn-icon{background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;border-radius:5px;}
+.btn-icon:hover{background:#f3f4f6;}
+.two-col{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;margin-bottom:18px;}
+.stock-item{display:flex;align-items:center;gap:10px;margin-bottom:13px;}
+.stock-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.stock-label{font-size:12px;color:#374151;flex:1;}
+.stock-bar-wrap{width:70px;background:#f3f4f6;border-radius:6px;height:6px;}
+.stock-bar{height:6px;border-radius:6px;}
+.stock-qty{font-size:11px;color:#9ca3af;min-width:40px;text-align:right;}
+.pos-layout{display:grid;grid-template-columns:1fr 320px;gap:18px;}
+.pos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+.pos-item{text-align:center;padding:16px 12px;border:2px solid #f3f4f6;border-radius:12px;cursor:pointer;transition:all 0.2s;}
+.pos-item:hover,.pos-item.selected{border-color:#6c7ae0;background:#f0f0ff;}
+.pi{font-size:28px;margin-bottom:6px;}
+.pname{font-size:12px;font-weight:600;color:#1a1f36;}
+.pprice{font-size:13px;font-weight:700;color:#6c7ae0;margin-top:4px;}
+.pstock-label{font-size:10px;color:#9ca3af;}
+.ticket{background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.ticket h4{font-size:14px;font-weight:700;color:#1a1f36;margin-bottom:14px;}
+.ticket-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid #f3f4f6;font-size:12px;}
+.ticket-total{display:flex;justify-content:space-between;font-weight:700;font-size:15px;color:#1a1f36;padding-top:12px;margin-top:8px;border-top:2px solid #e5e7eb;}
+.ticket-empty{color:#9ca3af;font-size:12px;text-align:center;padding:18px 0;}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;border-radius:16px;padding:26px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+.modal h3{font-size:16px;font-weight:700;color:#1a1f36;margin-bottom:18px;}
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:2px solid #f3f4f6;border-radius:9px;font-size:13px;outline:none;font-family:inherit;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#6c7ae0;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+#toast{display:none;position:fixed;bottom:28px;right:28px;background:#1a1f36;color:#fff;padding:13px 20px;border-radius:12px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
+
+.ptab{padding:8px 16px;font-size:13px;font-weight:600;color:#9ca3af;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;}
+.ptab:hover{color:#6c7ae0;}
+.ptab.active{color:#6c7ae0;border-bottom:3px solid #6c7ae0;}
+
+  .tabs-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+  .status.baja{background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600;}
+  .status.pendiente{background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600;}
+
+  /* ===== LOGIN OVERLAY ===== */
+  #login-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#1a1f36 0%,#2d3355 100%);display:flex;align-items:center;justify-content:center;z-index:9999;}
+  .login-box{background:#fff;border-radius:20px;padding:48px 40px;width:480px;max-width:95vw;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,0.4);}
+  .login-logo{font-size:32px;font-weight:800;color:#1a1f36;margin-bottom:4px;}
+  .login-logo span{color:#6c7ae0;}
+  .login-sub{color:#9ca3af;font-size:14px;margin-bottom:32px;}
+  .login-title{font-size:15px;font-weight:600;color:#374151;margin-bottom:16px;text-align:left;}
+  .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;}
+  .role-card{border:2px solid #e5e7eb;border-radius:14px;padding:18px 14px;cursor:pointer;transition:all 0.2s;text-align:left;}
+  .role-card:hover{border-color:#6c7ae0;background:#f5f4ff;transform:translateY(-2px);}
+  .role-card.selected{border-color:#6c7ae0;background:#eeecff;}
+  .role-card .rc-icon{font-size:28px;margin-bottom:8px;}
+  .role-card .rc-name{font-size:14px;font-weight:700;color:#1a1f36;}
+  .role-card .rc-desc{font-size:11px;color:#9ca3af;margin-top:3px;line-height:1.4;}
+  .login-btn{width:100%;padding:14px;background:#6c7ae0;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:background 0.2s;opacity:0.4;pointer-events:none;}
+  .login-btn.ready{opacity:1;pointer-events:auto;}
+  .login-btn.ready:hover{background:#5a69d4;}
+  /* ===== ROLE BADGE EN TOPBAR ===== */
+  .role-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-left:8px;}
+  .role-badge.admin{background:#fee2e2;color:#991b1b;}
+  .role-badge.produccion{background:#dcfce7;color:#166534;}
+  .role-badge.ventas{background:#dbeafe;color:#1d4ed8;}
+  .logout-btn{background:none;border:1px solid #e5e7eb;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:#6b7280;margin-left:10px;}
+  .logout-btn:hover{background:#fee2e2;color:#dc2626;border-color:#fca5a5;}
+  /* ===== NAV HIDDEN ===== */
+  .nav-item.hidden-role,.nav-section.hidden-role{display:none !important;}
+
+  .cost-cell-edit{background:#fffbeb;border:1px solid #f59e0b;border-radius:4px;width:70px;padding:3px 5px;font-size:13px;font-weight:700;text-align:right;color:#92400e;}
+  .cost-cell-edit:focus{outline:2px solid #f59e0b;background:#fff;}
+  .perm-toggle{appearance:none;-webkit-appearance:none;width:38px;height:20px;background:#d1d5db;border-radius:20px;cursor:pointer;position:relative;transition:background 0.2s;vertical-align:middle;}
+  .perm-toggle:checked{background:#6c7ae0;}
+  .perm-toggle::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+  .perm-toggle:checked::after{left:20px;}
+  .perm-toggle:disabled{opacity:0.5;cursor:default;}
+  .stat-card{background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.07);}
+  .stat-val{font-size:22px;font-weight:800;color:#1a1f36;line-height:1;}
+  .stat-lbl{font-size:11px;color:#9ca3af;margin-top:4px;font-weight:500;}
+  .dash-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+  </style>
+</head>
+<body>
+
+<div id="login-overlay">
+  <div class="login-box">
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:4px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="52" height="52"><rect width="100" height="100" rx="12" fill="#1e3561"/><rect x="22" y="14" width="16" height="72" fill="white" rx="2"/><rect x="22" y="14" width="44" height="38" fill="white" rx="2"/><rect x="38" y="22" width="20" height="22" fill="#1e3561" rx="2"/><text x="50" y="96" font-family="Arial,sans-serif" font-size="10" font-weight="800" fill="white" text-anchor="middle" letter-spacing="1.5">PRIMULA</text></svg><span style="font-size:30px;font-weight:800;color:#1a1f36">Prímula</span></div>
+    <div class="login-sub">Sistema de Gestión · Fabricación Mayorista</div>
+    <div class="login-title">¿Quién sos?</div>
+    <div class="role-grid">
+      <div class="role-card" onclick="selectRole(this,'admin')">
+        <div class="rc-icon">🛡️</div>
+        <div class="rc-name">Administrador</div>
+        <div class="rc-desc">Acceso total al sistema</div>
+      </div>
+      <div class="role-card" onclick="selectRole(this,'produccion')">
+        <div class="rc-icon">⚙️</div>
+        <div class="rc-name">Producción</div>
+        <div class="rc-desc">Pedidos, costura, materiales, entregas</div>
+      </div>
+      <div class="role-card" onclick="selectRole(this,'ventas-llavallol')">
+        <div class="rc-icon">🏪</div>
+        <div class="rc-name">Ventas Llavallol</div>
+        <div class="rc-desc">Clientes, presupuestos, punto de venta</div>
+      </div>
+      <div class="role-card" onclick="selectRole(this,'ventas-montegrande')">
+        <div class="rc-icon">🏬</div>
+        <div class="rc-name">Ventas Monte Grande</div>
+        <div class="rc-desc">Clientes, presupuestos, punto de venta</div>
+      </div>
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Ingresar →</button>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="logo" style="display:flex;align-items:center;gap:12px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="36" height="36"><rect width="100" height="100" rx="12" fill="#1e3561"/><rect x="22" y="14" width="16" height="72" fill="white" rx="2"/><rect x="22" y="14" width="44" height="38" fill="white" rx="2"/><rect x="38" y="22" width="20" height="22" fill="#1e3561" rx="2"/><text x="50" y="96" font-family="Arial,sans-serif" font-size="10" font-weight="800" fill="white" text-anchor="middle" letter-spacing="1.5">PRIMULA</text></svg><div><h2 style="font-size:17px">Prímula</h2><span>Sistema de Gestión</span></div></div>
+  <div class="nav-section">
+    <div class="nav-label">General</div>
+    <div class="nav-item active" data-roles="admin produccion ventas-llavallol ventas-montegrande" onclick="nav('inicio',this)"><span>🏠</span> Inicio</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Administración</div>
+    <div class="nav-item" data-roles="admin ventas-llavallol ventas-montegrande" onclick="nav('clientes',this)"><span>👥</span> Clientes</div>
+    <div class="nav-item" data-roles="admin" onclick="nav('proveedores',this)"><span>🤝</span> Proveedores</div>
+    <div class="nav-item" data-roles="admin ventas-llavallol ventas-montegrande" onclick="nav('presupuestos',this)"><span>📄</span> Presupuestos</div>
+    <div class="nav-item" data-roles="admin" onclick="nav('pagos',this)"><span>💰</span> Pagos y Cobros</div>
+    <div class="nav-item" data-roles="admin" onclick="nav('reportes',this)"><span>📊</span> Reportes</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Producción</div>
+    <div class="nav-item" data-roles="admin produccion" onclick="nav('pedidos',this)"><span>📋</span> Pedidos</div>
+    <div class="nav-item" data-roles="admin produccion" onclick="nav('tizadas',this)"><span>✂️</span> Tizadas / Corte</div>
+    <div class="nav-item" data-roles="admin produccion" onclick="nav('costura',this)"><span>🧵</span> Costura</div>
+    <div class="nav-item" data-roles="admin produccion ventas-llavallol ventas-montegrande" onclick="nav('entregas',this)"><span>🚚</span> Entregas</div>
+    <div class="nav-item" data-roles="admin produccion" onclick="nav('materiales',this)"><span>📦</span> Materiales / Telas</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Punto de Venta</div>
+    <div class="nav-item" data-roles="admin ventas-llavallol ventas-montegrande" onclick="nav('nueva-venta',this)"><span>🛒</span> Nueva Venta</div>
+    <div class="nav-item" data-roles="admin ventas-llavallol ventas-montegrande" onclick="nav('productos',this)"><span>🏷️</span> Productos</div>
+    <div class="nav-item" data-roles="admin ventas-llavallol ventas-montegrande" onclick="nav('stock',this)"><span>🗃️</span> Stock</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Sistema</div>
+    <div class="nav-item" data-roles="admin" onclick="nav('configuraciones',this)"><span>⚙️</span> Configuraciones</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div><h1 id="page-title">Panel Principal</h1><span>Martes, 14 de Abril 2026</span></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="user-pill" id="user-pill">
+        <div class="avatar" id="user-avatar">JC</div>
+        <span id="user-name">Juan Cruz</span>
+        <span class="role-badge" id="role-badge">Admin</span>
+      </div>
+      <div class="user-pill" onclick="doLogout()" style="cursor:pointer;background:#fee2e2;gap:8px;border:1px solid #fca5a5" title="Cerrar sesión"><div class="avatar" style="background:#dc2626;font-size:15px">🚪</div><span style="color:#dc2626;font-weight:600;font-size:13px">Salir</span></div>
+    </div>
+  </div>
+
+  <!-- INICIO -->
+  <div class="section active" id="sec-inicio">
+    <!-- DASHBOARD METRICS -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+      <div class="card" style="border-top:4px solid #6c7ae0;padding:18px">
+        <div style="font-size:10px;font-weight:700;color:#6c7ae0;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">💰 Facturación</div>
+        <div style="font-size:11px;color:#9ca3af">Este mes (Abr)</div>
+        <div style="font-size:24px;font-weight:800;color:#1a1f36;margin:2px 0 10px" id="dash-fac-mes">—</div>
+        <div style="border-top:1px solid #f1f5f9;padding-top:8px;display:flex;justify-content:space-between">
+          <span style="font-size:11px;color:#9ca3af">Acum. año</span>
+          <span style="font-size:14px;font-weight:700;color:#6c7ae0" id="dash-fac-ano">—</span>
+        </div>
+      </div>
+      <div class="card" style="border-top:4px solid #34d399;padding:18px">
+        <div style="font-size:10px;font-weight:700;color:#059669;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">🚚 Prendas entregadas</div>
+        <div style="font-size:11px;color:#9ca3af">Este mes (Abr)</div>
+        <div style="font-size:24px;font-weight:800;color:#1a1f36;margin:2px 0 10px" id="dash-pren-mes">—</div>
+        <div style="border-top:1px solid #f1f5f9;padding-top:8px;display:flex;justify-content:space-between">
+          <span style="font-size:11px;color:#9ca3af">Acum. año</span>
+          <span style="font-size:14px;font-weight:700;color:#059669" id="dash-pren-ano">—</span>
+        </div>
+      </div>
+      <div class="card" style="border-top:4px solid #f59e0b;padding:18px">
+        <div style="font-size:10px;font-weight:700;color:#d97706;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">📥 Ingresos taller</div>
+        <div style="font-size:11px;color:#9ca3af">Prendas recibidas (mes)</div>
+        <div style="font-size:24px;font-weight:800;color:#1a1f36;margin:2px 0 10px" id="dash-ing-mes">—</div>
+        <div style="border-top:1px solid #f1f5f9;padding-top:8px;display:flex;justify-content:space-between">
+          <span style="font-size:11px;color:#9ca3af">Acum. año</span>
+          <span style="font-size:14px;font-weight:700;color:#d97706" id="dash-ing-ano">—</span>
+        </div>
+      </div>
+      <div class="card" style="border-top:4px solid #f87171;padding:18px">
+        <div style="font-size:10px;font-weight:700;color:#dc2626;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">📤 Egresos costura</div>
+        <div style="font-size:11px;color:#9ca3af">Saldo pendiente</div>
+        <div style="font-size:24px;font-weight:800;color:#1a1f36;margin:2px 0 10px" id="dash-egr-mes">—</div>
+        <div style="border-top:1px solid #f1f5f9;padding-top:8px;display:flex;justify-content:space-between">
+          <span style="font-size:11px;color:#9ca3af">Total costura año</span>
+          <span style="font-size:14px;font-weight:700;color:#dc2626" id="dash-egr-ano">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-header"><h4>📋 Pedidos recientes</h4><button class="btn-sm" onclick="nav('pedidos',null)">Ver todos</button></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Nº Ped</th><th>Cliente</th><th>Tipo</th><th>Tela</th><th>Color</th><th>Talle</th><th>Cant.</th><th>Estado</th></tr></thead>
+          <tbody>
+            <tr><td><strong>241</strong></td><td>VANATY</td><td>Remeras</td><td>JERSEY</td><td>MELANGE</td><td>M</td><td>300</td><td><span class="status proceso">Costura</span></td></tr>
+            <tr><td><strong>241</strong></td><td>VANATY</td><td>Remeras</td><td>JERSEY</td><td>AZUL</td><td>L</td><td>200</td><td><span class="status proceso">Costura</span></td></tr>
+            <tr><td><strong>240</strong></td><td>VANATY</td><td>Chombas</td><td>PIQUE</td><td>BLANCO</td><td>XL</td><td>150</td><td><span class="status listo">Listo</span></td></tr>
+            <tr><td><strong>237</strong></td><td>VANATY</td><td>Cuellos</td><td>POLAR</td><td>MARINO</td><td>ÚNICO</td><td>500</td><td><span class="status proceso">Costura</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h4>🧵 Costureros activos</h4></div>
+        <div class="stock-item"><div class="stock-dot" style="background:#6c7ae0"></div><span class="stock-label">GRISELDA</span><div class="stock-bar-wrap"><div class="stock-bar" style="width:80%;background:#6c7ae0"></div></div><span class="stock-qty">960 u</span></div>
+        <div class="stock-item"><div class="stock-dot" style="background:#34d399"></div><span class="stock-label">HUGO</span><div class="stock-bar-wrap"><div class="stock-bar" style="width:60%;background:#34d399"></div></div><span class="stock-qty">720 u</span></div>
+        <div class="stock-item"><div class="stock-dot" style="background:#f87171"></div><span class="stock-label">NORMA</span><div class="stock-bar-wrap"><div class="stock-bar" style="width:45%;background:#f87171"></div></div><span class="stock-qty">540 u</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIGURACIONES -->
+  <div class="section" id="sec-configuraciones">
+    <div class="tabs-bar">
+      <button class="ptab active" onclick="setConfigTab('permisos',this)">🔐 Permisos de roles</button>
+      <button class="ptab" onclick="setConfigTab('empresa',this)">🏢 Empresa</button>
+    </div>
+    <div id="cfg-tab-permisos">
+      <div class="panel">
+        <div class="panel-header"><h4>🔐 Permisos por rol</h4><button class="btn" onclick="guardarPermisos()">💾 Guardar cambios</button></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Sección</th><th style="text-align:center">🛡️ Admin</th><th style="text-align:center">⚙️ Producción</th><th style="text-align:center">🏪 V. Llavallol</th><th style="text-align:center">🏬 V. M. Grande</th></tr></thead>
+          <tbody id="perms-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+    <div id="cfg-tab-empresa" style="display:none">
+      <div class="panel" style="max-width:520px">
+        <div class="panel-header"><h4>🏢 Datos de la empresa</h4></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div><label style="font-size:12px;color:#6b7280;font-weight:600">Nombre</label><input class="filter-select" style="width:100%;margin-top:4px" value="Primula"/></div>
+          <div><label style="font-size:12px;color:#6b7280;font-weight:600">CUIT</label><input class="filter-select" style="width:100%;margin-top:4px" placeholder="XX-XXXXXXXX-X"/></div>
+          <div><label style="font-size:12px;color:#6b7280;font-weight:600">Dirección Llavallol</label><input class="filter-select" style="width:100%;margin-top:4px" placeholder="Calle, número"/></div>
+          <div><label style="font-size:12px;color:#6b7280;font-weight:600">Dirección Monte Grande</label><input class="filter-select" style="width:100%;margin-top:4px" placeholder="Calle, número"/></div>
+          <button class="btn" style="align-self:flex-start" onclick="showToast('✅ Datos guardados')">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIENTES -->
+  <div class="section" id="sec-clientes">
+    <div class="search-bar"><input type="text" placeholder="🔍 Buscar cliente..."/><select class="filter-select"><option>Todos</option><option>Activos</option><option>Inactivos</option></select><button class="btn" onclick="openModal('modal-cliente')">+ Nuevo cliente</button></div>
+    <div class="panel"><div class="tbl-wrap"><table>
+      <thead><tr><th>Nombre / Empresa</th><th>Teléfono</th><th>Email</th><th>Tipo</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><strong>VANATY</strong></td><td>011-45671234</td><td>compras@vanaty.com</td><td>Mayorista</td><td><span class="status activo">Activo</span></td><td><div class="td-actions"><button class="btn-icon">✏️</button><button class="btn-icon">📋</button></div></td></tr>
+        <tr><td><strong>Colegio San Martín</strong></td><td>0351-4521233</td><td>admin@sanmartin.edu.ar</td><td>Institución</td><td><span class="status activo">Activo</span></td><td><div class="td-actions"><button class="btn-icon">✏️</button><button class="btn-icon">📋</button></div></td></tr>
+        <tr><td><strong>Metalúrgica Córdoba SA</strong></td><td>0351-4987654</td><td>compras@metalcba.com</td><td>Empresa</td><td><span class="status activo">Activo</span></td><td><div class="td-actions"><button class="btn-icon">✏️</button><button class="btn-icon">📋</button></div></td></tr>
+      </tbody>
+    </table></div></div>
+  </div>
+
+  <!-- PROVEEDORES -->
+  <div class="section" id="sec-proveedores">
+    <div class="search-bar"><input type="text" placeholder="🔍 Buscar proveedor..."/><button class="btn" onclick="openModal('modal-proveedor')">+ Nuevo proveedor</button></div>
+    <div class="panel"><div class="tbl-wrap"><table>
+      <thead><tr><th>Nombre</th><th>Rubro</th><th>Teléfono</th><th>Email</th><th>Última compra</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><strong>Telas del Norte SRL</strong></td><td>Telas</td><td>0351-4561234</td><td>ventas@telasnorte.com</td><td>08/04/2026</td><td><button class="btn-icon">✏️</button></td></tr>
+        <tr><td><strong>Distribuidora Hilo & Más</strong></td><td>Insumos</td><td>0351-4872345</td><td>hilomas@gmail.com</td><td>05/04/2026</td><td><button class="btn-icon">✏️</button></td></tr>
+        <tr><td><strong>Mercería Central</strong></td><td>Insumos</td><td>0351-4291100</td><td>merceriacentral@outlook.com</td><td>01/04/2026</td><td><button class="btn-icon">✏️</button></td></tr>
+      </tbody>
+    </table></div></div>
+  </div>
+
+  <!-- PRESUPUESTOS -->
+  <div class="section" id="sec-presupuestos">
+    <div class="search-bar"><input type="text" placeholder="🔍 Buscar presupuesto..."/><button class="btn" onclick="openModal('modal-presupuesto')">+ Nuevo presupuesto</button></div>
+    <div class="panel"><div class="tbl-wrap"><table>
+      <thead><tr><th>Nº</th><th>Cliente</th><th>Descripción</th><th>Total</th><th>Fecha</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>#0047</td><td>Colegio San Martín</td><td>120 guardapolvos blancos</td><td>$384.000</td><td>10/04/2026</td><td><span class="status aprobado">Aprobado</span></td><td><div class="td-actions"><button class="btn-icon">👁️</button><button class="btn-icon">✏️</button></div></td></tr>
+        <tr><td>#0046</td><td>Metalúrgica SA</td><td>80 remeras corporativas</td><td>$224.000</td><td>08/04/2026</td><td><span class="status pendiente">Pendiente</span></td><td><div class="td-actions"><button class="btn-icon">👁️</button><button class="btn-icon">✏️</button></div></td></tr>
+      </tbody>
+    </table></div></div>
+  </div>
+
+  <!-- PAGOS Y COBROS -->
+  <div class="section" id="sec-pagos">
+    <div class="cards">
+      <div class="card"><div class="card-top"><div class="card-icon" style="background:#f0fff4">✅</div><span class="badge up">Este mes</span></div><h3>$3.2M</h3><p>Cobrado</p></div>
+      <div class="card"><div class="card-top"><div class="card-icon" style="background:#fef9c3">⏳</div><span class="badge neutral">Pendiente</span></div><h3>$890k</h3><p>Por cobrar</p></div>
+      <div class="card"><div class="card-top"><div class="card-icon" style="background:#fee2e2">💸</div><span class="badge down">Gastos</span></div><h3>$420k</h3><p>Costura + telas</p></div>
+      <div class="card"><div class="card-top"><div class="card-icon" style="background:#f0f0ff">📈</div><span class="badge up">Balance</span></div><h3>$2.78M</h3><p>Resultado del mes</p></div>
+    </div>
+    <div class="search-bar"><input type="text" placeholder="🔍 Buscar movimiento..."/><select class="filter-select"><option>Todos</option><option>Cobros</option><option>Pago costura</option><option>Compra telas</option></select><button class="btn" onclick="openModal('modal-pago')">+ Registrar movimiento</button></div>
+    <div class="panel"><div class="tbl-wrap"><table>
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Quien</th><th>Monto</th><th>Método</th><th>Estado</th></tr></thead>
+      <tbody>
+        <tr><td>14/04</td><td>🟢 Cobro</td><td>Entrega pedido 239</td><td>VANATY</td><td style="color:#16a34a;font-weight:600">+$1.800.000</td><td>Transferencia</td><td><span class="status cobrado">Cobrado</span></td></tr>
+        <tr><td>12/04</td><td>🔴 Pago</td><td>Costura GRISELDA sem.14</td><td>GRISELDA</td><td style="color:#dc2626;font-weight:600">-$180.000</td><td>Efectivo</td><td><span class="status cobrado">Pagado</span></td></tr>
+        <tr><td>10/04</td><td>🔴 Pago</td><td>Compra tela PIQUE blanco</td><td>Telas del Norte</td><td style="color:#dc2626;font-weight:600">-$95.000</td><td>Transferencia</td><td><span class="status cobrado">Pagado</span></td></tr>
+        <tr><td>08/04</td><td>🟡 Cobro</td><td>Saldo pedido 240</td><td>VANATY</td><td style="color:#ca8a04;font-weight:600">$890.000</td><td>Cheque</td><td><span class="status pendiente">Pendiente</span></td></tr>
+        <tr><td>05/04</td><td>🔴 Pago</td><td>Costura HUGO sem.13</td><td>HUGO</td><td style="color:#dc2626;font-weight:600">-$145.000</td><td>Efectivo</td><td><span class="status cobrado">Pagado</span></td></tr>
+      </tbody>
+    </table></div></div>
+  </div>
+
+  <!-- REPORTES -->
+  <div class="section" id="sec-reportes">
+    <div class="cards">
+      <div class="card"><div class="card-top"><div class="card-icon" style="background:#f0f0ff">📦</div><span class="badge up">↑15%</span></div><h3>$3.2M</h3><p>Facturado abril</p></div>
+      <div class="card"><div class="card-top"><div class="card-icon" style="background:#f0fff4">🏭</div><span class="badge up">↑10%</span></div><h3>8.400 u</h3><p>Prendas producidas</p></div>
+      <div class="card"><div class="card-top"><div class="card-icon" style="background:#fff0f0">💸</div><span class="badge neutral">—</span></div><h3>$420k</h3><p>Costos de producción</p></div>
+      <div class="card"><div class="card-top"><div class="card-icon" style="background:#fffbeb">📈</div><span class="badge up">↑6%</span></div><h3>86,9%</h3><p>Margen de ganancia</p></div>
+    </div>
+    <div class="panel"><div class="panel-header"><h4>📊 Ventas por tipo de prenda — Abril 2026</h4></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Tipo</th><th>Unidades</th><th>Ingresos</th><th>% del total</th></tr></thead>
+      <tbody>
+        <tr><td>Remeras</td><td>3.200</td><td>$1.280.000</td><td>40%</td></tr>
+        <tr><td>Chombas</td><td>2.100</td><td>$1.050.000</td><td>33%</td></tr>
+        <tr><td>Camperas</td><td>850</td><td>$595.000</td><td>18%</td></tr>
+        <tr><td>Cuellos</td><td>1.200</td><td>$300.000</td><td>9%</td></tr>
+      </tbody></table></div>
+    </div>
+  </div>
+
+  <!-- PEDIDOS (PRODUCCIÓN) -->
+  <div class="section" id="sec-pedidos">
+    <div class="cards" id="ped-cards"></div>
+    <div class="panel">
+      <div class="panel-header" style="flex-wrap:wrap;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="ped-search" placeholder="🔍 Buscar cliente, nº pedido, tipo..." oninput="renderPedidos()" style="padding:8px 14px;border:2px solid #f3f4f6;border-radius:10px;font-size:13px;outline:none;min-width:240px"/>
+          <select class="filter-select" id="ped-caracter" onchange="renderPedidos()"><option value="">Todos</option><option>URGENTE</option><option>STOCK</option><option>IMPORTANTE</option></select>
+          <select class="filter-select" id="ped-tipo-filter" onchange="renderPedidos()"><option value="">Todos los tipos</option></select>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline" onclick="exportarPedidosCSV()">⬇️ Exportar CSV</button>
+          <button class="btn" onclick="openModal('modal-pedido')">+ Nuevo pedido</button>
+        </div>
+      </div>
+      <div id="ped-tabs" style="display:flex;gap:0;margin-bottom:14px;border-bottom:2px solid #f3f4f6;">
+        <div class="ptab active" onclick="setPedTab('detalle',this)">📋 Detalle (<span id="det-count">323</span> líneas)</div>
+        <div class="ptab" onclick="setPedTab('porped',this)">📦 Por Pedido (53)</div>
+        <div class="ptab" onclick="setPedTab('portipo',this)">👕 Por Tipo</div>
+        <div class="ptab" onclick="setPedTab('pormes',this)">📅 Por Mes</div>
+      </div>
+      <div id="ptab-detalle" class="tbl-wrap">
+        <table><thead><tr><th>Nº Ped</th><th>Fecha</th><th>Cliente</th><th>Carácter</th><th>Tipo</th><th>Tela</th><th>Color</th><th>Talle</th><th>Cant.</th><th>Tizada</th><th>Costura</th><th>Recibido</th><th>Entregado</th><th>Falta</th></tr></thead>
+        <tbody id="tbody-detalle"></tbody></table>
+      </div>
+      <div id="ptab-porped" class="tbl-wrap" style="display:none">
+        <table><thead><tr><th>Nº Ped</th><th>Fecha</th><th>Cliente</th><th>Carácter</th><th>Tipos</th><th>Total</th><th>Tizada</th><th>Costura</th><th>Recibido</th><th>Entregado</th><th>Falta</th><th>% Avance</th></tr></thead>
+        <tbody id="tbody-porped"></tbody></table>
+      </div>
+      <div id="ptab-portipo" class="tbl-wrap" style="display:none">
+        <table><thead><tr><th>Tipo</th><th>Total Prendas</th><th>Tizada</th><th>Costura</th><th>Recibido</th><th>Entregado</th><th>Falta</th><th>% Entregado</th></tr></thead>
+        <tbody id="tbody-portipo"></tbody></table>
+      </div>
+      <div id="ptab-pormes" class="tbl-wrap" style="display:none">
+        <table><thead><tr><th>Mes</th><th>Nombre</th><th>Pedidos únicos</th><th>Líneas</th><th>Total Prendas</th><th>Entregado</th><th>Falta</th><th>% Entregado</th></tr></thead>
+        <tbody id="tbody-pormes"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIZADAS -->
+  <div class="section" id="sec-tizadas">
+    <div class="search-bar"><input type="text" placeholder="🔍 Buscar por nº tizada, pedido o tipo..."/><select class="filter-select"><option>Todos</option><option>Sin cortar</option><option>Cortado</option><option>Armado</option></select><button class="btn" onclick="openModal('modal-tizada')">+ Nueva tizada</button></div>
+    <div class="panel"><div class="tbl-wrap"><table>
+      <thead><tr><th>Nº Tizada</th><th>Fecha</th><th>Nº Pedido</th><th>Cliente</th><th>Tipo</th><th>Tela</th><th>Color</th><th>Talle</th><th>Cantidad</th><th>Tizada ✓</th><th>Corte ✓</th><th>Armado ✓</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><strong>251</strong></td><td>10/04/26</td><td>241</td><td>VANATY</td><td>Remeras</td><td>JERSEY</td><td>MELANGE</td><td>M</td><td>300</td><td>✅</td><td>✅</td><td>⏳</td><td><button class="btn-icon">✏️</button></td></tr>
+        <tr><td><strong>250</strong></td><td>08/04/26</td><td>241</td><td>VANATY</td><td>Remeras</td><td>JERSEY</td><td>AZUL</td><td>L</td><td>200</td><td>✅</td><td>✅</td><td>⏳</td><td><button class="btn-icon">✏️</button></td></tr>
+        <tr><td><strong>249</strong></td><td>05/04/26</td><td>237</td><td>VANATY</td><td>Cuellos</td><td>POLAR</td><td>MARINO</td><td>ÚNICO</td><td>500</td><td>✅</td><td>⏳</td><td>⏳</td><td><button class="btn-icon">✏️</button></td></tr>
+        <tr><td><strong>248</strong></td><td>01/04/26</td><td>240</td><td>VANATY</td><td>Remeras</td><td>JERSEY</td><td>NEGRO</td><td>XL</td><td>150</td><td>✅</td><td>✅</td><td>✅</td><td><button class="btn-icon">✏️</button></td></tr>
+      </tbody>
+    </table></div></div>
+  </div>
+
+  <!-- COSTURA -->
+  <div class="section" id="sec-costura">
+    <div class="stats-bar" id="cos-stats"></div>
+    <div class="tabs-bar">
+      <button class="ptab active" onclick="setCosTab('traz',this)">📋 Trazabilidad</button>
+      <button class="ptab" onclick="setCosTab('porcos',this)">👷 Por Costurero</button>
+      <button class="ptab" onclick="setCosTab('ingreso',this)">📥 Ingreso Taller</button>
+      <button class="ptab" onclick="setCosTab('costureros',this)">👥 Costureros</button>
+      <button class="ptab" onclick="setCosTab('costos',this)">💲 Tabla de Costos</button>
+    </div>
+    <!-- TRAZABILIDAD -->
+    <div id="cos-tab-traz">
+      <div class="search-bar">
+        <input type="text" id="cos-search" placeholder="🔍 Buscar costurero, pedido, tipo..." oninput="renderCostura()"/>
+        <select class="filter-select" id="cos-filter-costurero" onchange="renderCostura()">
+          <option value="">Todos los costureros</option>
+        </select>
+        <button class="btn" onclick="openModal('modal-costura')">+ Asignar pedido</button>
+      </div>
+      <div class="panel"><div class="tbl-wrap"><table>
+        <thead><tr><th>Costurero/a</th><th>Nº Pedido</th><th>Cliente</th><th>Tipo</th><th>Tela</th><th>Color</th><th>Talle</th><th>Entregado</th><th>Recibido</th><th>Falta</th><th>Costo/u</th><th>Total</th><th>A Pagar</th><th></th></tr></thead>
+        <tbody id="cos-tbody-traz"></tbody>
+      </table></div></div>
+    </div>
+    <!-- POR COSTURERO -->
+    <div id="cos-tab-porcos" style="display:none">
+      <div class="panel"><div class="tbl-wrap"><table>
+        <thead><tr><th>Costurero/a</th><th>Estado</th><th>Entregado</th><th>Recibido</th><th>Falta</th><th>Costo Total</th><th>Pagado</th><th>A Pagar</th><th>Líneas</th></tr></thead>
+        <tbody id="cos-tbody-porcos"></tbody>
+      </table></div></div>
+    </div>
+    <!-- INGRESO TALLER -->
+    <div id="cos-tab-ingreso" style="display:none">
+      <div class="search-bar">
+        <input type="text" id="ingreso-search" placeholder="🔍 Buscar costurero o pedido..." oninput="renderIngreso()"/>
+        <select class="filter-select" id="ingreso-filter" onchange="renderIngreso()">
+          <option value="">Todos los costureros</option>
+        </select>
+      </div>
+      <div class="panel"><div class="tbl-wrap"><table>
+        <thead><tr><th>Costurero/a</th><th>Nº Pedido</th><th>Tipo</th><th>Color</th><th>Talle</th><th>Entregado</th><th>Recibido</th><th>Falta</th><th>Acción</th></tr></thead>
+        <tbody id="cos-tbody-ingreso"></tbody>
+      </table></div></div>
+    </div>
+    <!-- COSTUREROS -->
+    <div id="cos-tab-costureros" style="display:none">
+      <div class="search-bar"><button class="btn" onclick="openModal('modal-costurero')">+ Registrar costurero</button></div>
+      <div class="panel"><div class="tbl-wrap"><table>
+        <thead><tr><th>Nombre</th><th>Estado</th><th>Total Entregado</th><th>Total Recibido</th><th>Falta Recibir</th><th>Total Costura</th><th>Pagado</th><th>Saldo</th><th></th></tr></thead>
+        <tbody id="cos-tbody-costureros"></tbody>
+      </table></div></div>
+    </div>
+    <!-- TABLA DE COSTOS -->
+    <div id="cos-tab-costos" style="display:none">
+      <div class="panel">
+        <div class="panel-header"><h4>💲 Costos de costura por prenda y costurero</h4><span style="font-size:12px;color:#666">$0 = no trabaja ese tipo</span></div>
+        <div class="tbl-wrap"><table id="cos-tabla-costos">
+          <thead id="cos-costos-head"></thead>
+          <tbody id="cos-costos-body"></tbody>
+        </table></div>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-header"><h4>🧮 Calculadora de pago</h4></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;padding:12px">
+          <select class="filter-select" id="calc-costurero" style="min-width:160px" onchange="calcPago()">
+            <option value="">Seleccionar costurero</option>
+          </select>
+          <select class="filter-select" id="calc-prenda" style="min-width:160px" onchange="calcPago()">
+            <option value="">Seleccionar prenda</option>
+          </select>
+          <input type="number" class="filter-select" id="calc-cant" placeholder="Cantidad" style="min-width:120px" oninput="calcPago()"/>
+          <div id="calc-result" style="padding:10px 16px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;font-weight:700;font-size:15px;color:#166534;display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL COSTURA -->
+  <div class="modal-overlay" id="modal-costura">
+    <div class="modal"><div class="modal-header"><h3>Asignar pedido a costurero</h3><button class="modal-close" onclick="closeModal('modal-costura')">✕</button></div>
+      <div class="modal-body">
+        <select class="filter-select" style="width:100%;margin-bottom:10px"><option>Seleccionar costurero...</option><option>GRISELDA</option><option>TIA LILI</option><option>BENITO</option><option>HUGO</option><option>SOLE</option><option>LILIANA</option><option>JUANA</option><option>YOLANDA</option><option>CINTIA</option><option>PATRICIA</option><option>SILVANA</option></select>
+        <input type="text" class="filter-select" style="width:100%;margin-bottom:10px" placeholder="Nº de pedido"/>
+        <select class="filter-select" style="width:100%;margin-bottom:10px"><option>Seleccionar tipo de prenda...</option><option>Chombas</option><option>Chombas M/L</option><option>remera m/l</option><option>Remeras</option><option>buzo polar</option><option>Chaleco Polar</option><option>Campera Polar</option><option>Buzos Friza</option><option>Buzo canguro</option><option>Buzo friza 1/2 cierre</option><option>arreglo</option><option>Musculosa</option><option>Joggins</option><option>Chomba Colegio</option></select>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input type="number" class="filter-select" style="width:50%" placeholder="Cantidad entregada"/>
+          <input type="number" class="filter-select" style="width:50%" placeholder="Costo por prenda"/>
+        </div>
+        <div id="modal-cos-total" style="padding:10px;background:#f0fdf4;border-radius:8px;font-weight:700;color:#166534;text-align:right">Total: $0</div>
+      </div>
+      <div class="modal-footer"><button class="btn" onclick="closeModal('modal-costura')">Guardar</button><button class="btn btn-outline" onclick="document.getElementById('modal-costura').classList.remove('open')">Cancelar</button></div>
+    </div>
+  </div>
+  <!-- MODAL COSTURERO -->
+  <div class="modal-overlay" id="modal-costurero">
+    <div class="modal"><div class="modal-header"><h3>Registrar costurero</h3><button class="modal-close" onclick="document.getElementById('modal-costurero').classList.remove('open')">✕</button></div>
+      <div class="modal-body">
+        <input type="text" class="filter-select" style="width:100%;margin-bottom:10px" placeholder="Nombre completo"/>
+        <select class="filter-select" style="width:100%;margin-bottom:10px"><option>ACTIVO</option><option>BAJA</option></select>
+        <input type="text" class="filter-select" style="width:100%;margin-bottom:10px" placeholder="Teléfono (opcional)"/>
+      </div>
+      <div class="modal-footer"><button class="btn" onclick="closeModal('modal-costurero')">Guardar</button></div>
+    </div>
+  </div>
+
+  <!-- ENTREGAS -->
+  <div class="section" id="sec-entregas">
+    <div class="stats-bar" id="ent-stats"></div>
+    <div class="tabs-bar">
+      <button class="ptab active" onclick="setEntTab('det',this)">📋 Detalle</button>
+      <button class="ptab" onclick="setEntTab('porped',this)">📦 Por Pedido</button>
+      <button class="ptab" onclick="setEntTab('pormes',this)">📅 Por Mes</button>
+    </div>
+    <!-- DETALLE -->
+    <div id="ent-tab-det">
+      <div class="search-bar">
+        <input type="text" id="ent-search" placeholder="🔍 Buscar cliente, pedido, tipo..." oninput="renderEntregas()"/>
+        <select class="filter-select" id="ent-filter-mes" onchange="renderEntregas()">
+          <option value="">Todos los meses</option>
+          <option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option>
+        </select>
+        <select class="filter-select" id="ent-filter-fac" onchange="renderEntregas()">
+          <option value="">Todos los tipos</option><option>A</option><option>B</option>
+        </select>
+        <button class="btn" onclick="openModal('modal-entrega')">+ Registrar entrega</button>
+      </div>
+      <div class="panel"><div class="tbl-wrap"><table>
+        <thead><tr><th>Fecha</th><th>Cliente</th><th>Nº Ped</th><th>Tipo</th><th>Tela</th><th>Color</th><th>Talle</th><th>Cant.</th><th>Total</th><th>Tipo Fac</th><th>Nº Fac</th><th></th></tr></thead>
+        <tbody id="ent-tbody-det"></tbody>
+      </table></div></div>
+    </div>
+    <!-- POR PEDIDO -->
+    <div id="ent-tab-porped" style="display:none">
+      <div class="panel"><div class="tbl-wrap"><table>
+        <thead><tr><th>Nº Pedido</th><th>Cliente</th><th>Líneas</th><th>Prendas</th><th>Total $</th></tr></thead>
+        <tbody id="ent-tbody-porped"></tbody>
+      </table></div></div>
+    </div>
+    <!-- POR MES -->
+    <div id="ent-tab-pormes" style="display:none">
+      <div class="panel"><div class="tbl-wrap"><table>
+        <thead><tr><th>Mes</th><th>Líneas</th><th>Prendas</th><th>Total $</th></tr></thead>
+        <tbody id="ent-tbody-pormes"></tbody>
+      </table></div></div>
+    </div>
+  </div>
+  <!-- MODAL ENTREGA -->
+  <div class="modal-overlay" id="modal-entrega">
+    <div class="modal"><div class="modal-header"><h3>Registrar entrega</h3><button class="modal-close" onclick="document.getElementById('modal-entrega').classList.remove('open')">✕</button></div>
+      <div class="modal-body">
+        <input type="text" class="filter-select" style="width:100%;margin-bottom:10px" placeholder="Cliente"/>
+        <input type="text" class="filter-select" style="width:100%;margin-bottom:10px" placeholder="Nº de pedido"/>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input type="date" class="filter-select" style="width:50%"/>
+          <select class="filter-select" style="width:50%"><option>Factura A</option><option>Factura B</option></select>
+        </div>
+        <input type="number" class="filter-select" style="width:100%;margin-bottom:10px" placeholder="Nº de factura"/>
+        <input type="number" class="filter-select" style="width:100%;margin-bottom:10px" placeholder="Precio total"/>
+      </div>
+      <div class="modal-footer"><button class="btn" onclick="closeModal('modal-entrega')">Guardar</button><button class="btn btn-outline" onclick="document.getElementById('modal-entrega').classList.remove('open')">Cancelar</button></div>
+    </div>
+  </div>
+
+  <!-- MATERIALES -->
+  <div class="section" id="sec-materiales">
+    <div class="tabs-bar">
+      <button class="ptab active" onclick="setMatTab('telas',this)">🧵 Telas</button>
+      <button class="ptab" onclick="setMatTab('grilla',this)">📊 Color x Tela</button>
+      <button class="ptab" onclick="setMatTab('otros',this)">📦 Otros Materiales</button>
+    </div>
+    <!-- TELAS -->
+    <div id="mat-tab-telas">
+      <div class="stats-bar" id="mat-stats"></div>
+      <div class="panel" style="margin-top:0">
+        <div class="panel-header"><h4>📋 Stock de telas por tipo</h4></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Tipo de Tela</th><th>Rollos</th><th>KG Totales</th><th>Precio x KG</th><th>Valuación</th><th>% del stock</th></tr></thead>
+          <tbody id="mat-tbody-telas"></tbody>
+        </table></div>
+      </div>
+    </div>
+    <!-- COLOR X TELA -->
+    <div id="mat-tab-grilla" style="display:none">
+      <div class="panel">
+        <div class="panel-header"><h4>📊 Distribución Color × Tipo de Tela (en rollos)</h4></div>
+        <div class="tbl-wrap"><table id="mat-tabla-colores">
+          <thead id="mat-colores-head"></thead>
+          <tbody id="mat-colores-body"></tbody>
+        </table></div>
+      </div>
+    </div>
+    <!-- OTROS -->
+    <div id="mat-tab-otros" style="display:none">
+      <div class="search-bar"><button class="btn" onclick="openModal('modal-material')">+ Nuevo material</button></div>
+      <div class="panel"><div class="tbl-wrap"><table>
+        <thead><tr><th>Material</th><th>Categoría</th><th>Stock</th><th>Unidad</th><th>Precio/u</th><th>Proveedor</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><strong>Hilos</strong></td><td>Insumo</td><td>240</td><td>conos</td><td>$1.200</td><td>Insumos Textil</td><td><button class="btn-icon">✏️</button></td></tr>
+          <tr><td><strong>Botones</strong></td><td>Insumo</td><td>5.800</td><td>unidades</td><td>$45</td><td>Mercería Gral</td><td><button class="btn-icon">✏️</button></td></tr>
+          <tr><td><strong>Cierres</strong></td><td>Insumo</td><td>320</td><td>unidades</td><td>$180</td><td>Mercería Gral</td><td><button class="btn-icon">✏️</button></td></tr>
+          <tr><td><strong>Reflectivos</strong></td><td>Insumo</td><td>85</td><td>metros</td><td>$950</td><td>Seguridad Textil</td><td><button class="btn-icon">✏️</button></td></tr>
+          <tr><td><strong>Etiquetas</strong></td><td>Insumo</td><td>3.200</td><td>unidades</td><td>$12</td><td>Etiqueta Rápida</td><td><button class="btn-icon">✏️</button></td></tr>
+        </tbody>
+      </table></div></div>
+    </div>
+  </div>
+  <!-- MODAL MATERIAL -->
+  <div class="modal-overlay" id="modal-material">
+    <div class="modal"><div class="modal-header"><h3>Nuevo material</h3><button class="modal-close" onclick="document.getElementById('modal-material').classList.remove('open')">✕</button></div>
+      <div class="modal-body">
+        <input type="text" class="filter-select" style="width:100%;margin-bottom:10px" placeholder="Nombre del material"/>
+        <select class="filter-select" style="width:100%;margin-bottom:10px"><option>Tela</option><option>Insumo</option></select>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input type="number" class="filter-select" style="width:50%" placeholder="Stock actual"/>
+          <input type="number" class="filter-select" style="width:50%" placeholder="Precio por unidad"/>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn" onclick="closeModal('modal-material')">Guardar</button></div>
+    </div>
+  </div>
+
+  <!-- NUEVA VENTA -->
+  <div class="section" id="sec-nueva-venta">
+    <div class="pos-layout">
+      <div><div class="panel"><div class="panel-header"><h4>🏷️ Seleccionar productos</h4></div>
+        <div class="pos-grid">
+          <div class="pos-item" onclick="addToCart(this,'Chomba Azul S',15000)"><div class="pi">👕</div><div class="pname">Chomba Azul S</div><div class="pprice">$15.000</div><div class="pstock-label">Stock: 12</div></div>
+          <div class="pos-item" onclick="addToCart(this,'Chomba Azul M',15000)"><div class="pi">👕</div><div class="pname">Chomba Azul M</div><div class="pprice">$15.000</div><div class="pstock-label">Stock: 18</div></div>
+          <div class="pos-item" onclick="addToCart(this,'Remera Azul S',12000)"><div class="pi">👔</div><div class="pname">Remera Azul S</div><div class="pprice">$12.000</div><div class="pstock-label">Stock: 24</div></div>
+          <div class="pos-item" onclick="addToCart(this,'Remera Azul M',12000)"><div class="pi">👔</div><div class="pname">Remera Azul M</div><div class="pprice">$12.000</div><div class="pstock-label">Stock: 30</div></div>
+          <div class="pos-item" onclick="addToCart(this,'Campera Polar L',28000)"><div class="pi">🧥</div><div class="pname">Campera Polar L</div><div class="pprice">$28.000</div><div class="pstock-label">Stock: 8</div></div>
+          <div class="pos-item" onclick="addToCart(this,'Cuello Polar Único',8500)"><div class="pi">🧣</div><div class="pname">Cuello Polar Único</div><div class="pprice">$8.500</div><div class="pstock-label">Stock: 159</div></div>
+        </div>
+      </div></div>
+      <div><div class="ticket"><h4>🧾 Ticket de venta</h4>
+        <div id="cart-items"><div class="ticket-empty">Seleccioná un producto</div></div>
+        <div class="ticket-total" id="cart-total" style="display:none"><span>TOTAL</span><span id="total-amount">$0</span></div>
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
+          <select class="filter-select" style="width:100%"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option></select>
+          <button class="btn" style="width:100%;padding:11px" onclick="finalizarVenta()">✅ Finalizar venta</button>
+          <button class="btn btn-outline" style="width:100%;padding:11px" onclick="clearCart()">🗑️ Limpiar</button>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- PRODUCTOS -->
+  <div class="section" id="sec-productos">
+    <div class="search-bar"><input type="text" placeholder="🔍 Buscar producto..."/><select class="filter-select"><option>Todos</option><option>Chombas</option><option>Remeras</option><option>Camperas</option><option>Cuellos</option></select><button class="btn" onclick="openModal('modal-producto')">+ Nuevo producto</button></div>
+    <div class="panel"><div class="tbl-wrap"><table>
+      <thead><tr><th>Producto</th><th>Tipo</th><th>Tela</th><th>Color</th><th>Talle</th><th>Precio venta</th><th>Peso (kg)</th><th>Stock ideal</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><strong>CHOMBA AZUL S</strong></td><td>Chombas</td><td>PIQUE</td><td>MARINO</td><td>S</td><td>$15.000</td><td>0,39</td><td>50</td><td><span class="status activo">Activo</span></td><td><button class="btn-icon">✏️</button></td></tr>
+        <tr><td><strong>CHOMBA AZUL M</strong></td><td>Chombas</td><td>PIQUE</td><td>MARINO</td><td>M</td><td>$15.000</td><td>0,39</td><td>50</td><td><span class="status activo">Activo</span></td><td><button class="btn-icon">✏️</button></td></tr>
+        <tr><td><strong>CHOMBA ROJA S</strong></td><td>Chombas</td><td>PIQUE</td><td>ROJO</td><td>S</td><td>$15.000</td><td>0,39</td><td>30</td><td><span class="status activo">Activo</span></td><td><button class="btn-icon">✏️</button></td></tr>
+        <tr><td><strong>REMERA AZUL S</strong></td><td>Remeras</td><td>JERSEY</td><td>MARINO</td><td>S</td><td>$12.000</td><td>0,33</td><td>60</td><td><span class="status activo">Activo</span></td><td><button class="btn-icon">✏️</button></td></tr>
+        <tr><td><strong>CAMPERA FRIZA L</strong></td><td>Camperas</td><td>FRIZA</td><td>NEGRO</td><td>L</td><td>$28.000</td><td>0,57</td><td>20</td><td><span class="status activo">Activo</span></td><td><button class="btn-icon">✏️</button></td></tr>
+      </tbody>
+    </table></div></div>
+  </div>
+
+  <!-- STOCK -->
+  <div class="section" id="sec-stock">
+    <div class="cards">
+      <div class="card"><div class="card-top"><div class="card-icon" style="background:#f0fff4">✅</div><span class="badge up">—</span></div><h3>2.840</h3><p>Prendas en depósito</p></div>
+      <div class="card"><div class="card-top"><div class="card-icon" style="background:#fef9c3">⚠️</div><span class="badge neutral">—</span></div><h3>3</h3><p>Bajo stock ideal</p></div>
+      <div class="card"><div class="card-top"><div class="card-icon" style="background:#f0f0ff">💵</div><span class="badge up">—</span></div><h3>$42.6M</h3><p>Valor del stock</p></div>
+      <div class="card"><div class="card-top"><div class="card-icon" style="background:#fff0f0">🧵</div><span class="badge up">—</span></div><h3>18</h3><p>Productos diferentes</p></div>
+    </div>
+    <div class="panel"><div class="panel-header"><h4>🗃️ Stock depósito por producto y talle</h4></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Producto</th><th>Tipo</th><th>Color</th><th>S/XS</th><th>M</th><th>L</th><th>XL</th><th>2XL+</th><th>Total</th><th>Ideal</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td><strong>CHOMBA AZUL</strong></td><td>Chombas</td><td>MARINO</td><td>12</td><td>18</td><td>15</td><td>8</td><td>4</td><td><strong>57</strong></td><td>50</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td><strong>CHOMBA ROJA</strong></td><td>Chombas</td><td>ROJO</td><td>8</td><td>10</td><td>6</td><td>3</td><td>0</td><td><strong>27</strong></td><td>30</td><td><span class="status bajo">Bajo</span></td></tr>
+          <tr><td><strong>REMERA AZUL</strong></td><td>Remeras</td><td>MARINO</td><td>24</td><td>30</td><td>22</td><td>14</td><td>6</td><td><strong>96</strong></td><td>60</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td><strong>CAMPERA FRIZA</strong></td><td>Camperas</td><td>NEGRO</td><td>0</td><td>5</td><td>8</td><td>6</td><td>2</td><td><strong>21</strong></td><td>20</td><td><span class="status ok">OK</span></td></tr>
+          <tr><td><strong>CUELLO POLAR</strong></td><td>Cuellos</td><td>MARINO</td><td colspan="5" style="text-align:center">ÚNICO</td><td><strong>159</strong></td><td>200</td><td><span class="status bajo">Bajo</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-cliente"><div class="modal"><h3>👥 Nuevo Cliente</h3><div class="form-row"><div class="form-group"><label>Nombre / Empresa</label><input type="text" placeholder="Ej: VANATY"/></div><div class="form-group"><label>Tipo</label><select><option>Mayorista</option><option>Institución</option><option>Empresa</option><option>Gobierno</option></select></div></div><div class="form-row"><div class="form-group"><label>Teléfono</label><input type="text"/></div><div class="form-group"><label>Email</label><input type="email"/></div></div><div class="form-group"><label>Dirección</label><input type="text"/></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-cliente')">Cancelar</button><button class="btn" onclick="closeModal('modal-cliente')">Guardar</button></div></div></div>
+
+<div class="modal-overlay" id="modal-proveedor"><div class="modal"><h3>🤝 Nuevo Proveedor</h3><div class="form-row"><div class="form-group"><label>Nombre</label><input type="text"/></div><div class="form-group"><label>Rubro</label><select><option>Telas</option><option>Hilos</option><option>Accesorios</option><option>Servicios</option></select></div></div><div class="form-row"><div class="form-group"><label>Teléfono</label><input type="text"/></div><div class="form-group"><label>Email</label><input type="email"/></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-proveedor')">Cancelar</button><button class="btn" onclick="closeModal('modal-proveedor')">Guardar</button></div></div></div>
+
+<div class="modal-overlay" id="modal-presupuesto"><div class="modal"><h3>📄 Nuevo Presupuesto</h3><div class="form-row"><div class="form-group"><label>Cliente</label><select><option>VANATY</option><option>Colegio San Martín</option></select></div><div class="form-group"><label>Fecha de entrega</label><input type="date"/></div></div><div class="form-group"><label>Descripción</label><textarea rows="3" placeholder="Ej: 300 remeras jersey melange..."></textarea></div><div class="form-row"><div class="form-group"><label>Precio unitario ($)</label><input type="number"/></div><div class="form-group"><label>Cantidad total</label><input type="number"/></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-presupuesto')">Cancelar</button><button class="btn" onclick="closeModal('modal-presupuesto')">Crear presupuesto</button></div></div></div>
+
+<div class="modal-overlay" id="modal-pago"><div class="modal"><h3>💰 Registrar Movimiento</h3><div class="form-row"><div class="form-group"><label>Tipo</label><select><option>Cobro a cliente</option><option>Pago costura</option><option>Compra telas/insumos</option><option>Gasto general</option></select></div><div class="form-group"><label>Fecha</label><input type="date"/></div></div><div class="form-group"><label>Concepto</label><input type="text" placeholder="Ej: Costura GRISELDA semana 14"/></div><div class="form-row"><div class="form-group"><label>Monto ($)</label><input type="number"/></div><div class="form-group"><label>Método</label><select><option>Efectivo</option><option>Transferencia</option><option>Cheque</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-pago')">Cancelar</button><button class="btn" onclick="closeModal('modal-pago')">Guardar</button></div></div></div>
+
+<div class="modal-overlay" id="modal-pedido"><div class="modal"><h3>📋 Nuevo Pedido</h3><div class="form-row"><div class="form-group"><label>Nº Pedido</label><input type="number" placeholder="242"/></div><div class="form-group"><label>Carácter</label><select><option>URGENTE</option><option>STOCK</option></select></div></div><div class="form-row"><div class="form-group"><label>Cliente</label><select><option>VANATY</option><option>Colegio San Martín</option></select></div><div class="form-group"><label>Fecha</label><input type="date"/></div></div><div class="form-row"><div class="form-group"><label>Tipo de prenda</label><select><option>Remeras</option><option>Chombas</option><option>Camperas</option><option>Cuellos</option><option>Buzos</option></select></div><div class="form-group"><label>Tipo de tela</label><select><option>JERSEY</option><option>PIQUE</option><option>POLAR</option><option>FRIZA</option></select></div></div><div class="form-row"><div class="form-group"><label>Color</label><input type="text" placeholder="MELANGE"/></div><div class="form-group"><label>Talle</label><select><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>2XL</option><option>3XL</option><option>ÚNICO</option></select></div></div><div class="form-group"><label>Cantidad</label><input type="number"/></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-pedido')">Cancelar</button><button class="btn" onclick="closeModal('modal-pedido')">Crear pedido</button></div></div></div>
+
+<div class="modal-overlay" id="modal-tizada"><div class="modal"><h3>✂️ Nueva Tizada</h3><div class="form-row"><div class="form-group"><label>Nº Tizada</label><input type="number" placeholder="252"/></div><div class="form-group"><label>Fecha</label><input type="date"/></div></div><div class="form-row"><div class="form-group"><label>Nº Pedido</label><input type="number"/></div><div class="form-group"><label>Cliente</label><select><option>VANATY</option></select></div></div><div class="form-row"><div class="form-group"><label>Tipo</label><select><option>Remeras</option><option>Chombas</option><option>Camperas</option><option>Cuellos</option></select></div><div class="form-group"><label>Tela</label><select><option>JERSEY</option><option>PIQUE</option><option>POLAR</option><option>FRIZA</option></select></div></div><div class="form-row"><div class="form-group"><label>Color</label><input type="text"/></div><div class="form-group"><label>Talle</label><input type="text"/></div></div><div class="form-group"><label>Cantidad</label><input type="number"/></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-tizada')">Cancelar</button><button class="btn" onclick="closeModal('modal-tizada')">Crear tizada</button></div></div></div>
+
+<div class="modal-overlay" id="modal-costura"><div class="modal"><h3>🧵 Registrar Costura</h3><div class="form-row"><div class="form-group"><label>Costurero/a</label><select><option>GRISELDA</option><option>HUGO</option><option>NORMA</option></select></div><div class="form-group"><label>Fecha</label><input type="date"/></div></div><div class="form-row"><div class="form-group"><label>Nº Pedido</label><input type="number"/></div><div class="form-group"><label>Cliente</label><select><option>VANATY</option></select></div></div><div class="form-row"><div class="form-group"><label>Tipo</label><select><option>Remeras</option><option>Chombas</option><option>Camperas</option></select></div><div class="form-group"><label>Talle</label><input type="text"/></div></div><div class="form-row"><div class="form-group"><label>Entregado al costurero</label><input type="number"/></div><div class="form-group"><label>Costo por prenda ($)</label><input type="number"/></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-costura')">Cancelar</button><button class="btn" onclick="closeModal('modal-costura')">Guardar</button></div></div></div>
+
+<div class="modal-overlay" id="modal-entrega"><div class="modal"><h3>🚚 Registrar Entrega</h3><div class="form-row"><div class="form-group"><label>Cliente</label><select><option>VANATY</option></select></div><div class="form-group"><label>Fecha</label><input type="date"/></div></div><div class="form-row"><div class="form-group"><label>Nº Pedido</label><input type="text"/></div><div class="form-group"><label>Carácter</label><select><option>URGENTE</option><option>STOCK</option></select></div></div><div class="form-row"><div class="form-group"><label>Tipo</label><select><option>Remeras</option><option>Chombas</option></select></div><div class="form-group"><label>Color / Talle</label><input type="text" placeholder="NEGRO / XL"/></div></div><div class="form-row"><div class="form-group"><label>Cantidad</label><input type="number"/></div><div class="form-group"><label>Precio unitario s/IVA ($)</label><input type="number"/></div></div><div class="form-row"><div class="form-group"><label>Tipo Factura</label><select><option>A</option><option>B</option><option>Sin factura</option></select></div><div class="form-group"><label>Nº Factura</label><input type="text" placeholder="00001-00848"/></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-entrega')">Cancelar</button><button class="btn" onclick="closeModal('modal-entrega')">Guardar entrega</button></div></div></div>
+
+<div class="modal-overlay" id="modal-material"><div class="modal"><h3>📦 Nuevo Material</h3><div class="form-row"><div class="form-group"><label>Nombre</label><input type="text" placeholder="Ej: PIQUE blanco"/></div><div class="form-group"><label>Tipo de tela</label><select><option>JERSEY</option><option>PIQUE</option><option>POLAR</option><option>FRIZA</option><option>Otro</option></select></div></div><div class="form-row"><div class="form-group"><label>Stock actual (m)</label><input type="number"/></div><div class="form-group"><label>Stock mínimo (m)</label><input type="number"/></div></div><div class="form-group"><label>Proveedor</label><select><option>Telas del Norte SRL</option><option>Distribuidora Hilo & Más</option></select></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-material')">Cancelar</button><button class="btn" onclick="closeModal('modal-material')">Guardar</button></div></div></div>
+
+<div class="modal-overlay" id="modal-producto"><div class="modal"><h3>🏷️ Nuevo Producto</h3><div class="form-row"><div class="form-group"><label>Nombre</label><input type="text" placeholder="Ej: CHOMBA AZUL XL"/></div><div class="form-group"><label>Tipo</label><select><option>Chombas</option><option>Remeras</option><option>Camperas</option><option>Cuellos</option><option>Buzos</option></select></div></div><div class="form-row"><div class="form-group"><label>Tela</label><select><option>JERSEY</option><option>PIQUE</option><option>POLAR</option><option>FRIZA</option></select></div><div class="form-group"><label>Color</label><input type="text" placeholder="MARINO"/></div></div><div class="form-row"><div class="form-group"><label>Talle</label><select><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>2XL</option><option>ÚNICO</option></select></div><div class="form-group"><label>Precio venta ($)</label><input type="number"/></div></div><div class="form-group"><label>Peso prenda (kg)</label><input type="number" step="0.01"/></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-producto')">Cancelar</button><button class="btn" onclick="closeModal('modal-producto')">Guardar</button></div></div></div>
+
+<div id="toast"></div>
+
+<script>
+
+const PED_DATA = [[96, "30/01/2026", "ENFOQUE", "IMPORTANTE", "Remeras", "JERSEY", "MARINO", "4XL", 10, 0, 0, 0, 0, 10], [96, "30/01/2026", "ENFOQUE", "IMPORTANTE", "Remeras", "JERSEY", "NEGRO", "4XL", 10, 0, 0, 0, 0, 10], [96, "30/01/2026", "ENFOQUE", "IMPORTANTE", "Remeras", "JERSEY", "BLANCO", "5XL", 10, 0, 0, 0, 0, 10], [97, "11/02/2026", "ENFOQUE", "IMPORTANTE", "Chombas", "PIQUE", "NEGRO", "S", 2, 0, 0, 0, 0, 2], [97, "11/02/2026", "ENFOQUE", "IMPORTANTE", "Chombas", "PIQUE", "NEGRO", "M", 5, 0, 0, 0, 0, 5], [97, "11/02/2026", "ENFOQUE", "IMPORTANTE", "Chombas", "PIQUE", "NEGRO", "L", 15, 0, 0, 0, 0, 15], [97, "11/02/2026", "ENFOQUE", "IMPORTANTE", "Chombas", "PIQUE", "NEGRO", "XL", 10, 0, 0, 0, 0, 10], [97, "11/02/2026", "ENFOQUE", "IMPORTANTE", "Chombas", "PIQUE", "NEGRO", "2XL", 5, 0, 0, 0, 0, 5], [98, "12/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "MARINO", "L", 5, 0, 0, 0, 0, 5], [98, "12/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "MARINO", "XL", 1, 0, 0, 0, 0, 1], [98, "12/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "MARINO", "2XL", 3, 0, 0, 0, 0, 3], [98, "12/03/2026", "ENFOQUE", "IMPORTANTE", "Remeras", "JERSEY", "MARINO", "L", 1, 0, 0, 0, 0, 1], [98, "12/03/2026", "ENFOQUE", "IMPORTANTE", "Remeras", "JERSEY", "MARINO", "XL", 1, 0, 0, 0, 0, 1], [98, "12/03/2026", "ENFOQUE", "IMPORTANTE", "Remeras", "JERSEY", "MARINO", "2XL", 1, 0, 0, 0, 0, 1], [98, "12/03/2026", "ENFOQUE", "IMPORTANTE", "Remeras", "JERSEY", "MARINO", "S", 2, 0, 0, 0, 0, 2], [98, "12/03/2026", "ENFOQUE", "IMPORTANTE", "Remeras", "JERSEY", "MARINO", "M", 2, 0, 0, 0, 0, 2], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "NEGRO", "S", 1, 0, 0, 0, 0, 1], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "NEGRO", "M", 1, 0, 0, 0, 0, 1], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "NEGRO", "L", 5, 0, 0, 0, 0, 5], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "NEGRO", "XL", 4, 0, 0, 0, 0, 4], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "NEGRO", "2XL", 1, 0, 0, 0, 0, 1], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "NEGRO", "3XL", 1, 0, 0, 0, 0, 1], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "ROJO", "S", 1, 0, 0, 0, 0, 1], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "ROJO", "M", 1, 0, 0, 0, 0, 1], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "ROJO", "L", 5, 0, 0, 0, 0, 5], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "ROJO", "XL", 4, 0, 0, 0, 0, 4], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "ROJO", "2XL", 1, 0, 0, 0, 0, 1], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", "JERSEY", "ROJO", "3XL", 1, 0, 0, 0, 0, 1], [100, "16/03/2026", "ENFOQUE", "IMPORTANTE", "Chombas", "JERSEY", "NEGRO", "M", 4, 0, 0, 0, 0, 4], [100, "16/03/2026", "ENFOQUE", "IMPORTANTE", "Chombas", "JERSEY", "NEGRO", "XL", 6, 0, 0, 0, 0, 6], [101, "18/03/2026", "ENFOQUE", "IMPORTANTE", "Chombas", "JERSEY", "NEGRO", "M", 5, 0, 0, 0, 0, 5], [101, "18/03/2026", "ENFOQUE", "IMPORTANTE", "Chombas", "JERSEY", "NEGRO", "L", 5, 0, 0, 0, 0, 5], [101, "18/03/2026", "ENFOQUE", "IMPORTANTE", "Chombas", "JERSEY", "NEGRO", "XL", 5, 0, 0, 0, 0, 5], [101, "18/03/2026", "ENFOQUE", "IMPORTANTE", "Chombas", "JERSEY", "NEGRO", "2XL", 5, 0, 0, 0, 0, 5], [236, "09/01/2026", "VANATY", "URGENTE", "Campera Polar", "POLAR", "NEGRO", "S", 5, 5, 5, 5, 5, 0], [237, "13/01/2026", "VANATY", "STOCK", "Cuellos", "POLAR", "MARINO", "UNICO", 500, 0, 500, 0, 159, 500], [237, "13/01/2026", "VANATY", "STOCK", "Cuellos", "POLAR", "NEGRO", "UNICO", 500, 0, 500, 0, 0, 500], [238, "14/01/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "MELANGE", "XL", 150, 0, 150, 150, 68, 150], [238, "05/01/2026", "VANATY", "URGENTE", "Chombas", "JERSEY", "MELANGE", "8XL", 1, 1, 0, 0, 1, 0], [238, "05/01/2026", "VANATY", "URGENTE", "Chombas", "JERSEY", "GRIS TOPO", "8XL", 1, 1, 0, 0, 1, 0], [238, "07/01/2026", "VANATY", "URGENTE", "Buzo 1/2 cierre", "FRIZA", "MARINO", "S", 5, 5, 0, 0, 5, 0], [238, "07/01/2026", "VANATY", "URGENTE", "Buzo 1/2 cierre", "FRIZA", "MARINO", "M", 15, 15, 0, 0, 15, 0], [238, "07/01/2026", "VANATY", "URGENTE", "Buzo 1/2 cierre", "FRIZA", "MARINO", "L", 20, 20, 0, 0, 19, 0], [238, "07/01/2026", "VANATY", "URGENTE", "Buzo 1/2 cierre", "FRIZA", "MARINO", "XL", 20, 20, 0, 0, 20, 0], [238, "07/01/2026", "VANATY", "URGENTE", "Buzo 1/2 cierre", "FRIZA", "MARINO", "3XL", 15, 15, 0, 0, 15, 0], [239, "16/01/2026", "VANATY", "URGENTE", "Remera M/L", "JERSEY", "MARINO", "M", 18, 18, 18, 18, 18, 0], [240, "23/01/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "BLANCO", "XL", 50, 32, 0, 0, 56, 18], [241, "23/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MARINO", "L", 200, 0, 0, 0, 11, 200], [241, "23/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MARINO", "M", 150, 0, 0, 0, 103, 150], [241, "23/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MARINO", "XL", 200, 0, 0, 0, 14, 200], [241, "23/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "NEGRO", "M", 20, 0, 0, 0, 0, 20], [241, "23/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "NEGRO", "L", 100, 0, 0, 0, 36, 100], [241, "23/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "NEGRO", "XL", 150, 0, 0, 0, 39, 150], [241, "23/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "NEGRO", "2XL", 100, 0, 0, 0, 42, 100], [242, "23/01/2026", "VANATY", "URGENTE", "Chombas", "PIQUE", "BLANCO", "XL", 10, 10, 0, 0, 10, 0], [243, "27/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "S", 80, 0, 0, 0, 0, 80], [243, "27/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "M", 100, 0, 0, 0, 35, 100], [243, "27/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "L", 200, 0, 0, 0, 52, 200], [243, "27/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "XL", 200, 0, 0, 0, 68, 200], [243, "27/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "2XL", 100, 0, 0, 0, 36, 100], [243, "27/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MARINO", "L", 200, 0, 0, 0, 124, 200], [243, "27/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MARINO", "XL", 300, 0, 0, 0, 163, 300], [243, "27/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MARINO", "2XL", 300, 0, 0, 0, 11, 300], [243, "27/01/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MARINO", "3XL", 100, 0, 0, 0, 58, 100], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "S", 30, 0, 0, 0, 11, 30], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "M", 80, 0, 0, 0, 22, 80], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "L", 60, 0, 0, 0, 25, 60], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "3XL", 60, 0, 0, 0, 17, 60], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "4XL", 60, 0, 0, 0, 0, 60], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "5XL", 40, 0, 0, 0, 0, 40], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "S", 30, 0, 0, 0, 9, 30], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "M", 50, 0, 0, 0, 34, 50], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "L", 100, 0, 0, 0, 45, 100], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "XL", 150, 0, 0, 0, 28, 150], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "2XL", 120, 0, 0, 0, 14, 120], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "3XL", 100, 0, 0, 0, 29, 100], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "5XL", 20, 0, 0, 0, 0, 20], [245, "29/01/2026", "VANATY", "URGENTE", "Buzo 1/2 cierre", "FRIZA", "MARINO", "L", 8, 0, 0, 0, 0, 8], [245, "29/01/2026", "VANATY", "URGENTE", "Buzo 1/2 cierre", "FRIZA", "MARINO", "XL", 6, 0, 0, 0, 4, 6], [245, "29/01/2026", "VANATY", "URGENTE", "Buzo 1/2 cierre", "FRIZA", "MARINO", "2XL", 6, 0, 0, 0, 5, 6], [245, "29/01/2026", "VANATY", "URGENTE", "Buzo 1/2 cierre", "FRIZA", "MARINO", "3XL", 6, 0, 0, 0, 6, 6], [245, "29/01/2026", "VANATY", "URGENTE", "Buzo 1/2 cierre", "FRIZA", "MARINO", "4XL", 8, 0, 0, 0, 8, 8], [246, "29/01/2026", "VANATY", "URGENTE", "Chombas", "PIQUE", "BEIGE", "S", 6, 0, 0, 0, 0, 6], [247, "11/02/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "NEGRO", "XL", 6, 0, 0, 0, 0, 6], [247, "11/02/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "NEGRO", "2XL", 6, 0, 0, 0, 0, 6], [248, "26/02/2026", "VANATY", "URGENTE", "Chombas", "PIQUE", "MELANGE", "XL", 30, 0, 0, 0, 0, 30], [248, "23/02/2026", "VANATY", "URGENTE", "Chombas", "PIQUE", "BLANCO", "M", 20, 0, 0, 0, 10, 20], [249, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "S", 30, 0, 0, 0, 16, 30], [249, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "M", 100, 0, 0, 0, 47, 100], [249, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "L", 150, 0, 0, 0, 66, 150], [249, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "XL", 200, 0, 0, 0, 95, 200], [249, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "2XL", 200, 0, 0, 0, 60, 200], [249, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "3XL", 60, 0, 0, 0, 14, 60], [250, "27/02/2026", "VANATY", "URGENTE", "Chombas", "PIQUE", "TURQUESA", "L", 4, 0, 0, 0, 0, 4], [250, "27/02/2026", "VANATY", "URGENTE", "Chombas", "PIQUE", "TURQUESA", "XL", 2, 0, 0, 0, 0, 2], [250, "27/02/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "BLANCO", "M", 15, 0, 0, 0, 0, 15], [250, "27/02/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "BLANCO", "L", 15, 0, 0, 0, 0, 15], [250, "27/02/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "NEGRO", "XL", 40, 0, 0, 0, 0, 40], [251, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "NEGRO", "M", 100, 0, 0, 0, 57, 100], [251, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "NEGRO", "L", 200, 0, 0, 0, 0, 200], [251, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "NEGRO", "XL", 200, 0, 0, 0, 44, 200], [251, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "NEGRO", "2XL", 200, 0, 0, 0, 23, 200], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MARINO", "L", 150, 0, 0, 0, 28, 150], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MARINO", "XL", 200, 0, 0, 0, 33, 200], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MARINO", "2XL", 200, 0, 0, 0, 25, 200], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "AMARILLO", "2XL", 5, 0, 0, 0, 4, 5], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "AMARILLO", "L", 5, 0, 0, 0, 5, 5], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "AMARILLO", "XL", 10, 0, 0, 0, 9, 10], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "BEIGE", "L", 30, 0, 0, 0, 0, 30], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "BEIGE", "S", 10, 0, 0, 0, 0, 10], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "BEIGE", "XL", 40, 0, 0, 0, 0, 40], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "BLANCO", "2XL", 40, 0, 0, 0, 0, 40], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "BLANCO", "L", 60, 0, 0, 0, 0, 60], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "BLANCO", "M", 60, 0, 0, 0, 18, 60], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "BLANCO", "XL", 60, 0, 0, 0, 37, 60], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "BORDO", "L", 30, 0, 0, 0, 0, 30], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "BORDO", "XL", 50, 0, 0, 0, 0, 50], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "CELESTE", "5XL", 5, 0, 0, 0, 0, 5], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "CELESTE", "S", 5, 0, 0, 0, 0, 5], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "FRANCIA", "2XL", 50, 0, 0, 0, 0, 50], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "FRANCIA", "3XL", 20, 0, 0, 0, 0, 20], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "FRANCIA", "L", 20, 0, 0, 0, 0, 20], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "FRANCIA", "XL", 20, 0, 0, 0, 0, 20], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "2XL", 150, 0, 0, 0, 0, 150], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "3XL", 80, 0, 0, 0, 0, 80], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "L", 150, 0, 0, 0, 0, 150], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "M", 100, 0, 0, 0, 0, 100], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "S", 80, 0, 0, 0, 0, 80], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "MELANGE", "XL", 150, 0, 0, 0, 0, 150], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "GRIS TOPO", "2XL", 80, 0, 0, 0, 0, 80], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "GRIS TOPO", "3XL", 20, 0, 0, 0, 0, 20], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "GRIS TOPO", "L", 80, 0, 0, 0, 0, 80], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "GRIS TOPO", "S", 10, 0, 0, 0, 0, 10], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "GRIS TOPO", "XL", 80, 0, 0, 0, 0, 80], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "NARANJA", "L", 30, 0, 0, 0, 0, 30], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "NARANJA", "XL", 30, 0, 0, 0, 0, 30], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "ROJO", "2XL", 20, 0, 0, 0, 0, 20], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "ROJO", "L", 40, 0, 0, 0, 0, 40], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "ROJO", "M", 40, 0, 0, 0, 0, 40], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "ROJO", "XL", 60, 0, 0, 0, 0, 60], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "VERDE BOTELLA", "XL", 40, 0, 0, 0, 0, 40], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "2XL", 100, 0, 0, 0, 0, 100], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "3XL", 50, 0, 0, 0, 0, 50], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "4XL", 40, 0, 0, 0, 0, 40], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "5XL", 500, 0, 0, 0, 0, 500], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "L", 100, 0, 0, 0, 0, 100], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "M", 30, 0, 0, 0, 0, 30], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "S", 40, 0, 0, 0, 0, 40], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MARINO", "XL", 80, 0, 0, 0, 22, 80], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BEIGE", "2XL", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BLANCO", "2XL", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BLANCO", "3XL", 5, 0, 0, 0, 0, 5], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BLANCO", "L", 40, 0, 0, 0, 0, 40], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BLANCO", "M", 30, 0, 0, 0, 0, 30], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BLANCO", "S", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BLANCO", "XL", 50, 0, 0, 0, 0, 50], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BORDO", "2XL", 50, 0, 0, 0, 0, 50], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BORDO", "3XL", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BORDO", "L", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BORDO", "M", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BORDO", "S", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "BORDO", "XL", 30, 0, 0, 0, 0, 30], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "FRANCIA", "2XL", 80, 0, 0, 0, 0, 80], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "FRANCIA", "3XL", 20, 0, 0, 0, 0, 20], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "FRANCIA", "4XL", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "FRANCIA", "L", 80, 0, 0, 0, 0, 80], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "FRANCIA", "M", 60, 0, 0, 0, 0, 60], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "FRANCIA", "S", 40, 0, 0, 0, 0, 40], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "FRANCIA", "XL", 80, 0, 0, 0, 0, 80], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MELANGE", "2XL", 50, 0, 0, 0, 0, 50], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MELANGE", "3XL", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MELANGE", "M", 20, 0, 0, 0, 0, 20], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MELANGE", "S", 20, 0, 0, 0, 0, 20], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "MELANGE", "XL", 80, 0, 0, 0, 0, 80], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "GRIS TOPO", "2XL", 50, 0, 0, 0, 0, 50], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "GRIS TOPO", "4XL", 30, 0, 0, 0, 0, 30], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "GRIS TOPO", "L", 60, 0, 0, 0, 0, 60], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "GRIS TOPO", "S", 20, 0, 0, 0, 0, 20], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "GRIS TOPO", "XL", 80, 0, 0, 0, 0, 80], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "2XL", 150, 0, 0, 0, 0, 150], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "3XL", 20, 0, 0, 0, 0, 20], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "5XL", 20, 0, 0, 0, 0, 20], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "L", 150, 0, 0, 0, 0, 150], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "M", 150, 0, 0, 0, 0, 150], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "S", 60, 0, 0, 0, 0, 60], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NEGRO", "XL", 200, 0, 0, 0, 0, 200], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "ROJO", "2XL", 20, 0, 0, 0, 0, 20], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "ROJO", "L", 20, 0, 0, 0, 0, 20], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "ROJO", "XL", 20, 0, 0, 0, 0, 20], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "VERDE BOTELLA", "2XL", 50, 0, 0, 0, 0, 50], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "VERDE BOTELLA", "3XL", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "VERDE BOTELLA", "L", 30, 0, 0, 0, 0, 30], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "VERDE BOTELLA", "M", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "VERDE BOTELLA", "XL", 30, 0, 0, 0, 0, 30], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NARANJA", "2XL", 40, 0, 0, 0, 0, 40], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NARANJA", "3XL", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NARANJA", "5XL", 5, 0, 0, 0, 0, 5], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NARANJA", "L", 40, 0, 0, 0, 0, 40], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NARANJA", "M", 30, 0, 0, 0, 0, 30], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NARANJA", "S", 10, 0, 0, 0, 0, 10], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", "FRIZA", "NARANJA", "XL", 50, 0, 0, 0, 0, 50], [254, "27/02/2026", "VANATY", "URGENTE", "Buzos Friza", "FRIZA", "MARINO", "S", 1, 0, 0, 0, 0, 1], [255, "01/03/2026", "VANATY", "URGENTE", "Buzos Friza", "FRIZA", "MARINO", "L", 12, 0, 0, 0, 0, 12], [255, "01/03/2026", "VANATY", "URGENTE", "Buzos Friza", "FRIZA", "MARINO", "XL", 12, 0, 0, 0, 0, 12], [256, "01/03/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "NEGRO", "XL", 35, 0, 0, 0, 0, 35], [257, "05/03/2026", "VANATY", "URGENTE", "Chombas", "PIQUE", "NEGRO", "L", 10, 0, 0, 0, 0, 10], [258, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NEGRO", "L", 80, 0, 0, 0, 38, 80], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "MARINO", "3XL", 30, 0, 0, 0, 0, 30], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "MARINO", "5XL", 10, 0, 0, 0, 0, 10], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "MARINO", "L", 50, 0, 0, 0, 0, 50], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "MARINO", "M", 50, 0, 0, 0, 0, 50], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "MARINO", "XL", 80, 0, 0, 0, 0, 80], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "AMARILLO", "XL", 5, 0, 0, 0, 0, 5], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BEIGE", "2XL", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BEIGE", "3XL", 10, 0, 0, 0, 0, 10], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BEIGE", "4XL", 10, 0, 0, 0, 0, 10], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BEIGE", "L", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BEIGE", "M", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BEIGE", "S", 10, 0, 0, 0, 0, 10], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BEIGE", "XL", 10, 0, 0, 0, 0, 10], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BLANCO", "2XL", 30, 0, 0, 0, 0, 30], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BLANCO", "3XL", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BLANCO", "L", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BLANCO", "M", 30, 0, 0, 0, 0, 30], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BLANCO", "XL", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BORDO", "2XL", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BORDO", "L", 30, 0, 0, 0, 0, 30], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BORDO", "M", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BORDO", "S", 15, 0, 0, 0, 0, 15], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BORDO", "XL", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "CELESTE", "3XL", 5, 0, 0, 0, 0, 5], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "FRANCIA", "2XL", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "FRANCIA", "3XL", 10, 0, 0, 0, 0, 10], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "FRANCIA", "L", 30, 0, 0, 0, 0, 30], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "FRANCIA", "XL", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "MELANGE", "2XL", 50, 0, 0, 0, 0, 50], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "MELANGE", "3XL", 10, 0, 0, 0, 0, 10], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "MELANGE", "M", 50, 0, 0, 0, 0, 50], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "MELANGE", "XL", 50, 0, 0, 0, 0, 50], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "GRIS TOPO", "2XL", 60, 0, 0, 0, 0, 60], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "GRIS TOPO", "3XL", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "GRIS TOPO", "L", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "GRIS TOPO", "M", 50, 0, 0, 0, 0, 50], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "GRIS TOPO", "S", 30, 0, 0, 0, 0, 30], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "GRIS TOPO", "XL", 60, 0, 0, 0, 0, 60], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NARANJA", "2XL", 10, 0, 0, 0, 0, 10], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NARANJA", "L", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NARANJA", "M", 30, 0, 0, 0, 0, 30], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NARANJA", "S", 10, 0, 0, 0, 0, 10], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NARANJA", "XL", 30, 0, 0, 0, 0, 30], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NEGRO", "2XL", 80, 0, 0, 0, 0, 80], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NEGRO", "3XL", 60, 0, 0, 0, 0, 60], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NEGRO", "4XL", 50, 0, 0, 0, 0, 50], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NEGRO", "5XL", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NEGRO", "L", 80, 0, 0, 0, 0, 80], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NEGRO", "M", 60, 0, 0, 0, 0, 60], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "NEGRO", "XL", 50, 0, 0, 0, 0, 50], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "ROJO", "XL", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "TURQUESA", "L", 10, 0, 0, 0, 0, 10], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "TURQUESA", "M", 5, 0, 0, 0, 3, 5], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "TURQUESA", "S", 5, 0, 0, 0, 1, 5], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "TURQUESA", "XL", 10, 0, 0, 0, 8, 10], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "VERDE BOTELLA", "2XL", 30, 0, 0, 0, 0, 30], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "VERDE BOTELLA", "4XL", 20, 0, 0, 0, 0, 20], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "VERDE BOTELLA", "5XL", 10, 0, 0, 0, 0, 10], [260, "09/03/2026", "VANATY", "URGENTE", "Campera Polar", "POLAR", "BEIGE", "S", 2, 0, 0, 0, 0, 2], [260, "09/03/2026", "VANATY", "URGENTE", "Campera Polar", "POLAR", "BEIGE", "M", 5, 0, 0, 0, 0, 5], [260, "09/03/2026", "VANATY", "URGENTE", "Campera Polar", "POLAR", "BEIGE", "L", 5, 0, 0, 0, 0, 5], [260, "09/03/2026", "VANATY", "URGENTE", "Campera Polar", "POLAR", "BEIGE", "XL", 8, 0, 0, 0, 0, 8], [260, "09/03/2026", "VANATY", "URGENTE", "Campera Polar", "POLAR", "BEIGE", "2XL", 5, 0, 0, 0, 0, 5], [261, "09/03/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "BEIGE", "S", 5, 0, 0, 0, 0, 5], [261, "09/03/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "BEIGE", "M", 8, 0, 0, 0, 0, 8], [261, "09/03/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "BEIGE", "L", 10, 0, 0, 0, 0, 10], [261, "09/03/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "BEIGE", "XL", 10, 0, 0, 0, 0, 10], [261, "09/03/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "BEIGE", "2XL", 10, 0, 0, 0, 0, 10], [262, "09/03/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "NEGRO", "2XL", 10, 0, 0, 0, 0, 10], [263, "09/03/2026", "VANATY", "STOCK", "Remeras", "JERSEY", "NEGRO", "2XL", 50, 0, 0, 0, 0, 50], [264, "09/03/2026", "VANATY", "URGENTE", "Remera M/L", "JERSEY", "MARINO", "S", 10, 0, 0, 0, 10, 10], [264, "09/03/2026", "VANATY", "URGENTE", "Remera M/L", "JERSEY", "MARINO", "M", 20, 0, 0, 0, 20, 20], [264, "09/03/2026", "VANATY", "URGENTE", "Remera M/L", "JERSEY", "MARINO", "L", 40, 0, 0, 0, 40, 40], [264, "09/03/2026", "VANATY", "URGENTE", "Remera M/L", "JERSEY", "MARINO", "XL", 40, 0, 0, 0, 38, 40], [264, "09/03/2026", "VANATY", "URGENTE", "Remera M/L", "JERSEY", "MARINO", "2XL", 20, 0, 0, 0, 19, 20], [264, "09/03/2026", "VANATY", "URGENTE", "Remera M/L", "JERSEY", "MARINO", "3XL", 10, 0, 0, 0, 10, 10], [264, "09/03/2026", "VANATY", "URGENTE", "Remera M/L", "JERSEY", "MARINO", "4XL", 5, 0, 0, 0, 5, 5], [265, "09/03/2026", "VANATY", "URGENTE", "Campera Polar", "POLAR", "BEIGE", "L", 1, 0, 0, 0, 1, 1], [265, "09/03/2026", "VANATY", "URGENTE", "Campera Polar", "POLAR", "BEIGE", "XL", 5, 0, 0, 0, 6, 5], [265, "09/03/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "BEIGE", "L", 1, 0, 0, 0, 30, 1], [265, "09/03/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "BEIGE", "XL", 4, 0, 0, 0, 10, 4], [266, "10/03/2026", "VANATY", "URGENTE", "Chaleco Polar", "POLAR", "MARINO", "XL", 12, 0, 0, 0, 17, 12], [267, "17/03/2026", "VANATY", "URGENTE", "Buzo Polar", "POLAR", "GRIS TOPO", "XL", 40, 0, 0, 0, 26, 40], [267, "17/03/2026", "VANATY", "URGENTE", "Buzo Polar", "POLAR", "GRIS TOPO", "L", 40, 0, 0, 0, 73, 40], [268, "17/03/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "MARINO", "L", 300, 0, 0, 0, 169, 300], [268, "17/03/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "MARINO", "XL", 300, 0, 0, 0, 126, 300], [268, "20/03/2026", "VANATY", "URGENTE", "Remeras", "JERSEY", "MARINO", "XL", 10, 0, 0, 0, 126, 10], [268, "20/03/2026", "VANATY", "URGENTE", "Chaleco Polar", "POLAR", "MARINO", "XL", 4, 0, 0, 0, 0, 4], [269, "20/03/2026", "VANATY", "URGENTE", "Chombas M/L", "PIQUE", "MARINO", "S", 5, 0, 0, 0, 0, 5], [269, "20/03/2026", "VANATY", "URGENTE", "Chombas M/L", "PIQUE", "MARINO", "M", 15, 0, 0, 0, 0, 15], [269, "20/03/2026", "VANATY", "URGENTE", "Chombas M/L", "PIQUE", "MARINO", "L", 20, 0, 0, 0, 0, 20], [269, "20/03/2026", "VANATY", "URGENTE", "Chombas M/L", "PIQUE", "MARINO", "XL", 10, 0, 0, 0, 0, 10], [269, "20/03/2026", "VANATY", "URGENTE", "Chombas M/L", "PIQUE", "MARINO", "2XL", 10, 0, 0, 0, 0, 10], [270, "20/03/2026", "VANATY", "URGENTE", "Chombas", "PIQUE", "BLANCO", "M", 5, 0, 0, 0, 28, 5], [271, "20/03/2026", "VANATY", "STOCK", "Chombas", "PIQUE", "BLANCO", "M", 20, 0, 0, 0, 18, 20], [272, "20/03/2026", "VANATY", "URGENTE", "Chombas M/L", "PIQUE", "MELANGE", "2XL", 6, 0, 0, 0, 0, 6], [273, "23/03/2026", "VANATY", "URGENTE", "Campera Polar", "POLAR", "NEGRO", "S", 2, 0, 0, 0, 0, 2], [274, "25/03/2026", "VANATY", "URGENTE", "Buzo Polar", "POLAR", "NEGRO", "XL", 20, 0, 0, 0, 0, 20], [275, "25/03/2026", "VANATY", "STOCK", "Buzo Polar", "POLAR", "NEGRO", "M", 100, 0, 0, 0, 0, 100], [275, "25/03/2026", "VANATY", "STOCK", "Buzo Polar", "POLAR", "NEGRO", "L", 150, 0, 0, 0, 0, 150], [275, "25/03/2026", "VANATY", "STOCK", "Buzo Polar", "POLAR", "NEGRO", "XL", 200, 0, 0, 0, 0, 200], [275, "25/03/2026", "VANATY", "STOCK", "Buzo Polar", "POLAR", "NEGRO", "2XL", 150, 0, 0, 0, 0, 150], [276, "25/03/2026", "VANATY", "URGENTE", "Chombas", "JERSEY", "MARINO", "S", 2, 0, 0, 0, 0, 2], [276, "25/03/2026", "VANATY", "URGENTE", "Chombas", "JERSEY", "MARINO", "M", 2, 0, 0, 0, 0, 2], [276, "25/03/2026", "VANATY", "URGENTE", "Chombas", "JERSEY", "MARINO", "L", 2, 0, 0, 0, 0, 2], [276, "25/03/2026", "VANATY", "URGENTE", "Chombas", "JERSEY", "MARINO", "XL", 3, 0, 0, 0, 0, 3], [1000, "02/02/2026", "CATALINA", "URGENTE", "Canguro", "FRIZA", "NEGRO", "L", 8, 0, 0, 0, 8, 8], [1000, "02/02/2026", "CATALINA", "URGENTE", "Canguro", "FRIZA", "NEGRO", "XL", 4, 0, 0, 0, 4, 4], [1001, "09/02/2026", "CATALINA", "URGENTE", "Remeras", "JERSEY", "NEGRO", "10 Ni\u00f1o", 2, 0, 0, 0, 2, 2], [1001, "10/02/2026", "CATALINA", "URGENTE", "Buzo 1/2 cierre", "FRIZA", "NEGRO", "XL", 1, 0, 0, 0, 1, 1], [1002, "23/02/2026", "CATALINA", "URGENTE", "Cuellos", "POLAR", "GRIS TOPO", "UNICO", 20, 0, 0, 0, 20, 20], [1002, "24/02/2026", "CATALINA", "URGENTE", "Remeras", "JERSEY", "MELANGE", "XL", 5, 0, 0, 0, 0, 5], [1003, "26/02/2026", "CATALINA", "URGENTE", "Chombas M/L", "PIQUE", "MARINO", "M", 1, 0, 0, 0, 0, 1], [1004, "03/03/2026", "CATALINA", "URGENTE", "Remeras", "JERSEY", "ROJO", "XL", 3, 0, 0, 0, 3, 3], [1005, "03/03/2026", "CATALINA", "URGENTE", "Remeras", "JERSEY", "NEGRO", "L", 2, 0, 0, 0, 0, 2], ["", "24/02/2026", "CATALINA", "", "Buzo Polar", "POLAR", "GRIS TOPO", "XL", 7, 0, 0, 0, 0, 7]];
+const PED_PORPED = [[96, "30/01/2026", "ENFOQUE", "IMPORTANTE", "Remeras", 30, 0, 0, 0, 0, 30], [97, "11/02/2026", "ENFOQUE", "IMPORTANTE", "Chombas", 37, 0, 0, 0, 0, 37], [98, "12/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L, Remeras", 16, 0, 0, 0, 0, 16], [99, "13/03/2026", "ENFOQUE", "IMPORTANTE", "Remera M/L", 26, 0, 0, 0, 0, 26], [100, "16/03/2026", "ENFOQUE", "IMPORTANTE", "Chombas", 10, 0, 0, 0, 0, 10], [101, "18/03/2026", "ENFOQUE", "IMPORTANTE", "Chombas", 20, 0, 0, 0, 0, 20], [236, "09/01/2026", "VANATY", "URGENTE", "Campera Polar", 5, 5, 5, 5, 5, 0], [237, "13/01/2026", "VANATY", "STOCK", "Cuellos", 1000, 0, 1000, 0, 159, 1000], [238, "14/01/2026", "VANATY", "URGENTE", "Buzo 1/2 cierre, Chombas, Remeras", 227, 77, 150, 150, 144, 150], [239, "16/01/2026", "VANATY", "URGENTE", "Remera M/L", 18, 18, 18, 18, 18, 0], [240, "23/01/2026", "VANATY", "URGENTE", "Remeras", 50, 32, 0, 0, 56, 18], [241, "23/01/2026", "VANATY", "STOCK", "Remeras", 920, 0, 0, 0, 245, 920], [242, "23/01/2026", "VANATY", "URGENTE", "Chombas", 10, 10, 0, 0, 10, 0], [243, "27/01/2026", "VANATY", "STOCK", "Remeras", 1580, 0, 0, 0, 547, 1580], [244, "28/01/2026", "VANATY", "STOCK", "Buzos Friza", 900, 0, 0, 0, 234, 900], [245, "29/01/2026", "VANATY", "URGENTE", "Buzo 1/2 cierre", 34, 0, 0, 0, 23, 34], [246, "29/01/2026", "VANATY", "URGENTE", "Chombas", 6, 0, 0, 0, 0, 6], [247, "11/02/2026", "VANATY", "URGENTE", "Remeras", 12, 0, 0, 0, 0, 12], [248, "26/02/2026", "VANATY", "URGENTE", "Chombas", 50, 0, 0, 0, 10, 50], [249, "27/02/2026", "VANATY", "STOCK", "Remeras", 740, 0, 0, 0, 298, 740], [250, "27/02/2026", "VANATY", "URGENTE", "Chombas, Remeras", 76, 0, 0, 0, 0, 76], [251, "27/02/2026", "VANATY", "STOCK", "Remeras", 700, 0, 0, 0, 124, 700], [252, "27/02/2026", "VANATY", "STOCK", "Remeras", 2310, 0, 0, 0, 159, 2310], [253, "27/02/2026", "VANATY", "STOCK", "Buzos Friza", 3130, 0, 0, 0, 22, 3130], [254, "27/02/2026", "VANATY", "URGENTE", "Buzos Friza", 1, 0, 0, 0, 0, 1], [255, "01/03/2026", "VANATY", "URGENTE", "Buzos Friza", 24, 0, 0, 0, 0, 24], [256, "01/03/2026", "VANATY", "URGENTE", "Remeras", 35, 0, 0, 0, 0, 35], [257, "05/03/2026", "VANATY", "URGENTE", "Chombas", 10, 0, 0, 0, 0, 10], [258, "05/03/2026", "VANATY", "STOCK", "Chombas", 80, 0, 0, 0, 38, 80], [259, "05/03/2026", "VANATY", "STOCK", "Chombas", 1645, 0, 0, 0, 12, 1645], [260, "09/03/2026", "VANATY", "URGENTE", "Campera Polar", 25, 0, 0, 0, 0, 25], [261, "09/03/2026", "VANATY", "URGENTE", "Remeras", 43, 0, 0, 0, 0, 43], [262, "09/03/2026", "VANATY", "URGENTE", "Remeras", 10, 0, 0, 0, 0, 10], [263, "09/03/2026", "VANATY", "STOCK", "Remeras", 50, 0, 0, 0, 0, 50], [264, "09/03/2026", "VANATY", "URGENTE", "Remera M/L", 145, 0, 0, 0, 142, 145], [265, "09/03/2026", "VANATY", "URGENTE", "Campera Polar, Remeras", 11, 0, 0, 0, 47, 11], [266, "10/03/2026", "VANATY", "URGENTE", "Chaleco Polar", 12, 0, 0, 0, 17, 12], [267, "17/03/2026", "VANATY", "URGENTE", "Buzo Polar", 80, 0, 0, 0, 99, 80], [268, "17/03/2026", "VANATY", "URGENTE", "Chaleco Polar, Remeras", 614, 0, 0, 0, 421, 614], [269, "20/03/2026", "VANATY", "URGENTE", "Chombas M/L", 60, 0, 0, 0, 0, 60], [270, "20/03/2026", "VANATY", "URGENTE", "Chombas", 5, 0, 0, 0, 28, 5], [271, "20/03/2026", "VANATY", "STOCK", "Chombas", 20, 0, 0, 0, 18, 20], [272, "20/03/2026", "VANATY", "URGENTE", "Chombas M/L", 6, 0, 0, 0, 0, 6], [273, "23/03/2026", "VANATY", "URGENTE", "Campera Polar", 2, 0, 0, 0, 0, 2], [274, "25/03/2026", "VANATY", "URGENTE", "Buzo Polar", 20, 0, 0, 0, 0, 20], [275, "25/03/2026", "VANATY", "STOCK", "Buzo Polar", 600, 0, 0, 0, 0, 600], [276, "25/03/2026", "VANATY", "URGENTE", "Chombas", 9, 0, 0, 0, 0, 9], [1000, "02/02/2026", "CATALINA", "URGENTE", "Canguro", 12, 0, 0, 0, 12, 12], [1001, "09/02/2026", "CATALINA", "URGENTE", "Buzo 1/2 cierre, Remeras", 3, 0, 0, 0, 3, 3], [1002, "23/02/2026", "CATALINA", "URGENTE", "Cuellos, Remeras", 25, 0, 0, 0, 20, 25], [1003, "26/02/2026", "CATALINA", "URGENTE", "Chombas M/L", 1, 0, 0, 0, 0, 1], [1004, "03/03/2026", "CATALINA", "URGENTE", "Remeras", 3, 0, 0, 0, 3, 3], [1005, "03/03/2026", "CATALINA", "URGENTE", "Remeras", 2, 0, 0, 0, 0, 2]];
+const PED_PORTIPO = [["Remeras", 7334, 32, 150, 150, 1963, 7302], ["Buzos Friza", 4055, 0, 0, 0, 256, 4055], ["Chombas", 1910, 12, 0, 0, 118, 1898], ["Cuellos", 1020, 0, 1000, 0, 179, 1020], ["Buzo Polar", 707, 0, 0, 0, 99, 707], ["Remera M/L", 198, 18, 18, 18, 160, 180], ["Buzo 1/2 cierre", 110, 75, 0, 0, 98, 35], ["Chombas M/L", 67, 0, 0, 0, 0, 67], ["Campera Polar", 38, 5, 5, 5, 12, 33], ["Chaleco Polar", 16, 0, 0, 0, 17, 16], ["Canguro", 12, 0, 0, 0, 12, 12]];
+const PED_PORMES = [[1, "Enero", 12, 52, 4780, 1441, 4638], [2, "Febrero", 13, 131, 7104, 648, 7104], [3, "Marzo", 28, 139, 3583, 825, 3583]];
+const PED_TOTALES = {"lineas": 323, "peds": 53, "prendas": 15467, "entregado": 2914, "falta": 15325};
+const PED_TIPOS = ["Buzo 1/2 cierre", "Buzo Polar", "Buzos Friza", "Campera Polar", "Canguro", "Chaleco Polar", "Chombas", "Chombas M/L", "Cuellos", "Remera M/L", "Remeras"];
+
+let currentPedTab = 'detalle';
+
+function initPedidos(){
+  // Llenar select de tipos
+  const sel = document.getElementById('ped-tipo-filter');
+  PED_TIPOS.forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; sel.appendChild(o); });
+  // Cards
+  const t = PED_TOTALES;
+  document.getElementById('ped-cards').innerHTML = `
+    <div class="card"><div class="card-top"><div class="card-icon" style="background:#f0f0ff">📋</div><span class="badge neutral">2026</span></div><h3>${t.peds}</h3><p>Pedidos únicos</p></div>
+    <div class="card"><div class="card-top"><div class="card-icon" style="background:#f0fff4">👕</div><span class="badge up">Total</span></div><h3>${t.prendas.toLocaleString('es-AR')}</h3><p>Prendas pedidas</p></div>
+    <div class="card"><div class="card-top"><div class="card-icon" style="background:#dcfce7">🚚</div><span class="badge up">Entregado</span></div><h3>${t.entregado.toLocaleString('es-AR')}</h3><p>Prendas entregadas</p></div>
+    <div class="card"><div class="card-top"><div class="card-icon" style="background:#fee2e2">⏳</div><span class="badge down">Pendiente</span></div><h3>${t.falta.toLocaleString('es-AR')}</h3><p>Prendas que faltan</p></div>
+  `;
+  renderPedidos();
+}
+
+function setPedTab(tab, el){
+  currentPedTab = tab;
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['detalle','porped','portipo','pormes'].forEach(id=>{
+    document.getElementById('ptab-'+id).style.display = id===tab ? 'block' : 'none';
+  });
+  renderPedidos();
+}
+
+function filtrarDetalle(){
+  const q = (document.getElementById('ped-search').value||'').toLowerCase();
+  const car = (document.getElementById('ped-caracter').value||'').toUpperCase();
+  const tipo = document.getElementById('ped-tipo-filter').value||'';
+  return PED_DATA.filter(r=>{
+    const matchQ = !q || String(r[0]).includes(q) || r[2].toLowerCase().includes(q) || r[4].toLowerCase().includes(q) || r[6].toLowerCase().includes(q);
+    const matchC = !car || r[3].toUpperCase() === car;
+    const matchT = !tipo || r[4] === tipo;
+    return matchQ && matchC && matchT;
+  });
+}
+
+function renderPedidos(){
+  if(currentPedTab==='detalle'){
+    const rows = filtrarDetalle();
+    document.getElementById('det-count').textContent = rows.length;
+    const chars = {URGENTE:'urgente',STOCK:'pendiente',IMPORTANTE:'proceso'};
+    let html = '';
+    rows.forEach(r=>{
+      const falta = r[13];
+      const fc = falta===0?'color:#16a34a':'color:#dc2626';
+      const cs = chars[r[3]]||'inactivo';
+      const bg = r[3]==='URGENTE'?' style="background:#fff5f5"':'';
+      html += `<tr${bg}><td><strong>${r[0]}</strong></td><td>${r[1]}</td><td>${r[2]}</td>
+        <td><span class="status ${cs}">${r[3]}</span></td>
+        <td>${r[4]}</td><td>${r[5]}</td><td>${r[6]}</td><td>${r[7]}</td>
+        <td style="text-align:center">${r[8].toLocaleString('es-AR')}</td>
+        <td style="text-align:center">${r[9]}</td><td style="text-align:center">${r[10]}</td>
+        <td style="text-align:center">${r[11]}</td><td style="text-align:center">${r[12]}</td>
+        <td style="text-align:center;font-weight:600;${fc}">${falta}</td></tr>`;
+    });
+    document.getElementById('tbody-detalle').innerHTML = html || '<tr><td colspan="14" style="text-align:center;color:#9ca3af;padding:20px">Sin resultados</td></tr>';
+  }
+  else if(currentPedTab==='porped'){
+    const q = (document.getElementById('ped-search').value||'').toLowerCase();
+    const car = (document.getElementById('ped-caracter').value||'').toUpperCase();
+    const chars = {URGENTE:'urgente',STOCK:'pendiente',IMPORTANTE:'proceso'};
+    let html='';
+    PED_PORPED.filter(r=>{
+      return (!q||String(r[0]).includes(q)||r[2].toLowerCase().includes(q)||r[4].toLowerCase().includes(q))&&(!car||r[3].toUpperCase()===car);
+    }).forEach(r=>{
+      const pct = r[5]>0?Math.round(r[9]/r[5]*100):0;
+      const pctCol = pct>=80?'#16a34a':pct>=40?'#ca8a04':'#dc2626';
+      const cs = chars[r[3]]||'inactivo';
+      html+=`<tr><td><strong>${r[0]}</strong></td><td>${r[1]}</td><td>${r[2]}</td>
+        <td><span class="status ${cs}">${r[3]}</span></td><td style="font-size:11px">${r[4]}</td>
+        <td style="text-align:center;font-weight:600">${r[5].toLocaleString('es-AR')}</td>
+        <td style="text-align:center">${r[6]}</td><td style="text-align:center">${r[7]}</td>
+        <td style="text-align:center">${r[8]}</td><td style="text-align:center">${r[9]}</td>
+        <td style="text-align:center;color:#dc2626;font-weight:600">${r[10]}</td>
+        <td style="text-align:center"><span style="font-weight:700;color:${pctCol}">${pct}%</span></td></tr>`;
+    });
+    document.getElementById('tbody-porped').innerHTML = html||'<tr><td colspan="12" style="text-align:center;color:#9ca3af;padding:20px">Sin resultados</td></tr>';
+  }
+  else if(currentPedTab==='portipo'){
+    let html='';
+    PED_PORTIPO.forEach((r,i)=>{
+      const pct = r[1]>0?Math.round(r[5]/r[1]*100):0;
+      const pctCol = pct>=80?'#16a34a':pct>=40?'#ca8a04':'#dc2626';
+      const bg = i%2===0?'#f8f9ff':'#ffffff';
+      html+=`<tr style="background:${bg}"><td style="font-weight:600">${r[0]}</td>
+        <td style="text-align:center;font-weight:700">${r[1].toLocaleString('es-AR')}</td>
+        <td style="text-align:center">${r[2]}</td><td style="text-align:center">${r[3]}</td>
+        <td style="text-align:center">${r[4]}</td>
+        <td style="text-align:center;color:#16a34a;font-weight:600">${r[5].toLocaleString('es-AR')}</td>
+        <td style="text-align:center;color:#dc2626;font-weight:600">${r[6].toLocaleString('es-AR')}</td>
+        <td style="text-align:center"><span style="font-weight:700;color:${pctCol}">${pct}%</span>
+          <div style="background:#f3f4f6;border-radius:4px;height:5px;margin-top:3px"><div style="background:${pctCol};height:5px;border-radius:4px;width:${pct}%"></div></div>
+        </td></tr>`;
+    });
+    // Totales
+    const tot = PED_TOTALES;
+    const pctTot = tot.prendas>0?Math.round(tot.entregado/tot.prendas*100):0;
+    html+=`<tr style="background:#1a1f36"><td style="color:#fff;font-weight:700">TOTAL</td>
+      <td style="text-align:center;color:#fff;font-weight:700">${tot.prendas.toLocaleString('es-AR')}</td>
+      <td colspan="3"></td>
+      <td style="text-align:center;color:#4ade80;font-weight:700">${tot.entregado.toLocaleString('es-AR')}</td>
+      <td style="text-align:center;color:#f87171;font-weight:700">${tot.falta.toLocaleString('es-AR')}</td>
+      <td style="text-align:center;color:#fff;font-weight:700">${pctTot}%</td></tr>`;
+    document.getElementById('tbody-portipo').innerHTML = html;
+  }
+  else if(currentPedTab==='pormes'){
+    let html='';
+    PED_PORMES.forEach((r,i)=>{
+      const pct = r[4]>0?Math.round(r[5]/r[4]*100):0;
+      const pctCol = pct>=80?'#16a34a':pct>=40?'#ca8a04':'#dc2626';
+      const bg = i%2===0?'#f8f9ff':'#ffffff';
+      html+=`<tr style="background:${bg}">
+        <td style="text-align:center;font-weight:600">${r[0]}</td>
+        <td style="font-weight:600">${r[1].toUpperCase()}</td>
+        <td style="text-align:center">${r[2]}</td><td style="text-align:center">${r[3]}</td>
+        <td style="text-align:center;font-weight:700">${r[4].toLocaleString('es-AR')}</td>
+        <td style="text-align:center;color:#16a34a;font-weight:600">${r[5].toLocaleString('es-AR')}</td>
+        <td style="text-align:center;color:#dc2626;font-weight:600">${r[6].toLocaleString('es-AR')}</td>
+        <td style="text-align:center"><span style="font-weight:700;color:${pctCol}">${pct}%</span></td></tr>`;
+    });
+    document.getElementById('tbody-pormes').innerHTML = html;
+  }
+}
+
+function exportarPedidosCSV(){
+  const rows = filtrarDetalle();
+  const headers = ['Nº Ped','Fecha','Cliente','Carácter','Tipo','Tela','Color','Talle','Cantidad','Tizada','Costura','Recibido','Entregado','Falta'];
+  let csv = headers.join(',')+'\n';
+  rows.forEach(r=>{ csv += r.map(v=>'"'+String(v)+'"').join(',')+'\n'; });
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'pedidos_2026.csv';
+  a.click();
+  showToast('✅ CSV exportado correctamente');
+}
+
+const titles={inicio:'Panel Principal',configuraciones:'Configuraciones',clientes:'Clientes',proveedores:'Proveedores',presupuestos:'Presupuestos',pagos:'Pagos y Cobros',reportes:'Reportes',pedidos:'Pedidos',tizadas:'Tizadas / Corte',costura:'Costura',entregas:'Entregas',materiales:'Materiales / Telas','nueva-venta':'Nueva Venta',productos:'Productos',stock:'Stock'};
+function nav(id,el){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));document.getElementById('sec-'+id).classList.add('active');if(el)el.classList.add('active');else document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'"))n.classList.add('active');});document.getElementById('page-title').textContent=titles[id]||id;}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');showToast('✅ Guardado correctamente');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
+let cart={};
+function addToCart(el,name,price){if(!cart[name])cart[name]={price,qty:0};cart[name].qty++;renderCart();el.classList.add('selected');setTimeout(()=>el.classList.remove('selected'),300);}
+function renderCart(){const items=Object.entries(cart);if(!items.length){document.getElementById('cart-items').innerHTML='<div class="ticket-empty">Seleccioná un producto</div>';document.getElementById('cart-total').style.display='none';return;}let html='',total=0;items.forEach(([name,{price,qty}])=>{total+=price*qty;html+=`<div class="ticket-item"><span>${name} x${qty}</span><span style="font-weight:600">$${(price*qty).toLocaleString('es-AR')}</span></div>`;});document.getElementById('cart-items').innerHTML=html;document.getElementById('cart-total').style.display='flex';document.getElementById('total-amount').textContent='$'+total.toLocaleString('es-AR');}
+function clearCart(){cart={};renderCart();}
+function finalizarVenta(){if(!Object.keys(cart).length){showToast('⚠️ Agregá productos al ticket');return;}clearCart();showToast('✅ Venta registrada con éxito');}
+
+// ===== COSTURA DATA =====
+const COS_DET = [["CINTIA", "", "-", "Buzos Friza", "FRIZA", "GRIS MELANGE", "3XL", 10, 0, 10, 750, 7500.0, 7500.0], ["SOLE", "", "-", "Buzos Friza", "FRIZA", "MARRON", "XL", 2, 0, 2, 1, 2.0, 2.0], ["HUGO", "", "-", "Remeras", "JERSEY", "GRIS MELANGE", "M", 40, 0, 40, 1, 40.0, 40.0], ["HUGO", "", "-", "Remeras", "JERSEY", "GRIS MELANGE", "2XL", 65, 0, 65, 1, 65.0, 65.0], ["HUGO", "", "-", "Remeras", "JERSEY", "GRIS MELANGE", "L", 65, 0, 65, 1, 65.0, 65.0], ["HUGO", "", "-", "Remeras", "JERSEY", "GRIS MELANGE", "3XL", 20, 0, 20, 1, 20.0, 20.0], ["HUGO", "", "-", "Remeras", "JERSEY", "GRIS MELANGE", "S", 21, 0, 21, 1, 21.0, 21.0], ["GRISELDA", "", "-", "Remeras", "JERSEY", "GRIS MELANGE", "XL", 65, 0, 65, 3000, 195000.0, 195000.0], ["GRISELDA", "", "-", "Remeras", "JERSEY", "GRIS TOPO", "XL", 24, 0, 24, 3000, 72000.0, 72000.0], ["GRISELDA", "", "-", "Remeras", "JERSEY", "GRIS TOPO", "3XL", 12, 0, 12, 3000, 36000.0, 36000.0], ["GRISELDA", "", "-", "Remeras", "JERSEY", "GRIS TOPO", "XL", 10, 0, 10, 3000, 30000.0, 30000.0], ["SOLE", "", "-", "Campera Friza", "FRIZA", "GRIS TOPO", "M", 4, 0, 4, 7, 28.0, 28.0], ["SOLE", "", "-", "Campera Friza", "FRIZA", "GRIS TOPO", "L", 8, 0, 8, 7, 56.0, 56.0], ["BENITO", "", "-", "Buzo Polar", "POLAR", "MARINO", "M", 7, 0, 7, 1, 7.0, 7.0], ["BENITO", "", "-", "Buzo Polar", "POLAR", "MARINO", "L", 7, 0, 7, 1, 7.0, 7.0], ["BENITO", "", "-", "Buzo Polar", "POLAR", "MARINO", "XL", 7, 0, 7, 1, 7.0, 7.0], ["BENITO", "", "-", "Buzo Polar", "POLAR", "MARINO", "2XL", 7, 0, 7, 1, 7.0, 7.0], ["BENITO", "", "-", "Buzo Polar", "POLAR", "NEGRO", "M", 6, 0, 6, 1, 6.0, 6.0], ["BENITO", "", "-", "Buzo Polar", "POLAR", "NEGRO", "L", 6, 0, 6, 1, 6.0, 6.0], ["BENITO", "", "-", "Buzo Polar", "POLAR", "NEGRO", "XL", 6, 0, 6, 1, 6.0, 6.0], ["BENITO", "", "-", "Buzo Polar", "POLAR", "NEGRO", "2XL", 6, 0, 6, 1, 6.0, 6.0], ["BENITO", "", "-", "Buzo Polar", "POLAR", "GRIS TOPO", "M", 6, 0, 6, 1, 6.0, 6.0], ["BENITO", "", "-", "Buzo Polar", "POLAR", "GRIS TOPO", "L", 6, 0, 6, 1, 6.0, 6.0], ["BENITO", "", "-", "Buzo Polar", "POLAR", "GRIS TOPO", "XL", 6, 0, 6, 1, 6.0, 6.0], ["BENITO", "", "-", "Buzo Polar", "POLAR", "GRIS TOPO", "2XL", 6, 0, 6, 1, 6.0, 6.0], ["TIA LILI", "", "-", "Buzos Friza", "FRIZA", "MARINO", "L", 20, 0, 20, 1, 20.0, 20.0], ["TIA LILI", "", "-", "Buzos Friza", "FRIZA", "MARINO", "XL", 5, 0, 5, 1, 5.0, 5.0], ["TIA LILI", "", "-", "Buzos Friza", "FRIZA", "MARINO", "4XL", 1, 0, 1, 1, 1.0, 1.0], ["TIA LILI", "", "-", "Buzos Friza", "FRIZA", "MARINO", "3XL", 1, 0, 1, 1, 1.0, 1.0], ["TIA LILI", "", "-", "Buzos Friza", "FRIZA", "MARINO", "5XL", 1, 0, 1, 1, 1.0, 1.0], ["SOLE", "", "-", "Chombas", "PIQUE", "MARINO", "2XL", 1, 0, 1, 1, 1.0, 1.0], ["HUGO", "", "-", "Chombas", "PIQUE", "NARANJA", "M", 11, 0, 11, 850, 9350.0, 9350.0], ["HUGO", "", "-", "Chombas", "PIQUE", "NARANJA", "3XL", 11, 0, 11, 850, 9350.0, 9350.0], ["HUGO", "", "-", "Chombas", "PIQUE", "MARINO", "2XL", 17, 0, 17, 850, 14450.0, 14450.0], ["HUGO", "", "-", "Chombas", "PIQUE", "MARINO", "XL", 18, 0, 18, 850, 15300.0, 15300.0], ["HUGO", "", "-", "Chombas", "PIQUE", "MARINO", "M", 10, 0, 10, 850, 8500.0, 8500.0], ["HUGO", "", "-", "Chombas", "PIQUE", "MARINO", "3XL", 10, 0, 10, 850, 8500.0, 8500.0], ["HUGO", "", "-", "Chombas", "PIQUE", "MARINO", "XL", 18, 0, 18, 850, 15300.0, 15300.0], ["HUGO", "", "-", "Chombas", "PIQUE", "MARINO", "2XL", 18, 0, 18, 850, 15300.0, 15300.0], ["GRISELDA", "", "-", "Remeras", "JERSEY", "MARINO", "2XL", 31, 0, 31, 3000, 93000.0, 93000.0], ["GRISELDA", "", "-", "Remeras", "JERSEY", "NEGRO", "L", 31, 0, 31, 3000, 93000.0, 93000.0], ["GRISELDA", "", "-", "Remeras", "JERSEY", "NEGRO", "XL", 31, 0, 31, 3000, 93000.0, 93000.0], ["GRISELDA", "", "-", "Remeras", "JERSEY", "NEGRO", "2XL", 33, 0, 33, 3000, 99000.0, 99000.0], ["CINTIA", "", "-", "Buzo canguro", "FRIZA", "MARINO", "L", 2, 0, 2, 1, 2.0, 2.0], ["CINTIA", "", "-", "Buzo canguro", "FRIZA", "NEGRO", "2XL", 2, 0, 2, 1, 2.0, 2.0], ["GRISELDA", "", "-", "Joggins", "FRIZA", "MARINO", "6", 2, 0, 2, 0, 0.0, 0.0], ["TIA LILI", "", "-", "Campera canguro", "FRIZA", "ROJO", "S", 1, 0, 1, 1, 1.0, 1.0], ["TIA LILI", "", "-", "Campera canguro", "FRIZA", "ROJO", "M", 2, 0, 2, 1, 2.0, 2.0], ["TIA LILI", "", "-", "Campera canguro", "FRIZA", "ROJO", "L", 2, 0, 2, 1, 2.0, 2.0], ["TIA LILI", "", "-", "Campera canguro", "FRIZA", "ROJO", "XL", 1, 0, 1, 1, 1.0, 1.0], ["TIA LILI", "", "-", "Campera canguro", "FRIZA", "ROJO", "2XL", 1, 0, 1, 1, 1.0, 1.0], ["TIA LILI", "", "-", "Campera Polar", "POLAR", "GRIS PERLA", "XL", 4, 0, 4, 1, 4.0, 4.0], ["TIA LILI", "", "-", "Buzos Friza", "FRIZA", "MARINO", "2XL", 22, 0, 22, 1, 22.0, 22.0], ["TIA LILI", "", "-", "Buzos Friza", "FRIZA", "MARINO", "2XL", 11, 0, 11, 1, 11.0, 11.0], ["CINTIA", "", "-", "Buzos Friza", "FRIZA", "MARINO", "XL", 44, 0, 44, 750, 33000.0, 33000.0], ["CINTIA", "", "-", "Buzos Friza", "FRIZA", "MARINO", "2XL", 11, 0, 11, 750, 8250.0, 8250.0], ["SOLE", "", "-", "Campera canguro", "FRIZA", "NEGRO", "2XL", 3, 0, 3, 1, 3.0, 3.0], ["SOLE", "", "-", "Campera canguro", "FRIZA", "NEGRO", "L", 6, 0, 6, 1, 6.0, 6.0], ["SOLE", "", "-", "Campera canguro", "FRIZA", "NEGRO", "XL", 8, 0, 8, 1, 8.0, 8.0], ["SOLE", "", "-", "Campera canguro", "FRIZA", "NEGRO", "M", 8, 0, 8, 1, 8.0, 8.0], ["SOLE", "", "-", "Campera canguro", "FRIZA", "NEGRO", "S", 2, 0, 2, 1, 2.0, 2.0], ["SOLE", "", "-", "Campera canguro", "FRIZA", "GRIS TOPO", "S", 1, 0, 1, 1, 1.0, 1.0], ["SOLE", "", "-", "Campera canguro", "FRIZA", "GRIS TOPO", "3XL", 2, 0, 2, 1, 2.0, 2.0], ["HUGO", "", "-", "Chombas", "PIQUE", "MARINO", "L", 18, 0, 18, 850, 15300.0, 15300.0], ["HUGO", "", "-", "Chombas", "PIQUE", "MARINO", "S", 10, 0, 10, 850, 8500.0, 8500.0], ["HUGO", "", "-", "Chombas", "PIQUE", "MARINO", "L", 18, 0, 18, 850, 15300.0, 15300.0], ["HUGO", "", "-", "Chombas", "PIQUE", "FRANCIA", "2XL", 19, 0, 19, 850, 16150.0, 16150.0], ["HUGO", "", "-", "Chombas", "PIQUE", "FRANCIA", "3XL", 16, 0, 16, 850, 13600.0, 13600.0], ["HUGO", "", "-", "Chombas", "PIQUE", "FRANCIA", "S", 16, 0, 16, 850, 13600.0, 13600.0], ["HUGO", "", "-", "Chombas", "PIQUE", "FRANCIA", "M", 18, 0, 18, 850, 15300.0, 15300.0], ["HUGO", "", "-", "Chombas", "PIQUE", "FRANCIA", "XL", 19, 0, 19, 850, 16150.0, 16150.0], ["HUGO", "", "-", "Chombas", "PIQUE", "FRANCIA", "L", 19, 0, 19, 850, 16150.0, 16150.0], ["BENITO", "", "-", "Remeras", "JERSEY", "NEGRO", "XL", 58, 0, 58, 1, 58.0, 58.0], ["BENITO", "", "-", "Remeras", "JERSEY", "NEGRO", "L", 33, 0, 33, 1, 33.0, 33.0], ["BENITO", "", "-", "Remeras", "JERSEY", "NEGRO", "2XL", 31, 0, 31, 1, 31.0, 31.0], ["BENITO", "", "-", "Remeras", "JERSEY", "NEGRO", "3XL", 12, 0, 12, 1, 12.0, 12.0], ["BENITO", "", "-", "Buzos Friza", "FRIZA", "MARINO", "3XL", 20, 0, 20, 1, 20.0, 20.0], ["BENITO", "", "-", "Buzos Friza", "FRIZA", "MARINO", "L", 20, 0, 20, 1, 20.0, 20.0], ["BENITO", "", "-", "Buzos Friza", "FRIZA", "MARINO", "M", 20, 0, 20, 1, 20.0, 20.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "ROJO", "L", 19, 0, 19, 750, 14250.0, 14250.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "ROJO", "XL", 19, 0, 19, 750, 14250.0, 14250.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "ROJO", "2XL", 19, 0, 19, 750, 14250.0, 14250.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "GRIS TOPO", "S", 17, 0, 17, 750, 12750.0, 12750.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "GRIS TOPO", "M", 17, 0, 17, 750, 12750.0, 12750.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "GRIS TOPO", "3XL", 17, 0, 17, 750, 12750.0, 12750.0], ["CINTIA", "", "-", "Buzos Friza", "FRIZA", "MARINO", "M", 19, 0, 19, 750, 14250.0, 14250.0], ["CINTIA", "", "-", "Buzos Friza", "FRIZA", "MARINO", "L", 19, 0, 19, 750, 14250.0, 14250.0], ["CINTIA", "", "-", "Buzos Friza", "FRIZA", "MARINO", "XL", 20, 0, 20, 750, 15000.0, 15000.0], ["CINTIA", "", "-", "Buzos Friza", "FRIZA", "MARINO", "L", 10, 0, 10, 750, 7500.0, 7500.0], ["CINTIA", "", "-", "Buzos Friza", "FRIZA", "BLANCO", "4XL", 5, 0, 5, 750, 3750.0, 3750.0], ["GRISELDA", "", "-", "Chombas M/L", "PIQUE", "BLANCO", "M", 12, 0, 12, 550, 6600.0, 6600.0], ["GRISELDA", "", "-", "Chombas M/L", "PIQUE", "BLANCO", "XL", 6, 0, 6, 550, 3300.0, 3300.0], ["HUGO", "", "-", "Chombas", "PIQUE", "GRIS MELANGE", "L", 48, 0, 48, 850, 40800.0, 40800.0], ["HUGO", "", "-", "Chombas", "PIQUE", "GRIS MELANGE", "2XL", 48, 0, 48, 850, 40800.0, 40800.0], ["HUGO", "", "-", "Chombas", "PIQUE", "GRIS MELANGE", "3XL", 22, 0, 22, 850, 18700.0, 18700.0], ["GRISELDA", "", "-", "Remeras", "JERSEY", "NEGRO", "XL", 24, 0, 24, 3000, 72000.0, 72000.0], ["GRISELDA", "", "-", "Remeras", "JERSEY", "NEGRO", "3XL", 12, 0, 12, 3000, 36000.0, 36000.0], ["GRISELDA", "", "-", "Campera canguro", "FRIZA", "GRIS TOPO", "S", 5, 0, 5, 0, 0.0, 0.0], ["GRISELDA", "", "-", "Campera canguro", "FRIZA", "GRIS TOPO", "L", 10, 0, 10, 0, 0.0, 0.0], ["GRISELDA", "", "-", "Campera canguro", "FRIZA", "GRIS TOPO", "XL", 5, 0, 5, 0, 0.0, 0.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "NEGRO", "M", 17, 0, 17, 750, 12750.0, 12750.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "NEGRO", "M", 19, 0, 19, 750, 14250.0, 14250.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "NEGRO", "3XL", 36, 0, 36, 750, 27000.0, 27000.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "NEGRO", "S", 53, 0, 53, 750, 39750.0, 39750.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "NEGRO", "4XL", 1, 0, 1, 750, 750.0, 750.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "GRIS TOPO", "XL", 41, 0, 41, 750, 30750.0, 30750.0], ["HUGO", "", "-", "Chombas", "PIQUE", "GRIS MELANGE", "XL", 48, 0, 48, 850, 40800.0, 40800.0], ["HUGO", "", "-", "Chombas", "PIQUE", "NARANJA", "S", 11, 0, 11, 850, 9350.0, 9350.0], ["HUGO", "", "-", "Chombas", "PIQUE", "NEGRO", "L", 40, 0, 40, 850, 34000.0, 34000.0], ["HUGO", "", "-", "Chombas", "PIQUE", "NEGRO", "XL", 40, 0, 40, 850, 34000.0, 34000.0], ["HUGO", "", "-", "Chombas", "PIQUE", "NEGRO", "2XL", 40, 0, 40, 850, 34000.0, 34000.0], ["SOLE", "", "-", "Chombas", "JERSEY", "NEGRO", "2XL", 5, 0, 5, 1, 5.0, 5.0], ["SOLE", "", "-", "Buzos Friza", "FRIZA", "MARINO", "5XL", 3, 0, 3, 1, 3.0, 3.0], ["BENITO", "", "-", "Buzos Friza", "FRIZA", "MARINO", "XL", 22, 0, 22, 1, 22.0, 22.0], ["BENITO", "", "-", "Buzos Friza", "FRIZA", "MARINO", "4XL", 22, 0, 22, 1, 22.0, 22.0], ["BENITO", "", "-", "Buzos Friza", "FRIZA", "MARINO", "2XL", 16, 0, 16, 1, 16.0, 16.0], ["BENITO", "", "-", "Buzos Friza", "FRIZA", "MARINO", "S", 16, 0, 16, 1, 16.0, 16.0], ["BENITO", "", "-", "Buzos Friza", "FRIZA", "MARINO", "XL", 44, 0, 44, 1, 44.0, 44.0], ["SOLE", "", "-", "Musculosa", "JERSEY", "NEGRO", "M", 2, 0, 2, 1, 2.0, 2.0], ["SOLE", "", "-", "Musculosa", "JERSEY", "ROJO", "M", 1, 0, 1, 1, 1.0, 1.0], ["SOLE", "", "-", "Chombas", "PIQUE", "BLANCO", "6XL", 4, 0, 4, 1, 4.0, 4.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "GRIS MELANGE", "S", 33, 0, 33, 750, 24750.0, 24750.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "GRIS MELANGE", "XL", 12, 0, 12, 750, 9000.0, 9000.0], ["TIA LILI", "", "-", "Chombas", "PIQUE", "GRIS TOPO", "2XL", 41, 0, 41, 750, 30750.0, 30750.0], ["TIA LILI", "", "-", "Remeras", "PIQUE", "FRANCIA", "M", 33, 0, 33, 1, 33.0, 33.0], ["TIA LILI", "", "-", "Remeras", "PIQUE", "FRANCIA", "XL", 33, 0, 33, 1, 33.0, 33.0], ["SOLE", "", "-", "Delantal", "GABARDINA", "BLANCO", "", 10, 0, 10, 1, 10.0, 10.0], ["CINTIA", "", "-", "Buzos Friza", "FRIZA", "MARINO", "XL", 10, 0, 10, 750, 7500.0, 7500.0], ["CINTIA", "", "-", "Buzos Friza", "FRIZA", "MARINO", "3XL", 19, 0, 19, 750, 14250.0, 14250.0], ["CINTIA", "", "-", "Buzos Friza", "FRIZA", "MARINO", "4XL", 10, 0, 10, 750, 7500.0, 7500.0], ["HUGO", "", "38", "Chombas", "PIQUE", "GRIS TOPO", "L", 41, 0, 41, 850, 34850.0, 34850.0], ["HUGO", "", "38", "Chombas", "PIQUE", "GRIS TOPO", "XL", 41, 0, 41, 850, 34850.0, 34850.0], ["HUGO", "", "38", "Chombas", "PIQUE", "GRIS MELANGE", "M", 48, 0, 48, 850, 40800.0, 40800.0], ["GRISELDA", "", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "S", 30, 0, 30, 2800, 84000.0, 84000.0], ["GRISELDA", "", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "3XL", 54, 0, 54, 2800, 151200.0, 151200.0], ["GRISELDA", "", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "2XL", 60, 0, 60, 2800, 168000.0, 168000.0], ["BENITO", "", "39", "Remeras", "JERSEY", "FRANCIA", "3XL", 33, 0, 33, 1, 33.0, 33.0], ["BENITO", "", "39", "Remeras", "JERSEY", "FRANCIA", "4XL", 29, 0, 29, 1, 29.0, 29.0], ["BENITO", "", "39", "Remeras", "JERSEY", "FRANCIA", "S", 33, 0, 33, 1, 33.0, 33.0], ["BENITO", "", "39", "Remeras", "JERSEY", "FRANCIA", "2XL", 33, 0, 33, 1, 33.0, 33.0], ["BENITO", "", "39", "Remeras", "JERSEY", "FRANCIA", "L", 33, 0, 33, 1, 33.0, 33.0], ["BENITO", "", "39", "Remeras", "JERSEY", "GRIS TOPO", "XL", 34, 0, 34, 1, 34.0, 34.0], ["BENITO", "", "39", "Remeras", "JERSEY", "GRIS TOPO", "4XL", 23, 0, 23, 1, 23.0, 23.0], ["BENITO", "", "39", "Remeras", "JERSEY", "GRIS TOPO", "M", 34, 0, 34, 1, 34.0, 34.0], ["BENITO", "", "39", "Remeras", "JERSEY", "GRIS TOPO", "L", 34, 0, 34, 1, 34.0, 34.0], ["HUGO", "", "168", "Remeras", "JERSEY", "BLANCO", "S", 20, 0, 20, 1, 20.0, 20.0], ["HUGO", "", "168", "Remeras", "JERSEY", "BLANCO", "M", 30, 0, 30, 1, 30.0, 30.0], ["HUGO", "", "168", "Remeras", "JERSEY", "BLANCO", "L", 30, 0, 30, 1, 30.0, 30.0], ["HUGO", "", "168", "Remeras", "JERSEY", "BLANCO", "XL", 30, 0, 30, 1, 30.0, 30.0], ["SOLE", "CATALINA", "1", "Musculosa", "JERSEY", "NEGRO", "XL", 3, 0, 3, 1, 3.0, 3.0]];
+const COS_RESUMEN = [["BENITO", "ACTIVO", 3999, 1910, 2089, 2173379, 0, 2173379, 252], ["CINTIA", "ACTIVO", 477, 0, 477, 354754, 0, 354754, 31], ["GRISELDA", "ACTIVO", 3599, 2243, 1356, 9282250, 0, 9282250, 188], ["HUGO", "ACTIVO", 8210, 5360, 2850, 1832030, 4250, 1827780, 380], ["JUANA", "ACTIVO", 248, 248, 0, 248, 0, 248, 21], ["LILIANA", "ACTIVO", 721, 632, 89, 910, 0, 910, 60], ["MARIANO", "BAJA", 404, 404, 0, 404, 0, 404, 33], ["PATRICIA", "ACTIVO", 475, 475, 0, 18888, 0, 18888, 35], ["SOLE", "ACTIVO", 1373, 836, 537, 5598, 0, 5598, 209], ["TIA LILI", "ACTIVO", 2799, 1497, 1302, 278140, 0, 278140, 158]];
+const COSTOS_LISTA = [["Chombas", 900, 700, 1200, 1000, 0, 0, 0, 0, 0, 0, 250], ["Chombas M/L", 950, 750, 0, 850, 0, 0, 0, 0, 0, 0, 0], ["remera m/l", 550, 0, 0, 600, 0, 0, 0, 0, 0, 0, 0], ["Remeras", 700, 500, 850, 550, 0, 0, 0, 0, 0, 0, 180], ["buzo polar", 3000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 650], ["Chaleco Polar", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 680], ["Campera Polar", 0, 0, 3500, 0, 0, 0, 0, 0, 0, 0, 680], ["Buzos Friza", 1100, 0, 0, 700, 0, 0, 0, 0, 750, 500, 240], ["Buzo canguro", 2800, 0, 0, 0, 0, 0, 0, 0, 750, 0, 0], ["Buzo friza 1/2 cierre", 2500, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], ["arreglo", 200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200], ["Musculosa", 0, 0, 0, 0, 700, 0, 0, 0, 0, 0, 0], ["Joggins", 1500, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], ["Chomba Colegio", 0, 0, 0, 1200, 0, 0, 0, 0, 0, 0, 0]];
+const COSTUREROS = ["GRISELDA", "TIA LILI", "BENITO", "HUGO", "SOLE", "LILIANA", "JUANA", "YOLANDA", "CINTIA", "PATRICIA", "SILVANA"];
+// cos_det cols: [costurero, cliente, pedido, tipo, tela, color, talle, entregado, recibido, falta, costo_u, costo_tot, a_pagar]
+
+// ===== ENTREGAS DATA =====
+const ENT_DET = [["02/01/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "M", 66, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "L", 53, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "2XL", 34, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Chombas", "PIQUE", "VERDE BOTELLA", "M", 20, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Chombas", "PIQUE", "VERDE BOTELLA", "2XL", 19, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "S", 17, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "M", 37, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "L", 15, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "XL", 50, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Chombas", "PIQUE", "BORDO", "L", 11, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Chombas", "PIQUE", "BORDO", "XL", 11, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Chombas", "PIQUE", "BORDO", "2XL", 34, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Chombas", "JERSEY", "NEGRO", "L", 3, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Chombas", "JERSEY", "NEGRO", "XL", 5, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Musculosa", "JERSEY", "MARINO", "L", 4, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Musculosa", "JERSEY", "MARINO", "XL", 6, 0, "A", 354, "ENERO"], ["02/01/26", "VANATY", "-", "Musculosa", "JERSEY", "MARINO", "2XL", 6, 0, "A", 354, "ENERO"], ["07/01/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "L", 20, 0, "A", 356, "ENERO"], ["07/01/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "XL", 22, 0, "A", 356, "ENERO"], ["07/01/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "3XL", 10, 0, "A", 356, "ENERO"], ["07/01/26", "VANATY", "-", "Chombas", "PIQUE", "MARINO", "M", 19, 0, "A", 356, "ENERO"], ["07/01/26", "VANATY", "-", "Chombas", "PIQUE", "MARINO", "L", 23, 0, "A", 356, "ENERO"], ["07/01/26", "VANATY", "-", "Chombas", "PIQUE", "MARINO", "XL", 16, 0, "A", 356, "ENERO"], ["07/01/26", "VANATY", "-", "Chombas", "PIQUE", "MARINO", "2XL", 15, 0, "A", 356, "ENERO"], ["07/01/26", "VANATY", "-", "Chombas", "PIQUE", "VERDE BOTELLA", "L", 39, 0, "A", 356, "ENERO"], ["07/01/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "S", 27, 0, "A", 356, "ENERO"], ["07/01/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "L", 17, 0, "A", 356, "ENERO"], ["07/01/26", "VANATY", "238", "Remeras", "JERSEY", "MELANGE", "XL", 17, 0, "A", 356, "ENERO"], ["07/01/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "2XL", 16, 0, "A", 356, "ENERO"], ["07/01/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "3XL", 21, 0, "A", 356, "ENERO"], ["12/01/26", "VANATY", "-", "Remeras", "JERSEY", "COMBINADAS", "L", 500, 0, "", 0, "ENERO"], ["12/01/26", "VANATY", "238", "Remeras", "JERSEY", "MELANGE", "XL", 18, 0, "", 0, "ENERO"], ["12/01/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "2XL", 19, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "FRANCIA", "L", 32, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "FRANCIA", "XL", 34, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "FRANCIA", "2XL", 31, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "MARINO", "M", 11, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "MARINO", "L", 25, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "MARINO", "XL", 1, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "M", 11, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "L", 46, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "XL", 43, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "NEGRO", "S", 1, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "NEGRO", "XL", 1, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "VERDE BOTELLA", "L", 1, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "VERDE BOTELLA", "XL", 1, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "L", 4, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "5XL", 1, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remera M/L", "JERSEY", "MELANGE", "M", 10, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Remera M/L", "JERSEY", "MELANGE", "L", 9, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "M", 10, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "L", 20, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "XL", 20, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "238", "Chombas", "JERSEY", "MELANGE", "8XL", 1, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "238", "Chombas", "JERSEY", "GRIS TOPO", "8XL", 1, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "236", "Campera Friza", "FRIZA", "NEGRO", "L", 10, 0, "", 0, "ENERO"], ["16/01/26", "VANATY", "236", "Campera Friza", "FRIZA", "NEGRO", "XL", 15, 0, "", 0, "ENERO"], ["22/01/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "M", 13, 84156, "A", 362, "ENERO"], ["22/01/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "L", 24, 155364, "A", 362, "ENERO"], ["22/01/26", "VANATY", "238", "Remeras", "JERSEY", "MELANGE", "XL", 24, 155364, "A", 362, "ENERO"], ["22/01/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "2XL", 12, 85450, "A", 362, "ENERO"], ["22/01/26", "VANATY", "-", "Remeras", "JERSEY", "COMBINADAS", "XL", 500, 3055250, "A", 361, "ENERO"], ["22/01/26", "VANATY", "-", "Remeras", "JERSEY", "FRANCIA", "2XL", 2, 14242, "A", 361, "ENERO"], ["22/01/26", "VANATY", "-", "Buzos Friza", "FRIZA", "MARINO", "L", 15, 274972, "A", 361, "ENERO"], ["22/01/26", "VANATY", "-", "Buzos Friza", "FRIZA", "MARINO", "XL", 21, 384962, "A", 361, "ENERO"], ["22/01/26", "VANATY", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "XL", 20, 366630, "A", 361, "ENERO"], ["22/01/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "XL", -1, 0, "NC A", 81, "ENERO"], ["22/01/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "M", -11, 0, "NC A", 80, "ENERO"], ["14/01/26", "SARA MANSILLA", "-", "Remeras", "JERSEY", "AMARILLO", "", 4, 15200, "REMITO", 0, "ENERO"], ["21/01/26", "ENFOQUE", "-", "Remeras", "JERSEY", "MARINO", "4XL", 9, 64251, "REMITO", 0, "ENERO"], ["21/01/26", "ENFOQUE", "-", "Remeras", "JERSEY", "BLANCO", "4XL", 11, 78529, "REMITO", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Remeras", "JERSEY", "COMBINADAS", "2XL", 743, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "240", "Remeras", "JERSEY", "BLANCO", "XL", 24, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Remeras", "JERSEY", "MARINO", "XL", 46, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Remeras", "JERSEY", "NEGRO", "4XL", 4, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "2XL", 19, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Remeras", "JERSEY", "FRANCIA", "2XL", 1, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "239", "Remera M/L", "JERSEY", "MARINO", "M", 18, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Buzos Friza", "FRIZA", "MARINO", "M", 11, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Buzos Friza", "FRIZA", "MARINO", "L", 16, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Buzos Friza", "FRIZA", "MARINO", "XL", 1, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "M", 17, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "L", 30, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "XL", 2, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chombas", "PIQUE", "BEIGE", "M", 6, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chombas", "PIQUE", "BEIGE", "L", 5, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chombas", "PIQUE", "BEIGE", "XL", 9, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chombas", "PIQUE", "BEIGE", "2XL", 11, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "L", 1, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "XL", 1, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "242", "Chombas", "PIQUE", "BLANCO", "XL", 10, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "236", "Chombas", "PIQUE", "BLANCO", "XL", 30, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chombas", "PIQUE", "TURQUESA", "M", 2, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chombas", "PIQUE", "TURQUESA", "L", 2, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chombas", "PIQUE", "TURQUESA", "XL", 2, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chaleco Polar", "POLAR", "MARINO", "M", 2, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chaleco Polar", "POLAR", "MARINO", "L", 1, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chaleco Polar", "POLAR", "MARINO", "XL", 1, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Chaleco Polar", "POLAR", "MARINO", "2XL", 3, 0, "", 0, "ENERO"], ["29/01/26", "VANATY", "-", "Campera Polar", "POLAR", "MARINO", "5XL", 1, 0, "", 0, "ENERO"], ["06/02/26", "VANATY", "-", "Buzos Friza", "FRIZA", "MARINO", "M", 7, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Buzos Friza", "FRIZA", "MARINO", "L", 1, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "L", 3, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "241", "Remeras", "JERSEY", "MARINO", "M", 33, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "241", "Remeras", "JERSEY", "MARINO", "L", 11, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "241", "Remeras", "JERSEY", "MARINO", "XL", 14, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "241", "Remeras", "JERSEY", "MARINO", "2XL", 1, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "241", "Remeras", "JERSEY", "NEGRO", "XL", 4, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "241", "Remeras", "JERSEY", "NEGRO", "2XL", 4, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "S", 1, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "M", 1, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "L", 54, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "XL", 41, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "2XL", 1, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "L", 8, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "238", "Remeras", "JERSEY", "MELANGE", "XL", 9, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Remeras", "JERSEY", "VERDE BOTELLA", "XL", 2, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Remeras", "JERSEY", "CELESTE", "L", 1, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Remeras", "JERSEY", "COMBINADAS", "2XL", 1, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Remeras", "JERSEY", "COMBINADAS", "3XL", 211, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Remera M/L", "JERSEY", "MELANGE", "L", 1, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Chombas", "PIQUE", "BLANCO", "XL", 2, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Chombas", "PIQUE", "TURQUESA", "XS", 8, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Chombas", "PIQUE", "TURQUESA", "M", 3, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Chombas", "PIQUE", "TURQUESA", "L", 4, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Chombas", "PIQUE", "TURQUESA", "3XL", 1, 0, "", 0, "FEBRERO"], ["06/02/26", "VANATY", "-", "Chombas M/L", "PIQUE", "MELANGE", "XL", 10, 0, "", 0, "FEBRERO"], ["13/02/26", "VANATY", "243", "Remeras", "JERSEY", "MARINO", "M", 32, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "243", "Remeras", "JERSEY", "MARINO", "L", 88, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "243", "Remeras", "JERSEY", "MARINO", "XL", 22, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "243", "Remeras", "JERSEY", "MARINO", "2XL", 3, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "L", 1, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "2XL", 12, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "-", "Remeras", "JERSEY", "NEGRO", "L", 1, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "-", "Remeras", "JERSEY", "BLANCO", "XL", 4, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "-", "Remeras", "JERSEY", "CELESTE", "XL", 1, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "-", "Remeras", "JERSEY", "COMBINADA", "2XL", 7, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "-", "Remeras", "JERSEY", "COMBINADA", "3XL", 310, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "-", "Remera M/L", "JERSEY", "MARINO", "L", 2, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "-", "Remera M/L", "JERSEY", "MARINO", "XL", 4, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "-", "Remera M/L", "JERSEY", "MARINO", "2XL", 5, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "MARINO", "2XL", 2, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "NEGRO", "L", 28, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "NEGRO", "XL", 19, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "NEGRO", "2XL", 14, 0, "372", 0, "FEBRERO"], ["13/02/26", "CATALINA", "1000", "Canguro", "FRIZA", "NEGRO", "L", 8, 0, "372", 0, "FEBRERO"], ["13/02/26", "CATALINA", "1000", "Canguro", "FRIZA", "NEGRO", "XL", 4, 0, "372", 0, "FEBRERO"], ["13/02/26", "VANATY", "236", "Campera Polar", "POLAR", "NEGRO", "S", 5, 0, "372", 0, "FEBRERO"], ["20/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "NEGRO", "S", 9, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "NEGRO", "M", 34, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "NEGRO", "L", 17, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "NEGRO", "XL", 9, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "NEGRO", "3XL", 29, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "MARINO", "L", 4, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "MARINO", "XL", 4, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "MARINO", "2XL", 2, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "244", "Buzos Friza", "FRIZA", "MARINO", "3XL", 4, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "243", "Remeras", "JERSEY", "MARINO", "M", 27, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "243", "Remeras", "JERSEY", "MARINO", "XL", 105, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "243", "Remeras", "JERSEY", "MARINO", "3XL", 58, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "240", "Remeras", "JERSEY", "BLANCO", "XL", 32, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "L", 3, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "-", "Remeras", "JERSEY", "GRIS TOPO", "XL", 1, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "-", "Remeras", "JERSEY", "FRANCIA", "L", 2, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "241", "Remeras", "JERSEY", "NEGRO", "XL", 35, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "241", "Remeras", "JERSEY", "NEGRO", "2XL", 38, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "-", "Remeras", "JERSEY", "COMBINADA", "2XL", 7, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "-", "Remeras", "JERSEY", "COMBINADA", "3XL", 229, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "238", "Buzo 1/2 cierre", "FRIZA", "MARINO", "S", 5, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "238", "Buzo 1/2 cierre", "FRIZA", "MARINO", "M", 15, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "238", "Buzo 1/2 cierre", "FRIZA", "MARINO", "L", 19, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "238", "Buzo 1/2 cierre", "FRIZA", "MARINO", "XL", 20, 0, "", 0, "FEBRERO"], ["20/02/26", "VANATY", "245", "Buzo 1/2 cierre", "FRIZA", "MARINO", "XL", 4, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "245", "Buzo 1/2 cierre", "FRIZA", "MARINO", "2XL", 5, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "238", "Buzo 1/2 cierre", "FRIZA", "MARINO", "3XL", 15, 0, "", 0, "FEBRERO"], ["20/02/26", "VANATY", "245", "Buzo 1/2 cierre", "FRIZA", "MARINO", "3XL", 6, 0, "375", 0, "FEBRERO"], ["20/02/26", "VANATY", "245", "Buzo 1/2 cierre", "FRIZA", "MARINO", "4XL", 8, 0, "375", 0, "FEBRERO"], ["27/02/26", "VANATY", "243", "Remeras", "JERSEY", "MELANGE", "M", 35, 0, "", 0, "FEBRERO"], ["27/02/26", "VANATY", "243", "Remeras", "JERSEY", "MELANGE", "L", 52, 0, "", 0, "FEBRERO"], ["27/02/26", "VANATY", "243", "Remeras", "JERSEY", "MELANGE", "XL", 68, 0, "", 0, "FEBRERO"], ["27/02/26", "VANATY", "243", "Remeras", "JERSEY", "MELANGE", "2XL", 36, 0, "", 0, "FEBRERO"], ["27/02/26", "CATALINA", "1001", "Remeras", "JERSEY", "NEGRO", "10 Niño", 2, 0, "", 0, "FEBRERO"], ["27/02/26", "VANATY", "241", "Remeras", "JERSEY", "NEGRO", "L", 36, 0, "", 0, "FEBRERO"], ["27/02/26", "VANATY", "-", "Chombas", "PIQUE", "MELANGE", "M", 30, 0, "", 0, "FEBRERO"], ["27/02/26", "VANATY", "-", "Chombas", "PIQUE", "MELANGE", "2XL", 15, 0, "", 0, "FEBRERO"], ["27/02/26", "VANATY", "248", "Chombas", "PIQUE", "BLANCO", "M", 10, 0, "", 0, "FEBRERO"], ["27/02/26", "CATALINA", "1001", "Buzo 1/2 cierre", "FRIZA", "NEGRO", "XL", 1, 0, "", 0, "FEBRERO"], ["06/03/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "M", 27, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "L", 68, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "XL", 53, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Remeras", "JERSEY", "MELANGE", "2XL", 9, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Remeras", "JERSEY", "BLANCO", "M", 21, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Remeras", "JERSEY", "BLANCO", "L", 15, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Remeras", "JERSEY", "NEGRO", "XL", 120, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Remera M/L", "JERSEY", "GRIS TOPO", "L", 8, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Remera M/L", "JERSEY", "GRIS TOPO", "XL", 1, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Remera M/L", "JERSEY", "GRIS TOPO", "3XL", 3, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Buzo Polar", "POLAR", "GRIS TOPO", "XL", 13, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Chombas", "PIQUE", "TURQUESA", "L", 4, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Chombas", "PIQUE", "TURQUESA", "XL", 2, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Chombas", "PIQUE", "BEIGE", "S", 6, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Chombas", "PIQUE", "BEIGE", "XL", 6, 0, "", 0, "MARZO"], ["06/03/26", "VANATY", "-", "Chombas M/L", "PIQUE", "MARINO", "M", 1, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "226", "Buzos Friza", "FRIZA", "GRIS TOPO", "M", 33, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "L", 32, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "2XL", 48, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "3XL", 8, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "244", "Buzos Friza", "FRIZA", "MARINO", "S", 11, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "244", "Buzos Friza", "FRIZA", "MARINO", "M", 22, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "244", "Buzos Friza", "FRIZA", "MARINO", "L", 21, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "244", "Buzos Friza", "FRIZA", "MARINO", "3XL", 13, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "224", "Remeras", "JERSEY", "GRIS TOPO", "L", 27, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "224", "Remeras", "JERSEY", "GRIS TOPO", "XL", 27, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "224", "Remeras", "JERSEY", "GRIS TOPO", "2XL", 27, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "251", "Remeras", "JERSEY", "NEGRO", "M", 30, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "-", "Remeras", "JERSEY", "NEGRO", "L", 30, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "-", "Remeras", "JERSEY", "NEGRO", "XL", 30, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "243", "Remeras", "JERSEY", "MARINO", "M", 36, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "243", "Remeras", "JERSEY", "MARINO", "L", 36, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "243", "Remeras", "JERSEY", "MARINO", "XL", 36, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "243", "Remeras", "JERSEY", "MARINO", "2XL", 8, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "-", "Remeras", "JERSEY", "BEIGE", "L", 1, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "-", "Remeras", "JERSEY", "BEIGE", "XL", 4, 0, "", 0, "MARZO"], ["13/03/26", "CATALINA", "1004", "Remeras", "JERSEY", "ROJO", "XL", 3, 0, "", 0, "MARZO"], ["13/03/26", "CATALINA", "1002", "Cuellos", "POLAR", "GRIS TOPO", "UNICO", 20, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "237", "Cuellos", "POLAR", "MARINO", "UNICO", 159, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "255", "Buzo 1/2 cierre", "FRIZA", "NEGRO", "L", 12, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "255", "Buzo 1/2 cierre", "FRIZA", "NEGRO", "XL", 12, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "-", "Campera Friza", "FRIZA", "MARINO", "S", 1, 0, "", 0, "MARZO"], ["13/03/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "L", 41, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "265", "Campera Polar", "POLAR", "BEIGE", "L", 1, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "265", "Campera Polar", "POLAR", "BEIGE", "XL", 6, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "cel", "Remeras", "JERSEY", "MARINO", "M", 35, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "cel", "Remeras", "JERSEY", "MARINO", "L", 71, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "201", "Remeras", "JERSEY", "BEIGE", "L", 10, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "201", "Remeras", "JERSEY", "BEIGE", "2XL", 10, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "-", "Remeras", "JERSEY", "VERDE BOTELLA", "XL", 41, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "MARINO", "XL", 33, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "S", 9, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "L", 2, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "GRIS TOPO", "2XL", 9, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "NEGRO", "S", 15, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "NEGRO", "XL", 10, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "NEGRO", "2XL", 9, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "NEGRO", "3XL", 10, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "L", 20, 0, "", 0, "MARZO"], ["19/03/26", "VANATY", "-", "Chombas", "combinada", "", "XL", 3, 0, "", 0, "MARZO"], ["23/03/26", "VANATY", "-", "Remeras", "JERSEY", "ROJO", "M", 35, 0, "", 0, "MARZO"], ["23/03/26", "VANATY", "-", "Remeras", "JERSEY", "ROJO", "L", 35, 0, "", 0, "MARZO"], ["23/03/26", "VANATY", "-", "Remeras", "JERSEY", "ROJO", "XL", 30, 0, "", 0, "MARZO"], ["23/03/26", "VANATY", "268", "Remeras", "JERSEY", "MARINO", "L", 169, 0, "", 0, "MARZO"], ["23/03/26", "VANATY", "268", "Remeras", "JERSEY", "MARINO", "XL", 126, 0, "", 0, "MARZO"], ["23/03/26", "VANATY", "258", "Chombas", "PIQUE", "NEGRO", "S", 18, 0, "", 0, "MARZO"], ["23/03/26", "VANATY", "258", "Chombas", "PIQUE", "NEGRO", "M", 18, 0, "", 0, "MARZO"], ["23/03/26", "VANATY", "258", "Chombas", "PIQUE", "NEGRO", "L", 38, 0, "", 0, "MARZO"], ["23/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "NEGRO", "2XL", 20, 0, "", 0, "MARZO"], ["23/03/26", "VANATY", "-", "Buzos Friza", "FRIZA", "NEGRO", "3XL", 18, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "264", "Remera M/L", "JERSEY", "MARINO", "S", 10, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "264", "Remera M/L", "JERSEY", "MARINO", "M", 20, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "264", "Remera M/L", "JERSEY", "MARINO", "L", 40, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "264", "Remera M/L", "JERSEY", "MARINO", "XL", 38, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "264", "Remera M/L", "JERSEY", "MARINO", "2XL", 19, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "264", "Remera M/L", "JERSEY", "MARINO", "3XL", 10, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "264", "Remera M/L", "JERSEY", "MARINO", "4XL", 5, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "265", "Remeras", "JERSEY", "BEIGE", "S", 15, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "265", "Remeras", "JERSEY", "BEIGE", "M", 8, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "265", "Remeras", "JERSEY", "BEIGE", "L", 30, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "265", "Remeras", "JERSEY", "BEIGE", "XL", 10, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "265", "Remeras", "JERSEY", "BEIGE", "2XL", 5, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "249", "Remeras", "JERSEY", "MELANGE", "M", 33, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "249", "Remeras", "JERSEY", "MELANGE", "L", 51, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "249", "Remeras", "JERSEY", "MELANGE", "XL", 50, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "XL", 36, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "2XL", 46, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "3XL", 22, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "-", "Chombas", "PIQUE", "NEGRO", "4XL", 32, 0, "", 0, "MARZO"], ["27/03/26", "VANATY", "266", "Chaleco Polar", "POLAR", "MARINO", "XL", 13, 0, "", 0, "MARZO"], ["01/04/26", "VANATY", "253", "Buzos Friza", "FRIZA", "MARINO", "XL", 22, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "227", "Buzo Polar", "POLAR", "MARINO", "L", 17, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "227", "Buzo Polar", "POLAR", "MARINO", "2XL", 14, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "227", "Buzo Polar", "POLAR", "NEGRO", "L", 20, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "227", "Buzo Polar", "POLAR", "NEGRO", "2XL", 20, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "267", "Buzo Polar", "POLAR", "GRIS TOPO", "L", 26, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "267", "Buzo Polar", "POLAR", "GRIS TOPO", "2XL", 27, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "249", "Remeras", "JERSEY", "MELANGE", "S", 16, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "249", "Remeras", "JERSEY", "MELANGE", "M", 14, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "249", "Remeras", "JERSEY", "MELANGE", "L", 15, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "249", "Remeras", "JERSEY", "MELANGE", "XL", 45, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "249", "Remeras", "JERSEY", "MELANGE", "2XL", 60, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "249", "Remeras", "JERSEY", "MELANGE", "3XL", 14, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "252", "Remeras", "JERSEY", "MARINO", "L", 28, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "252", "Remeras", "JERSEY", "MARINO", "XL", 33, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "252", "Remeras", "JERSEY", "MARINO", "2XL", 25, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "252", "Remeras", "JERSEY", "AMARILLO", "L", 5, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "252", "Remeras", "JERSEY", "AMARILLO", "XL", 9, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "252", "Remeras", "JERSEY", "AMARILLO", "2XL", 4, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "252", "Remeras", "JERSEY", "BLANCO", "M", 18, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "252", "Remeras", "JERSEY", "BLANCO", "XL", 37, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "252", "Remeras", "JERSEY", "BLANCO", "3XL", 18, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "270", "Chombas", "PIQUE", "BLANCO", "M", 28, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "271", "Chombas", "PIQUE", "BLANCO", "L", 4, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "CATA", "Chombas", "PIQUE", "BLANCO", "4XL", 4, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "CATA", "Chombas M/L", "PIQUE", "BLANCO", "M", 10, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "CATA", "Chombas M/L", "PIQUE", "BLANCO", "L", 2, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "CATA", "Chombas M/L", "PIQUE", "BLANCO", "XL", 3, 0, "", 0, "ABRIL"], ["01/04/26", "VANATY", "CATA", "Chombas M/L", "PIQUE", "BLANCO", "4XL", 4, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "278", "Remera M/L", "JERSEY", "MARINO", "M", 29, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "278", "Remera M/L", "JERSEY", "MARINO", "L", 29, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "278", "Remera M/L", "JERSEY", "MARINO", "XL", 41, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "278", "Remera M/L", "JERSEY", "MARINO", "4XL", 9, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "271", "Chombas", "PIQUE", "BLANCO", "M", 18, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "259", "Chombas", "PIQUE", "TURQUESA", "S", 1, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "259", "Chombas", "PIQUE", "TURQUESA", "M", 3, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "259", "Chombas", "PIQUE", "TURQUESA", "XL", 8, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "267", "Buzo Polar", "POLAR", "GRIS TOPO", "L", 47, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "267", "Buzo Polar", "POLAR", "GRIS TOPO", "XL", 26, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "267", "Buzo Polar", "POLAR", "GRIS TOPO", "2XL", 1, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "275", "Buzo Polar", "POLAR", "MARINO", "L", 3, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "275", "Buzo Polar", "POLAR", "MARINO", "2XL", 4, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "cata", "Campera Polar", "POLAR", "Marron", "XL", 2, 0, "", 0, "ABRIL"], ["08/04/26", "VANATY", "266", "Chaleco Polar", "POLAR", "MARINO", "XL", 4, 0, "", 0, "ABRIL"], ["09/04/26", "VANATY", "241", "Remeras", "JERSEY", "MARINO", "M", 70, 0, "", 0, "ABRIL"], ["09/04/26", "VANATY", "-", "Remeras", "JERSEY", "NEGRO", "L", 65, 0, "", 0, "ABRIL"], ["09/04/26", "VANATY", "-", "Remeras", "JERSEY", "NEGRO", "XL", 34, 0, "", 0, "ABRIL"], ["09/04/26", "VANATY", "-", "Remeras", "JERSEY", "NEGRO", "2XL", 32, 0, "", 0, "ABRIL"], ["09/04/26", "VANATY", "-", "Buzos Friza", "FRIZA", "MARINO", "L", 23, 0, "", 0, "ABRIL"], ["09/04/26", "VANATY", "-", "Buzos Friza", "FRIZA", "MARINO", "XL", 33, 0, "", 0, "ABRIL"], ["09/04/26", "VANATY", "-", "Buzos Friza", "FRIZA", "MARINO", "2XL", 23, 0, "", 0, "ABRIL"], ["09/04/26", "VANATY", "-", "Buzos Friza", "FRIZA", "NEGRO", "3XL", 2, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "lore", "Buzos Friza", "FRIZA", "MARINO", "L", 40, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "lore", "Buzos Friza", "FRIZA", "MARINO", "XL", 10, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "lore", "Buzos Friza", "FRIZA", "MARINO", "2XL", 10, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "275", "Buzo Polar", "POLAR", "MARINO", "XL", 11, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "251", "Remeras", "JERSEY", "NEGRO", "M", 27, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "251", "Remeras", "JERSEY", "NEGRO", "XL", 44, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "251", "Remeras", "JERSEY", "NEGRO", "2XL", 23, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "CATA", "Buzos Friza", "FRIZA", "MARINO", "5XL", 1, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "276", "Chombas", "JERSEY", "COMBINADA", "S", 2, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "276", "Chombas", "JERSEY", "COMBINADA", "M", 2, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "276", "Chombas", "JERSEY", "COMBINADA", "L", 2, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "276", "Chombas", "JERSEY", "COMBINADA", "XL", 3, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "CATA", "Chombas", "PIQUE", "BLANCO", "L", 2, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "CATA", "Chombas M/L", "PIQUE", "MELANGE", "2XL", 6, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "CATA", "Campera Polar", "POLAR", "MARRON", "L", 2, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "CATA", "Remeras", "JERSEY", "MARINO", "4", 1, 0, "", 0, "ABRIL"], ["10/04/26", "VANATY", "CATA", "Remeras", "JERSEY", "MARINO", "8", 1, 0, "", 0, "ABRIL"], ["11/04/26", "VANATY", "CATA", "Remeras", "JERSEY", "MARINO", "12", 1, 0, "", 0, "ABRIL"]];
+const ENT_POR_PED = [["201", "VANATY", 2, 20, 0], ["224", "VANATY", 3, 81, 0], ["226", "VANATY", 1, 33, 0], ["227", "VANATY", 4, 71, 0], ["236", "VANATY", 4, 60, 0], ["237", "VANATY", 1, 159, 0], ["238", "VANATY", 11, 144, 155364], ["239", "VANATY", 1, 18, 0], ["240", "VANATY", 2, 56, 0], ["241", "VANATY", 10, 246, 0], ["242", "VANATY", 1, 10, 0], ["243", "VANATY", 15, 642, 0], ["244", "VANATY", 17, 242, 0], ["245", "VANATY", 4, 23, 0], ["248", "VANATY", 1, 10, 0], ["249", "VANATY", 9, 298, 0], ["251", "VANATY", 4, 124, 0], ["252", "VANATY", 9, 177, 0], ["253", "VANATY", 1, 22, 0], ["255", "VANATY", 2, 24, 0], ["258", "VANATY", 3, 74, 0], ["259", "VANATY", 3, 12, 0], ["264", "VANATY", 7, 142, 0], ["265", "VANATY", 7, 75, 0], ["266", "VANATY", 2, 17, 0], ["267", "VANATY", 5, 127, 0], ["268", "VANATY", 2, 295, 0], ["270", "VANATY", 1, 28, 0], ["271", "VANATY", 2, 22, 0], ["275", "VANATY", 3, 18, 0], ["276", "VANATY", 4, 9, 0], ["278", "VANATY", 4, 108, 0], ["1000", "CATALINA", 2, 12, 0], ["1001", "CATALINA", 2, 3, 0], ["1002", "CATALINA", 1, 20, 0], ["1004", "CATALINA", 1, 3, 0], ["CATA", "VANATY", 12, 37, 0], ["cata", "VANATY", 1, 2, 0], ["cel", "VANATY", 2, 106, 0], ["lore", "VANATY", 3, 60, 0]];
+const ENT_POR_MES = [["ABRIL", 70, 1237, 0], ["ENERO", 100, 3191, 4734369], ["FEBRERO", 87, 2040, 0], ["MARZO", 90, 2379, 0]];
+const ENT_TOTALES = {"lineas": 347, "prendas": 8847, "valor": 4734369, "clientes": 4};
+// ent_det cols: [fecha, cliente, pedido, tipo, tela, color, talle, cant, precio_total, tipo_fac, nro_fac, mes]
+
+// ===== MATERIALES DATA =====
+const TELAS = [{"tipo": "JERSEY", "rollos": 7, "kg": 140, "precio_kg": 10595.04, "total": 1483305.6}, {"tipo": "PIQUE", "rollos": 6, "kg": 120, "precio_kg": 11652.89, "total": 1398346.8}, {"tipo": "FRIZA", "rollos": 18, "kg": 360, "precio_kg": 11909.09, "total": 4287272.4}, {"tipo": "POLAR", "rollos": 4, "kg": 80, "precio_kg": 8500.0, "total": 680000.0}, {"tipo": "DEPORTIVO", "rollos": 4, "kg": 80, "precio_kg": 11652.89, "total": 932231.2}, {"tipo": "DEP S/FRIZA", "rollos": 1, "kg": 20, "precio_kg": 12396.69, "total": 247933.8}, {"tipo": "RUSTICO", "rollos": 1, "kg": 20, "precio_kg": 10000.0, "total": 200000.0}];
+const TELA_TOT = {"rollos": 41, "kg": 820, "valor": 9229089.8};
+const COLORES_TELA = [["MARINO", 1, 1, 2, 0, 2, 1, 0], ["NEGRO", 1, 0, 0, 2, 0, 0, 0], ["GRIS MEL", 0, 0, 5, 0, 0, 0, 1], ["GRIS TOPO", 0, 0, 0, 0, 0, 0, 0], ["GRIS PERLA", 0, 0, 9, 0, 0, 0, 0], ["BLANCO", 1, 4, 0, 0, 1, 0, 0], ["ROJO", 0, 0, 0, 1, 1, 0, 0], ["BORDO", 0, 1, 2, 0, 0, 0, 0], ["FRANCIA", 3, 0, 0, 0, 0, 0, 0], ["AMARILLO", 0, 0, 0, 0, 0, 0, 0], ["NARANJA", 0, 0, 0, 0, 0, 0, 0], ["VERDE", 1, 0, 0, 1, 0, 0, 0]];
+const TIPOS_TELA = ['JERSEY','PIQUE','FRIZA','POLAR','DEPORTIVO','DEP S/FRIZA','RUSTICO'];
+
+// ===== COSTURA FUNCTIONS =====
+let cosTabActual = 'traz';
+function setCosTab(tab, el) {
+  cosTabActual = tab;
+  ['traz','porcos','ingreso','costureros','costos'].forEach(t => {
+    const d = document.getElementById('cos-tab-'+t);
+    if(d) d.style.display = t===tab?'block':'none';
+  });
+  document.querySelectorAll('#sec-costura .ptab').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if(tab==='traz') renderCostura();
+  else if(tab==='porcos') renderCosResumen();
+  else if(tab==='ingreso') renderIngreso();
+  else if(tab==='costureros') renderCostureros();
+  else if(tab==='costos') renderCostosTbl();
+}
+function initCostura() {
+  // Stats
+  const total_ent = COS_RESUMEN.reduce((a,r)=>a+r[2],0);
+  const total_rec = COS_RESUMEN.reduce((a,r)=>a+r[3],0);
+  const total_flt = COS_RESUMEN.reduce((a,r)=>a+r[4],0);
+  const total_apg = COS_RESUMEN.reduce((a,r)=>a+r[7],0);
+  document.getElementById('cos-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${COS_RESUMEN.filter(r=>r[1]==='ACTIVO').length}</div><div class="stat-lbl">Costureros activos</div></div>
+    <div class="stat-card"><div class="stat-val">${total_ent.toLocaleString('es-AR')}</div><div class="stat-lbl">Total entregado</div></div>
+    <div class="stat-card"><div class="stat-val">${total_rec.toLocaleString('es-AR')}</div><div class="stat-lbl">Total recibido</div></div>
+    <div class="stat-card" style="background:#fff7ed"><div class="stat-val" style="color:#c2410c">${total_flt.toLocaleString('es-AR')}</div><div class="stat-lbl">Falta recibir</div></div>
+    <div class="stat-card" style="background:#fef2f2"><div class="stat-val" style="color:#dc2626">${total_apg.toLocaleString('es-AR')}</div><div class="stat-lbl">Saldo a pagar</div></div>`;
+  // Fill costurero selects
+  ['cos-filter-costurero','ingreso-filter','calc-costurero'].forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    const isCalc = id==='calc-costurero';
+    COSTUREROS.forEach(c => {
+      const o = document.createElement('option');
+      o.value=c; o.textContent=c;
+      el.appendChild(o);
+    });
+  });
+  // Fill calc prenda options
+  const cp = document.getElementById('calc-prenda');
+  if(cp) COSTOS_LISTA.forEach(r=>{ const o=document.createElement('option'); o.value=r[0]; o.textContent=r[0]; cp.appendChild(o); });
+  renderCostura();
+}
+function renderCostura() {
+  const q = (document.getElementById('cos-search')||{}).value?.toLowerCase()||'';
+  const fc = (document.getElementById('cos-filter-costurero')||{}).value||'';
+  const rows = COS_DET.filter(r =>
+    (!fc || r[0]===fc) &&
+    (!q || [r[0],r[1],r[2],r[3],r[5]].some(v=>String(v).toLowerCase().includes(q)))
+  );
+  const tb = document.getElementById('cos-tbody-traz');
+  if(!tb) return;
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="14" style="text-align:center;color:#999;padding:20px">Sin resultados</td></tr>'; return; }
+  tb.innerHTML = rows.slice(0,200).map(r => {
+    const faltaColor = r[9]===0?'#16a34a':r[9]>10?'#dc2626':'#ca8a04';
+    const faltaFw = r[9]>0?'700':'400';
+    return `<tr>
+      <td><strong>${r[0]}</strong></td>
+      <td>${r[2]}</td><td>${r[1]}</td><td>${r[3]}</td><td>${r[4]}</td>
+      <td>${r[5]}</td><td>${r[6]}</td>
+      <td style="text-align:center">${r[7]}</td>
+      <td style="text-align:center;color:#16a34a">${r[8]}</td>
+      <td style="text-align:center;color:${faltaColor};font-weight:${faltaFw}">${r[9]}</td>
+      <td style="text-align:right">${r[10]?'$'+r[10].toLocaleString('es-AR'):'-'}</td>
+      <td style="text-align:right">${r[11]?'$'+Math.round(r[11]).toLocaleString('es-AR'):'-'}</td>
+      <td style="text-align:right;color:#dc2626;font-weight:600">${r[12]>0?'$'+Math.round(r[12]).toLocaleString('es-AR'):'-'}</td>
+      <td><button class="btn-icon" onclick="showToast('✅ Ingreso registrado')">📥</button></td>
+    </tr>`;
+  }).join('');
+}
+function renderCosResumen() {
+  const tb = document.getElementById('cos-tbody-porcos');
+  if(!tb) return;
+  tb.innerHTML = COS_RESUMEN.map(r => {
+    const badge = r[1]==='ACTIVO'?'<span class="status activo">ACTIVO</span>':'<span class="status baja">BAJA</span>';
+    return `<tr>
+      <td><strong>${r[0]}</strong></td><td>${badge}</td>
+      <td style="text-align:center">${r[2].toLocaleString('es-AR')}</td>
+      <td style="text-align:center;color:#16a34a">${r[3].toLocaleString('es-AR')}</td>
+      <td style="text-align:center;color:${r[4]>0?'#dc2626':'#16a34a'};font-weight:${r[4]>0?700:400}">${r[4].toLocaleString('es-AR')}</td>
+      <td style="text-align:right">${r[5]?'$'+r[5].toLocaleString('es-AR'):'-'}</td>
+      <td style="text-align:right;color:#16a34a">${r[6]?'$'+r[6].toLocaleString('es-AR'):'-'}</td>
+      <td style="text-align:right;color:${r[7]>0?'#dc2626':'#16a34a'};font-weight:700">${r[7]>0?'$'+r[7].toLocaleString('es-AR'):'Al día'}</td>
+      <td style="text-align:center;color:#666">${r[8]}</td>
+    </tr>`;
+  }).join('');
+}
+function renderIngreso() {
+  const q = (document.getElementById('ingreso-search')||{}).value?.toLowerCase()||'';
+  const fc = (document.getElementById('ingreso-filter')||{}).value||'';
+  const rows = COS_DET.filter(r => r[9]>0 && (!fc||r[0]===fc) && (!q||[r[0],r[2],r[3]].some(v=>String(v).toLowerCase().includes(q))));
+  const tb = document.getElementById('cos-tbody-ingreso');
+  if(!tb) return;
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:#999;padding:20px">No hay prendas pendientes de ingreso</td></tr>'; return; }
+  tb.innerHTML = rows.slice(0,100).map((r,i) => `<tr>
+    <td><strong>${r[0]}</strong></td><td>${r[2]}</td><td>${r[3]}</td>
+    <td>${r[5]}</td><td>${r[6]}</td>
+    <td style="text-align:center">${r[7]}</td>
+    <td style="text-align:center;color:#16a34a">${r[8]}</td>
+    <td style="text-align:center;color:#dc2626;font-weight:700">${r[9]}</td>
+    <td><button class="btn" style="padding:4px 10px;font-size:12px" onclick="registrarIngreso(this,${i})">📥 Ingresar</button></td>
+  </tr>`).join('');
+}
+function registrarIngreso(btn, idx) {
+  btn.textContent='✅ Ingresado'; btn.disabled=true;
+  btn.style.background='#16a34a';
+  showToast('✅ Ingreso registrado correctamente');
+}
+function renderCostureros() {
+  const tb = document.getElementById('cos-tbody-costureros');
+  if(!tb) return;
+  tb.innerHTML = COS_RESUMEN.map(r => {
+    const badge = r[1]==='ACTIVO'?'<span class="status activo">ACTIVO</span>':'<span class="status baja">BAJA</span>';
+    return `<tr>
+      <td><strong>${r[0]}</strong></td><td>${badge}</td>
+      <td style="text-align:center">${r[2].toLocaleString('es-AR')}</td>
+      <td style="text-align:center;color:#16a34a">${r[3].toLocaleString('es-AR')}</td>
+      <td style="text-align:center;color:${r[4]>0?'#dc2626':'#16a34a'}">${r[4].toLocaleString('es-AR')}</td>
+      <td style="text-align:right">${r[5]?'$'+r[5].toLocaleString('es-AR'):'-'}</td>
+      <td style="text-align:right;color:#16a34a">${r[6]?'$'+r[6].toLocaleString('es-AR'):'-'}</td>
+      <td style="text-align:right;color:${r[7]>0?'#dc2626':'#16a34a'};font-weight:700">${r[7]>0?'$'+r[7].toLocaleString('es-AR'):'Al día'}</td>
+      <td><button class="btn-icon">✏️</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function calcPago() {
+  const cos = document.getElementById('calc-costurero')?.value;
+  const prenda = document.getElementById('calc-prenda')?.value;
+  const cant = parseInt(document.getElementById('calc-cant')?.value)||0;
+  const res = document.getElementById('calc-result');
+  if(!res) return;
+  if(!cos||!prenda||!cant){ res.style.display='none'; return; }
+  const cosIdx = COSTUREROS.indexOf(cos);
+  const row = COSTOS_LISTA.find(r=>r[0]===prenda);
+  if(!row||cosIdx<0){ res.style.display='none'; return; }
+  const precio = row[cosIdx+1]||0;
+  if(!precio){ res.innerHTML='Sin precio para esta combinación'; res.style.display='block'; return; }
+  const total = precio * cant;
+  res.innerHTML = `${cant} × $${precio.toLocaleString('es-AR')} = <span style="font-size:18px">$${total.toLocaleString('es-AR')}</span>`;
+  res.style.display='block';
+}
+
+// ===== ENTREGAS FUNCTIONS =====
+let entTabActual = 'det';
+function setEntTab(tab, el) {
+  entTabActual = tab;
+  ['det','porped','pormes'].forEach(t => {
+    const d = document.getElementById('ent-tab-'+t);
+    if(d) d.style.display = t===tab?'block':'none';
+  });
+  document.querySelectorAll('#sec-entregas .ptab').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if(tab==='det') renderEntregas();
+  else if(tab==='porped') renderEntPorPed();
+  else if(tab==='pormes') renderEntPorMes();
+}
+function initEntregas() {
+  const t = ENT_TOTALES;
+  document.getElementById('ent-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${t.lineas}</div><div class="stat-lbl">Líneas entregadas</div></div>
+    <div class="stat-card"><div class="stat-val">${t.prendas.toLocaleString('es-AR')}</div><div class="stat-lbl">Prendas entregadas</div></div>
+    <div class="stat-card"><div class="stat-val">${t.clientes}</div><div class="stat-lbl">Clientes</div></div>
+    <div class="stat-card" style="background:#f0fdf4"><div class="stat-val" style="color:#166534">$${t.valor.toLocaleString('es-AR')}</div><div class="stat-lbl">Facturado 2026</div></div>`;
+  renderEntregas();
+}
+function renderEntregas() {
+  const q = (document.getElementById('ent-search')||{}).value?.toLowerCase()||'';
+  const mes = (document.getElementById('ent-filter-mes')||{}).value||'';
+  const fac = (document.getElementById('ent-filter-fac')||{}).value||'';
+  const rows = ENT_DET.filter(r =>
+    (!mes || r[11]===mes) &&
+    (!fac || r[9]===fac) &&
+    (!q || [r[1],r[2],r[3],r[5]].some(v=>String(v).toLowerCase().includes(q)))
+  );
+  const tb = document.getElementById('ent-tbody-det');
+  if(!tb) return;
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="12" style="text-align:center;color:#999;padding:20px">Sin resultados</td></tr>'; return; }
+  tb.innerHTML = rows.slice(0,300).map(r => {
+    const facBadge = r[9]==='A'?'<span class="status activo">A</span>':r[9]==='B'?'<span class="status pendiente">B</span>':'';
+    const total = r[8]>0?'$'+Math.round(r[8]).toLocaleString('es-AR'):'-';
+    return `<tr>
+      <td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td>
+      <td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td><td>${r[6]}</td>
+      <td style="text-align:center;font-weight:600">${r[7].toLocaleString('es-AR')}</td>
+      <td style="text-align:right;font-weight:600">${total}</td>
+      <td style="text-align:center">${facBadge}</td>
+      <td style="text-align:center">${r[10]||'-'}</td>
+      <td><div class="td-actions"><button class="btn-icon">🖨️</button><button class="btn-icon">✏️</button></div></td>
+    </tr>`;
+  }).join('');
+}
+function renderEntPorPed() {
+  const tb = document.getElementById('ent-tbody-porped');
+  if(!tb) return;
+  tb.innerHTML = ENT_POR_PED.map(r => `<tr>
+    <td style="font-weight:700">${r[0]}</td><td>${r[1]}</td>
+    <td style="text-align:center">${r[2]}</td>
+    <td style="text-align:center;font-weight:600">${r[3].toLocaleString('es-AR')}</td>
+    <td style="text-align:right;font-weight:700;color:#166534">${r[4]>0?'$'+r[4].toLocaleString('es-AR'):'-'}</td>
+  </tr>`).join('');
+}
+function renderEntPorMes() {
+  const tb = document.getElementById('ent-tbody-pormes');
+  if(!tb) return;
+  const total_prendas = ENT_POR_MES.reduce((a,r)=>a+r[2],0);
+  tb.innerHTML = ENT_POR_MES.map(r => {
+    const pct = total_prendas>0?Math.round(r[2]/total_prendas*100):0;
+    return `<tr>
+      <td><strong>${r[0]}</strong></td>
+      <td style="text-align:center">${r[1]}</td>
+      <td style="text-align:center;font-weight:700">${r[2].toLocaleString('es-AR')} <span style="color:#666;font-weight:400;font-size:12px">(${pct}%)</span></td>
+      <td style="text-align:right;font-weight:700;color:#166534">${r[3]>0?'$'+r[3].toLocaleString('es-AR'):'-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ===== MATERIALES FUNCTIONS =====
+function initMateriales() {
+  const pct_tipos = TELAS.map(t => Math.round(t.rollos/TELA_TOT.rollos*100));
+  document.getElementById('mat-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${TELA_TOT.rollos}</div><div class="stat-lbl">Rollos totales</div></div>
+    <div class="stat-card"><div class="stat-val">${TELA_TOT.kg.toLocaleString('es-AR')} kg</div><div class="stat-lbl">KG totales</div></div>
+    <div class="stat-card"><div class="stat-val">${TELAS.length}</div><div class="stat-lbl">Tipos de tela</div></div>
+    <div class="stat-card" style="background:#f0fdf4"><div class="stat-val" style="color:#166534">$${Math.round(TELA_TOT.valor).toLocaleString('es-AR')}</div><div class="stat-lbl">Valuación total</div></div>`;
+  renderTelas();
+  renderColorGrilla();
+}
+function setMatTab(tab, el) {
+  ['telas','grilla','otros'].forEach(t => {
+    const d = document.getElementById('mat-tab-'+t);
+    if(d) d.style.display = t===tab?'block':'none';
+  });
+  document.querySelectorAll('#sec-materiales .ptab').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+}
+function renderTelas() {
+  const tb = document.getElementById('mat-tbody-telas');
+  if(!tb) return;
+  tb.innerHTML = TELAS.map(t => {
+    const pct = Math.round(t.rollos/TELA_TOT.rollos*100);
+    const bar = `<div style="background:#e2e8f0;border-radius:4px;height:8px;width:100%;margin-top:4px"><div style="background:#3b82f6;width:${pct}%;height:100%;border-radius:4px"></div></div>`;
+    return `<tr>
+      <td><strong>${t.tipo}</strong></td>
+      <td style="text-align:center"><span style="font-size:18px;font-weight:700">${t.rollos}</span> 🧻</td>
+      <td style="text-align:center"><span style="font-weight:700">${t.kg}</span> kg</td>
+      <td style="text-align:right">$${t.precio_kg.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}/kg</td>
+      <td style="text-align:right;font-weight:700;color:#166534">$${Math.round(t.total).toLocaleString('es-AR')}</td>
+      <td style="min-width:100px">${pct}%${bar}</td>
+    </tr>`;
+  }).join('');
+  // Totals row
+  const totRow = `<tr style="background:#f8fafc;font-weight:700;border-top:2px solid #cbd5e1">
+    <td>TOTAL</td>
+    <td style="text-align:center">${TELA_TOT.rollos} rollos</td>
+    <td style="text-align:center">${TELA_TOT.kg} kg</td>
+    <td style="text-align:right">-</td>
+    <td style="text-align:right;color:#166534">$${Math.round(TELA_TOT.valor).toLocaleString('es-AR')}</td>
+    <td>100%</td>
+  </tr>`;
+  tb.innerHTML += totRow;
+}
+function renderColorGrilla() {
+  const head = document.getElementById('mat-colores-head');
+  const body = document.getElementById('mat-colores-body');
+  if(!head||!body) return;
+  head.innerHTML = '<tr><th>Color</th>' + TIPOS_TELA.map(t=>`<th>${t}</th>`).join('') + '<th>Total</th></tr>';
+  body.innerHTML = COLORES_TELA.map(r => {
+    const total = r.slice(1).reduce((a,v)=>a+(v||0),0);
+    const celdas = r.slice(1).map(v => {
+      if(!v) return '<td style="color:#ddd;text-align:center">·</td>';
+      return `<td style="text-align:center;font-weight:700;background:#eff6ff;color:#1d4ed8">${v} 🧻</td>`;
+    }).join('');
+    return `<tr><td><strong>${r[0]}</strong></td>${celdas}<td style="text-align:center;font-weight:700">${total||''}</td></tr>`;
+  }).join('');
+  // Total row
+  const totals = TIPOS_TELA.map((_,i) => COLORES_TELA.reduce((a,r)=>a+(r[i+1]||0),0));
+  const totalTotal = totals.reduce((a,v)=>a+v,0);
+  body.innerHTML += '<tr style="background:#f1f5f9;font-weight:700;border-top:2px solid #cbd5e1"><td>TOTAL</td>' +
+    totals.map(v=>`<td style="text-align:center">${v||'-'}</td>`).join('') +
+    `<td style="text-align:center">${totalTotal}</td></tr>`;
+}
+
+// ===== DASHBOARD =====
+function initDashboard(){
+  var mesActual='ABRIL';
+  var presMes=ENT_DET.filter(function(r){return r[11]===mesActual;}).reduce(function(a,r){return a+r[7];},0);
+  var presAno=ENT_DET.reduce(function(a,r){return a+r[7];},0);
+  var facMes=ENT_DET.filter(function(r){return r[11]===mesActual;}).reduce(function(a,r){return a+(r[8]||0);},0);
+  var facAno=ENT_DET.reduce(function(a,r){return a+(r[8]||0);},0);
+  var egrPend=COS_RESUMEN.reduce(function(a,r){return a+r[7];},0);
+  var egrTot=COS_RESUMEN.reduce(function(a,r){return a+r[5];},0);
+  var ingMes=COS_DET.filter(function(r){return r[8]>0;}).reduce(function(a,r){return a+r[8];},0);
+  var ingAno=COS_DET.reduce(function(a,r){return a+r[8];},0);
+  function fmt(n){if(n>=1000000)return '$'+Math.round(n/1000).toLocaleString('es-AR')+'K';if(n>=1000)return '$'+Math.round(n/1000).toLocaleString('es-AR')+'K';return '$'+Math.round(n).toLocaleString('es-AR');}
+  function fmtN(n){if(n>=1000)return (Math.round(n/100)/10).toFixed(1)+'K';return n.toLocaleString('es-AR');}
+  var ids={
+    'dash-fac-mes':fmt(facMes),'dash-fac-ano':fmt(facAno),
+    'dash-pren-mes':fmtN(presMes),'dash-pren-ano':fmtN(presAno),
+    'dash-ing-mes':fmtN(ingMes),'dash-ing-ano':fmtN(ingAno),
+    'dash-egr-mes':fmt(egrPend),'dash-egr-ano':fmt(egrTot)
+  };
+  Object.keys(ids).forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=ids[id];});
+}
+
+// ===== CONFIGURACIONES =====
+var SECTIONS_LABELS={
+  inicio:'Inicio',clientes:'Clientes',proveedores:'Proveedores',
+  presupuestos:'Presupuestos',pagos:'Pagos y Cobros',reportes:'Reportes',
+  pedidos:'Pedidos',tizadas:'Tizadas / Corte',costura:'Costura',
+  entregas:'Entregas',materiales:'Materiales','nueva-venta':'Nueva Venta',
+  productos:'Productos',stock:'Stock'
+};
+var ROLES_KEYS=['admin','produccion','ventas-llavallol','ventas-montegrande'];
+var ROLES_LABELS=['🛡️ Admin','⚙️ Producción','🏪 V. Llavallol','🏬 V. M. Grande'];
+var permsData={};
+function initPermsData(){
+  document.querySelectorAll('.nav-item[data-roles]').forEach(function(item){
+    var onclick=item.getAttribute('onclick')||'';var mi=onclick.indexOf("nav('");var m=mi>=0?[null,onclick.slice(mi+5,onclick.indexOf("'",mi+5))]:null;
+    var sec=m?m[1]:null;
+    if(sec)permsData[sec]=(item.getAttribute('data-roles')||'').split(' ');
+  });
+}
+function setConfigTab(tab,el){
+  ['permisos','empresa'].forEach(function(t){
+    var d=document.getElementById('cfg-tab-'+t);
+    if(d)d.style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('#sec-configuraciones .ptab').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  if(tab==='permisos')renderPerms();
+}
+function renderPerms(){
+  initPermsData();
+  var tb=document.getElementById('perms-tbody');
+  if(!tb)return;
+  var rows=Object.keys(SECTIONS_LABELS).map(function(sec){
+    var label=SECTIONS_LABELS[sec];
+    var allowed=permsData[sec]||[];
+    var cells=ROLES_KEYS.map(function(role,ri){
+      var checked=allowed.indexOf(role)>=0?'checked':'';
+      var disabled=role==='admin'?'disabled title="Admin siempre tiene acceso"':'';
+      var cell='<td style="text-align:center"><input type="checkbox" class="perm-toggle" '+checked+' '+disabled+' onchange="togglePerm(\"'+sec+'\",\"'+role+'\",this.checked)"/></td>';return cell;
+    }).join('');
+    return '<tr><td style="font-weight:600">'+label+'</td>'+cells+'</tr>';
+  }).join('');
+  tb.innerHTML=rows;
+}
+function togglePerm(sec,role,val){
+  if(!permsData[sec])permsData[sec]=[];
+  if(val){if(permsData[sec].indexOf(role)<0)permsData[sec].push(role);}
+  else{permsData[sec]=permsData[sec].filter(function(r){return r!==role;});}
+}
+function guardarPermisos(){
+  document.querySelectorAll('.nav-item[data-roles]').forEach(function(item){
+    var onclick=item.getAttribute('onclick')||'';var mi=onclick.indexOf("nav('");var m=mi>=0?[null,onclick.slice(mi+5,onclick.indexOf("'",mi+5))]:null;
+    var sec=m?m[1]:null;
+    if(sec&&permsData[sec])item.setAttribute('data-roles',permsData[sec].join(' '));
+  });
+  if(currentRole)applyRoleNav(ROLES_CONFIG[currentRole].sections);
+  showToast('✅ Permisos guardados y aplicados');
+}
+
+// ===== COSTOS EDITABLES (override) =====
+function renderCostosTbl(){
+  var head=document.getElementById('cos-costos-head');
+  var body=document.getElementById('cos-costos-body');
+  if(!head||!body)return;
+  head.innerHTML='<tr><th>Prenda / Tipo</th>'+COSTUREROS.map(function(c){return '<th style="font-size:11px;min-width:80px">'+c+'</th>';}).join('')+'</tr>';
+  body.innerHTML=COSTOS_LISTA.map(function(r,ri){
+    var celdas=r.slice(1).map(function(v,ci){
+      if(!v)return '<td style="text-align:center;color:#e5e7eb">&#8212;</td>';
+      var inp='<input class="cost-cell-edit" type="number" value="'+v+'" id="cc_'+ri+'_'+ci+'"'+
+        ' onchange="updateCosto('+ri+','+(ci+1)+',this.value)"/>';
+      return '<td style="padding:3px 4px">'+inp+'</td>';
+    }).join('');
+    return '<tr><td><strong>'+r[0]+'</strong></td>'+celdas+'</tr>';
+  }).join('');
+}
+function updateCosto(ri,ci,val){
+  COSTOS_LISTA[ri][ci]=parseInt(val)||0;
+  showToast('Precio actualizado');
+}
+
+// ===== LOGIN / ROLES =====
+const ROLES_CONFIG = {
+  'admin': {
+    label: 'Administrador', short: 'Admin', badgeClass: 'admin', avatar: 'AD',
+    sections: ['inicio','clientes','proveedores','presupuestos','pagos','reportes','pedidos','tizadas','costura','entregas','materiales','nueva-venta','productos','stock'],
+    defaultSection: 'inicio'
+  },
+  'produccion': {
+    label: 'Producción', short: 'Producción', badgeClass: 'produccion', avatar: 'PR',
+    sections: ['inicio','pedidos','tizadas','costura','entregas','materiales'],
+    defaultSection: 'inicio'
+  },
+  'ventas-llavallol': {
+    label: 'Ventas Llavallol', short: 'V. Llavallol', badgeClass: 'ventas', avatar: 'VL',
+    sections: ['inicio','clientes','presupuestos','entregas','nueva-venta','productos','stock'],
+    defaultSection: 'inicio'
+  },
+  'ventas-montegrande': {
+    label: 'Ventas Monte Grande', short: 'V. M. Grande', badgeClass: 'ventas', avatar: 'VM',
+    sections: ['inicio','clientes','presupuestos','entregas','nueva-venta','productos','stock'],
+    defaultSection: 'inicio'
+  }
+};
+
+let currentRole = null;
+let selectedRoleKey = null;
+
+function selectRole(card, role) {
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedRoleKey = role;
+  const btn = document.getElementById('login-btn');
+  btn.classList.add('ready');
+  btn.textContent = 'Ingresar como ' + ROLES_CONFIG[role].label + ' →';
+}
+
+function doLogin() {
+  if (!selectedRoleKey) return;
+  currentRole = selectedRoleKey;
+  const cfg = ROLES_CONFIG[currentRole];
+  // Update user indicator
+  document.getElementById('user-avatar').textContent = cfg.avatar;
+  document.getElementById('user-name').textContent = cfg.label;
+  const badge = document.getElementById('role-badge');
+  badge.textContent = cfg.short;
+  badge.className = 'role-badge ' + cfg.badgeClass;
+  // Apply nav permissions
+  applyRoleNav(cfg.sections);
+  // Hide login, show app
+  document.getElementById('login-overlay').style.display = 'none';
+  // Go to default section
+  nav(cfg.defaultSection, null);
+  showToast('✅ Bienvenido/a · ' + cfg.label);
+}
+
+function applyRoleNav(allowedSections) {
+  document.querySelectorAll('.nav-item[data-roles]').forEach(item => {
+    const roles = item.getAttribute('data-roles').split(' ');
+    const allowed = roles.includes(currentRole);
+    item.classList.toggle('hidden-role', !allowed);
+  });
+  // Hide nav-section labels if ALL items in that section are hidden
+  document.querySelectorAll('.nav-section').forEach(section => {
+    const items = section.querySelectorAll('.nav-item');
+    const allHidden = Array.from(items).every(i => i.classList.contains('hidden-role'));
+    section.classList.toggle('hidden-role', allHidden);
+  });
+}
+
+function doLogout() {
+  currentRole = null;
+  selectedRoleKey = null;
+  // Reset login screen
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+  const btn = document.getElementById('login-btn');
+  btn.classList.remove('ready');
+  btn.textContent = 'Ingresar →';
+  // Show login overlay
+  document.getElementById('login-overlay').style.display = 'flex';
+  // Reset nav (show everything until re-login)
+  document.querySelectorAll('.nav-item.hidden-role,.nav-section.hidden-role').forEach(el => {
+    el.classList.remove('hidden-role');
+  });
+}
+
+window.addEventListener('load',()=>{initPedidos();initCostura();initEntregas();initMateriales();initDashboard();});
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',2500);}
+</script>
+</body>
+</html>
