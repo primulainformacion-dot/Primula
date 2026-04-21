@@ -364,19 +364,25 @@ td { font-size:13px; padding:11px 0; border-top:1px solid #f3f4f6; color:#374151
         </div>
         <div class="panel">
           <div class="panel-header"><h4>📅 Semanas recientes</h4></div>
-          <div id="fin-weekly-table" style="padding:8px"></div>
+          <div id="fin-mes-actual-panel" style="margin-bottom:12px"></div>
+      <div id="fin-weekly-table" style="padding:8px"></div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div class="panel">
           <div class="panel-header"><h4 id="dash-top-title">💰 Top egresos 2026</h4></div>
           <div id="fin-top-conceptos" style="padding:8px 12px"></div>
-        </div>
+ 
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h4>🟢 Top Ingresos 2026</h4></div>
+        <div id="fin-top-ingresos" style="padding:8px 12px"></div>
         <div class="panel">
           <div class="panel-header"><h4>📊 Totales del año</h4></div>
           <div id="fin-anual-resumen" style="padding:16px"></div>
         </div>
       </div>
+      <div id="fin-cheques-section" style="margin-top:16px"></div>
     </div>
 
     <!-- CAJAS TAB -->
@@ -433,7 +439,8 @@ td { font-size:13px; padding:11px 0; border-top:1px solid #f3f4f6; color:#374151
           <div class="tbl-wrap"><table>
             <thead><tr><th>Mes</th><th style="text-align:right">Ingresos</th><th style="text-align:right">Egresos</th><th style="text-align:right">Neto mes</th><th style="text-align:right">Acumulado</th><th>Tend.</th></tr></thead>
             <tbody id="cf-tbody-mensual"></tbody>
-          </table></div>
+          
+          <div id="cf-egresos-detalle"></div></table></div>
         </div>
       </div>
       <div id="cf-view-semanal" style="display:none">
@@ -458,7 +465,11 @@ td { font-size:13px; padding:11px 0; border-top:1px solid #f3f4f6; color:#374151
 
     <!-- OBJETIVOS TAB (actualizado) -->
     <div id="fin-tab-objetivos" style="display:none">
+      <div id="fin-obj-ganancia-mes"></div>
+      <div id="fin-obj-ganancia-anio"></div>
       <div id="fin-obj-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px"></div>
+      <div id="fin-obj-produccion-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px"></div>
+      <div id="fin-obj-kpis" style="margin-top:16px"></div>
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
         <div class="panel">
           <div class="panel-header"><h4>📊 Facturación mensual por canal</h4></div>
@@ -495,7 +506,12 @@ td { font-size:13px; padding:11px 0; border-top:1px solid #f3f4f6; color:#374151
                 <option value="">-- escribir o elegir --</option>
               </select>
               <input type="text" id="mov-detalle" class="form-input" placeholder="o escribir..." style="flex:1"/>
-            </div>
+            
+    </div>
+    <div style="margin-top:8px">
+      <label style="font-size:12px;color:#6b7280">Referencia (Factura/Remito)</label>
+      <input type="text" id="mov-referencia" placeholder="Nro factura/remito..." style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-top:4px">
+</div>
           </label>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <label>Ingreso ($):<input type="number" id="mov-ingreso" class="form-input" placeholder="0" style="width:100%;margin-top:4px"/></label>
@@ -524,7 +540,12 @@ td { font-size:13px; padding:11px 0; border-top:1px solid #f3f4f6; color:#374151
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <label>Ingreso ($):<input type="number" id="edit-mov-ingreso" class="form-input" style="width:100%;margin-top:4px"/></label>
             <label>Egreso ($):<input type="number" id="edit-mov-egreso" class="form-input" style="width:100%;margin-top:4px"/></label>
-          </div>
+          
+    </div>
+    <div style="margin-top:8px">
+      <label style="font-size:12px;color:#6b7280">Referencia (Factura/Remito)</label>
+      <input type="text" id="edit-mov-referencia" placeholder="Nro factura/remito..." style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-top:4px">
+</div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button class="btn btn-outline" onclick="closeModalOnly('modal-edit-mov')">Cancelar</button>
             <button class="btn" onclick="guardarEditMov()">Guardar cambios</button>
@@ -1028,17 +1049,28 @@ const FIN_CANAL_MENSUAL = {"mayorista_san_marcos":{"2025":[{"mes":"ENERO","val":
 
 // Objetivos editables por canal (base 2026)
 const FIN_OBJ_CANALES = {
-  mayorista_san_marcos: { label: '🏭 Mayorista San Marcos', color: '#6c7ae0', obj2025: 200000000, obj2026: 250000000 },
-  mayorista_otros:      { label: '📦 Otros Mayoristas',    color: '#8b5cf6', obj2025:  20000000, obj2026:  25000000 },
+  mayorista_san_marcos: { label: '🏭 Mayorista (San Marcos)', color: '#6c7ae0', obj2025: 200000000, obj2026: 250000000 },
+  mayorista_otros:      { label: '🏭 Mayorista (Otros)',    color: '#8b5cf6', obj2025:  20000000, obj2026:  25000000 },
   local_llavallol:      { label: '🏪 Local Llavallol',     color: '#34d399', obj2025:  30000000, obj2026: 100000000 },
   local_montegrande:    { label: '🏬 Local Monte Grande',  color: '#f59e0b', obj2025: 100000000, obj2026: 120000000 },
   online:               { label: '🌐 Tienda Online',       color: '#06b6d4', obj2025:   5000000, obj2026:  10000000 },
 };
 
+const FIN_OBJETIVOS = {
+  facturacion: 535000000,
+  produccion: 200000,
+  ganancia_mensual: 7500000,
+  ganancia_anual: 90000000,
+  produccion_semanal: 4000,
+  produccion_mensual: 16000,
+  produccion_anual: 200000
+};
+
 
 // ===== FINANZAS MODULE =====
 var finTabActual = 'dashboard';
-var finAnio = 2026;  // año activo
+var finAnio = 2026;
+var currentCajaActiva = FIN_CAJAS[0];  // año activo
 
 // Formatters
 function fmtM(n) {
@@ -1047,6 +1079,11 @@ function fmtM(n) {
   return '$'+Math.round(n).toLocaleString('es-AR');
 }
 function fmtFull(n) { return '$'+Math.round(n).toLocaleString('es-AR'); }
+function fmtDate(d) { 
+  if(!d) return ''; 
+  var p = d.split('-'); 
+  return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d; 
+}
 function fmtShort(n) {
   var s = n < 0 ? '-' : '';
   var abs = Math.abs(n);
@@ -1159,6 +1196,16 @@ function renderFinDashboard() {
 
   // Totals card
   var net = totalIng - totalEgr;
+  
+  // Total saldo de todas las cajas
+  var totalSaldo = totalIng - totalEgr;
+  var totalSaldoColor = totalSaldo >= 0 ? '#059669' : '#dc2626';
+  grid.innerHTML += '<div class="card" style="border-top:4px solid #10b981;padding:14px;background:#f0fdf4;cursor:pointer;opacity:0.9">'+
+    '<div style="font-size:10px;font-weight:700;color:#10b981;letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">SALDO TOTAL CAJAS</div>'+
+    '<div style="font-size:20px;font-weight:800;color:'+totalSaldoColor+'">'+fmtM(totalSaldo)+'</div>'+
+    '<div style="font-size:10px;color:#9ca3af;margin-top:4px">'+fmtShort(totalIng)+' - '+fmtShort(totalEgr)+'</div>'+
+  '</div>';
+
   grid.innerHTML += '<div class="card" style="border-top:4px solid #374151;padding:14px;background:#f8fafc">'+
     '<div style="font-size:10px;font-weight:700;color:#374151;letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">TOTAL '+y+'</div>'+
     '<div style="font-size:20px;font-weight:800;color:'+(net>=0?'#059669':'#dc2626')+'">'+fmtM(net)+'</div>'+
@@ -1172,7 +1219,34 @@ function renderFinDashboard() {
   // Monthly chart
   renderFinChart();
 
-  // Weekly table (last 8 weeks of the year)
+  
+  // Mes actual summary card
+  var mesActualData = null;
+  var MES_ORDER = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  var monthlyData = FIN_YEAR_MONTHLY[String(y)] || {};
+  // Find the latest month with data
+  for(var i=MES_ORDER.length-1; i>=0; i--) {
+    if(monthlyData[MES_ORDER[i]]) {
+      mesActualData = {mes: MES_ORDER[i], ing: monthlyData[MES_ORDER[i]].ing||0, egr: monthlyData[MES_ORDER[i]].egr||0};
+      break;
+    }
+  }
+  var mesCard = '';
+  if(mesActualData) {
+    var mesNet = mesActualData.ing - mesActualData.egr;
+    var mesCol = mesNet >= 0 ? '#059669' : '#dc2626';
+    mesCard = '<div class="card" style="border-top:4px solid #f59e0b;padding:14px;margin-bottom:16px">'+
+      '<div style="font-size:10px;font-weight:700;color:#f59e0b;letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">'+mesActualData.mes+' '+y+'</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+
+        '<div><div style="font-size:9px;color:#9ca3af">Ingresos</div><div style="font-size:14px;font-weight:800;color:#059669">'+fmtShort(mesActualData.ing)+'</div></div>'+
+        '<div><div style="font-size:9px;color:#9ca3af">Egresos</div><div style="font-size:14px;font-weight:800;color:#dc2626">'+fmtShort(mesActualData.egr)+'</div></div>'+
+        '<div><div style="font-size:9px;color:#9ca3af">Neto</div><div style="font-size:14px;font-weight:800;color:'+mesCol+'">'+fmtShort(mesNet)+'</div></div>'+
+      '</div>'+
+    '</div>';
+    var mesPanelEl = document.getElementById('fin-mes-actual-panel'); 
+    if(mesPanelEl) mesPanelEl.innerHTML = mesCard;
+  }
+// Weekly table (last 8 weeks of the year)
   var weeklyData = FIN_YEAR_WEEKLY[String(y)] || {};
   var weeks = Object.values(weeklyData).sort(function(a,b){ return b.sem-a.sem; }).slice(0,6);
   var wEl = document.getElementById('fin-weekly-table'); if(wEl) {
@@ -1208,6 +1282,24 @@ function renderFinDashboard() {
     }).join('');
   }
 
+
+  // Top ingresos
+  var topIngresos = document.getElementById('fin-top-ingresos'); if(topIngresos) {
+    var maxIng = topData.length ? Math.max.apply(null, topData.map(function(r){ return r.ing||0; })) : 1;
+    if(!maxIng) maxIng = 1;
+    topIngresos.innerHTML = topData.slice(0,12).map(function(r) {
+      var pct = Math.round((r.ing||0)/maxIng*100);
+      return '<div style="margin-bottom:7px">'+
+        '<div style="display:flex;justify-content:space-between;font-size:12px">'+
+          '<span style="font-weight:600;color:#374151">'+r.concepto+'</span>'+
+          '<span style="color:#059669">'+fmtShort(r.ing||0)+'</span>'+
+        '</div>'+
+        '<div style="background:#f1f5f9;border-radius:3px;height:4px;margin-top:2px">'+
+          '<div style="background:#34d399;width:'+pct+'%;height:100%;border-radius:3px"></div>'+
+        '</div></div>';
+    }).join('');
+  }
+
   // Anual resumen
   var resEl = document.getElementById('fin-anual-resumen'); if(resEl) {
     var netColor = net>=0?'#059669':'#dc2626';
@@ -1224,6 +1316,43 @@ function renderFinDashboard() {
       '<div style="font-size:11px;color:#9ca3af;margin-top:4px">Egresos: '+pctEgr+'% de ingresos</div>';
   }
 }
+
+
+  // Cheques y eCheqs section
+  var allMovs = getMovs();
+  var chequesMovs = allMovs.filter(function(m) {
+    if((m.anio||m['año']||0) != y) return false;
+    var hasCheckConcept = ['CHEQUES DEPOSITADOS','CHEQUES','GASTOS CHEQUES','CHEQUES/ECHEQ'].indexOf(m.concepto) >= 0;
+    var hasCheckDetail = m.detalle && m.detalle.toLowerCase().includes('cheque');
+    return hasCheckConcept || hasCheckDetail;
+  });
+  
+  var chequesCobrados = 0, chequesPagados = 0;
+  chequesMovs.forEach(function(m) {
+    if(m.concepto === 'CHEQUES DEPOSITADOS' && m.ingreso > 0) chequesCobrados += m.ingreso;
+    if((m.concepto === 'GASTOS CHEQUES' || (m.detalle && (m.detalle.includes('Pago de Cheque') || m.detalle.includes('Pago Cheque')))) && m.egreso > 0) chequesPagados += m.egreso;
+  });
+  
+  var chequesDiv = document.getElementById('fin-cheques-section'); if(chequesDiv) {
+    var chequesSaldo = chequesCobrados - chequesPagados;
+    var chequesColor = chequesSaldo >= 0 ? '#059669' : '#dc2626';
+    var html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">'+
+      '<div class="card" style="padding:14px"><div style="font-size:10px;color:#059669;font-weight:700;margin-bottom:4px">CHEQUES COBRADOS</div><div style="font-size:18px;font-weight:800;color:#059669">'+fmtFull(chequesCobrados)+'</div></div>'+
+      '<div class="card" style="padding:14px"><div style="font-size:10px;color:#dc2626;font-weight:700;margin-bottom:4px">CHEQUES PAGADOS</div><div style="font-size:18px;font-weight:800;color:#dc2626">'+fmtFull(chequesPagados)+'</div></div>'+
+      '<div class="card" style="padding:14px"><div style="font-size:10px;font-weight:700;margin-bottom:4px;color:'+chequesColor+'">SALDO CHEQUES</div><div style="font-size:18px;font-weight:800;color:'+chequesColor+'">'+fmtFull(chequesSaldo)+'</div></div>'+
+    '</div>';
+    html += '<div class="panel"><div class="panel-header"><h4>📄 Cheques y eCheqs '+y+' ('+chequesMovs.length+')</h4></div>'+
+      '<div class="tbl-wrap"><table><thead><tr>'+
+      '<th>Fecha</th><th>Caja</th><th>Concepto</th><th>Detalle</th><th style="text-align:right">Monto</th><th>Tipo</th></tr></thead><tbody>';
+    chequesMovs.sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); }).forEach(function(m) {
+      var tipo = m.ingreso > 0 ? 'Cobrado' : 'Pagado';
+      var monto = m.ingreso > 0 ? m.ingreso : m.egreso;
+      var tipoColor = m.ingreso > 0 ? '#059669' : '#dc2626';
+      html += '<tr><td style="font-size:12px;white-space:nowrap">'+fmtDate(m.fecha)+'</td><td style="font-size:11px">'+m.caja+'</td><td><strong style="font-size:12px">'+m.concepto+'</strong></td><td style="font-size:11px;color:#6b7280;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.detalle+'</td><td style="text-align:right;font-weight:600;color:'+tipoColor+'">'+fmtFull(monto)+'</td><td><span style="font-size:11px;color:'+tipoColor+'">'+tipo+'</span></td></tr>';
+    });
+    html += '</tbody></table></div></div>';
+    chequesDiv.innerHTML = html;
+  }
 
 function renderFinChart() {
   var canvas = document.getElementById('fin-chart-monthly'); if(!canvas) return;
@@ -1252,6 +1381,7 @@ function renderFinChart() {
 function renderFinCajas() { renderCajaDetail(FIN_CAJAS[0], null); }
 
 function renderCajaDetail(caja, btnEl) {
+  currentCajaActiva = caja;
   document.querySelectorAll('#fin-cajas-subtabs .ptab').forEach(function(b){ b.classList.remove('active'); });
   if(btnEl) btnEl.classList.add('active');
   else document.querySelectorAll('#fin-cajas-subtabs .ptab').forEach(function(b){ if(b.textContent===caja) b.classList.add('active'); });
@@ -1292,7 +1422,43 @@ function renderCajaDetail(caja, btnEl) {
   }
 
   // Movements table with running balance
-  html += '<div class="panel"><div class="panel-header"><h4>📋 Movimientos '+caja+' '+y+' ('+movs.length+')</h4></div>'+
+  
+  // Add filter bar
+  var filterBar = '<div class="search-bar" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">'+
+    '<input type="text" id="caja-search" placeholder="🔍 Buscar..." style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:6px;flex:1;min-width:150px" oninput="renderCajaDetail(currentCajaActiva,null)">'+
+    '<select id="caja-mes-filter" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:6px;min-width:140px" onchange="renderCajaDetail(currentCajaActiva,null)">'+
+      '<option value="">Todos los meses</option>';
+  MES_ORDER.forEach(function(m){ filterBar += '<option value="'+m+'">'+m+'</option>'; });
+  filterBar += '</select>'+
+    '<select id="caja-tipo-filter" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:6px;min-width:120px" onchange="renderCajaDetail(currentCajaActiva,null)">'+
+      '<option value="">Ing + Egr</option>'+
+      '<option value="ing">Solo ingresos</option>'+
+      '<option value="egr">Solo egresos</option>'+
+    '</select>'+
+  '</div>';
+  
+  // Apply filters to movements
+  var searchQ = (document.getElementById('caja-search')||{}).value||'';
+  var filterMes = (document.getElementById('caja-mes-filter')||{}).value||'';
+  var filterTipo = (document.getElementById('caja-tipo-filter')||{}).value||'';
+  movs = movs.filter(function(m) {
+    if(searchQ) {
+      var qq = searchQ.toLowerCase();
+      if(!([m.concepto,m.detalle,m.caja].filter(Boolean).join(' ').toLowerCase().includes(qq))) return false;
+    }
+    if(filterMes && m.mes !== filterMes) return false;
+    if(filterTipo === 'ing' && (m.ingreso||0) <= 0) return false;
+    if(filterTipo === 'egr' && (m.egreso||0) <= 0) return false;
+    return true;
+  });
+  
+  // Replace the first movements table with filtered version and add filter bar before it
+  var movPanelStart = html.lastIndexOf('<div class="panel"><div class="panel-header"><h4>📋 Movimientos');
+  if(movPanelStart > 0) {
+    html = html.substring(0, movPanelStart) + filterBar + html.substring(movPanelStart);
+  }
+
+html += '<div class="panel"><div class="panel-header"><h4>📋 Movimientos '+caja+' '+y+' ('+movs.length+')</h4></div>'+
     '<div class="tbl-wrap"><table><thead><tr>'+
     '<th>Fecha</th><th>Concepto</th><th>Detalle</th>'+
     '<th style="text-align:right;color:#059669">Ingreso</th>'+
@@ -1305,7 +1471,7 @@ function renderCajaDetail(caja, btnEl) {
   movsWithAcum.forEach(function(m) {
     var acumCol = (m._acum||0)>=0?'#059669':'#dc2626';
     html += '<tr>'+
-      '<td style="font-size:12px;white-space:nowrap">'+m.fecha+'</td>'+
+      '<td style="font-size:12px;white-space:nowrap">' + fmtDate(m.fecha) + '</td>'+
       '<td><strong style="font-size:12px">'+m.concepto+'</strong></td>'+
       '<td style="font-size:11px;color:#6b7280;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.detalle+'</td>'+
       '<td style="text-align:right;color:#059669;font-weight:600">'+(m.ingreso>0?fmtFull(m.ingreso):'')+'</td>'+
@@ -1361,7 +1527,7 @@ function renderFinMovs() {
     acum += (m.ingreso||0)-(m.egreso||0);
     var acumCol = acum>=0?'#059669':'#dc2626';
     return '<tr>'+
-      '<td style="font-size:12px;white-space:nowrap">'+m.fecha+'</td>'+
+      '<td style="font-size:12px;white-space:nowrap">' + fmtDate(m.fecha) + '</td>'+
       '<td style="font-size:11px">'+(cajaShort[m.caja]||m.caja)+'</td>'+
       '<td><strong style="font-size:12px">'+m.concepto+'</strong></td>'+
       '<td style="font-size:11px;color:#6b7280;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(m.detalle||'')+'">'+m.detalle+'</td>'+
@@ -1369,7 +1535,7 @@ function renderFinMovs() {
       '<td style="text-align:right;font-weight:600;color:#dc2626">'+(m.egreso>0?fmtFull(m.egreso):'')+'</td>'+
       '<td style="text-align:right;font-weight:700;font-size:11px;color:'+acumCol+'">'+fmtShort(acum)+'</td>'+
       '<td><button class="btn-sm btn-outline" style="font-size:10px;padding:2px 6px" onclick="abrirEditMov('+JSON.stringify(m)+')">✏</button></td>'+
-    '</tr>';
+    + '<td style="font-size:11px;color:#6b7280;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(m.referencia||'')+'</td></tr>';
   }).join('');
 }
 
@@ -1486,14 +1652,46 @@ function renderCFMensual() {
       '<td style="text-align:right;font-weight:700;color:'+col+'">'+fmtFull(m.net)+'</td>'+
       '<td style="text-align:right;font-weight:700;color:'+acumCol+'">'+fmtFull(m.acum)+'</td>'+
       '<td style="text-align:center">'+trend+'</td></tr>';
-  }).join('') +
-  '<tr style="background:#f8fafc;font-weight:800">'+
+  }).join('');
+  var totIng = months.reduce(function(a,m){return a+m.ing;},0);
+  var totEgr = months.reduce(function(a,m){return a+m.egr;},0);
+  var totNet = totIng - totEgr;
+  tb.innerHTML += '<tr style="background:#f8fafc;font-weight:800">'+
     '<td>TOTAL</td>'+
-    '<td style="text-align:right;color:#059669">'+fmtFull(months.reduce(function(a,m){return a+m.ing;},0))+'</td>'+
-    '<td style="text-align:right;color:#dc2626">'+fmtFull(months.reduce(function(a,m){return a+m.egr;},0))+'</td>'+
-    '<td style="text-align:right;color:'+(months[months.length-1]||{net:0}).acum>=0?'#059669':'#dc2626'+'">'+fmtFull((months[months.length-1]||{acum:0}).acum)+'</td>'+
+    '<td style="text-align:right;color:#059669">'+fmtFull(totIng)+'</td>'+
+    '<td style="text-align:right;color:#dc2626">'+fmtFull(totEgr)+'</td>'+
+    '<td style="text-align:right;color:'+(totNet>=0?'#059669':'#dc2626')+'">'+fmtFull(totNet)+'</td>'+
     '<td></td><td></td></tr>';
 }
+
+
+  // Add egresos breakdown by concepto
+  var egresosDetail = document.getElementById('cf-egresos-detalle'); 
+  if(egresosDetail && months.length) {
+    var allMovs = getMovs();
+    var egresosMovs = allMovs.filter(function(m) {
+      return (m.anio||m['año']||0) == y && m.egreso > 0;
+    });
+    var conceptoMap = {};
+    egresosMovs.forEach(function(m) {
+      var c = m.concepto || 'Sin clasificar';
+      conceptoMap[c] = (conceptoMap[c] || 0) + m.egreso;
+    });
+    var topEgresos = Object.keys(conceptoMap).map(function(c) {
+      return {concepto: c, total: conceptoMap[c]};
+    }).sort(function(a,b) { return b.total - a.total; }).slice(0,10);
+    
+    var totalEgresoAll = topEgresos.reduce(function(a,r) { return a + r.total; }, 0);
+    var html = '<div style="margin-top:16px;padding:16px;background:#f8fafc;border-radius:8px">'+
+      '<h4 style="margin-bottom:12px;font-size:13px;font-weight:700">📊 Detalle de egresos por tipo</h4>'+
+      '<div class="tbl-wrap"><table style="font-size:12px"><thead><tr><th>Concepto</th><th style="text-align:right">Total</th><th style="text-align:right">%</th></tr></thead><tbody>';
+    topEgresos.forEach(function(r) {
+      var pct = totalEgresoAll > 0 ? Math.round(r.total / totalEgresoAll * 100) : 0;
+      html += '<tr><td>'+r.concepto+'</td><td style="text-align:right">'+fmtFull(r.total)+'</td><td style="text-align:right">'+pct+'%</td></tr>';
+    });
+    html += '</tbody></table></div></div>';
+    egresosDetail.innerHTML = html;
+  }
 
 function renderCFSemanal() {
   var y = String(finAnio);
@@ -1670,6 +1868,146 @@ function renderObjetivos() {
   var op=document.getElementById('obj-produccion'); if(op) op.value=FIN_OBJETIVOS.produccion;
   var og=document.getElementById('obj-ganancia'); if(og) og.value=FIN_OBJETIVOS.ganancia;
 }
+
+
+  // ── GANANCIA CARDS ──
+  var gananciaMonthCard = document.getElementById('fin-obj-ganancia-mes');
+  var gananciaYearCard = document.getElementById('fin-obj-ganancia-anio');
+  if(gananciaMonthCard || gananciaYearCard) {
+    var monthlyData = FIN_YEAR_MONTHLY[ys] || {};
+    var currentMonthGan = null;
+    var MES_ORDER = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+    for(var i=MES_ORDER.length-1; i>=0; i--) {
+      if(monthlyData[MES_ORDER[i]]) {
+        var m = monthlyData[MES_ORDER[i]];
+        currentMonthGan = m.ing - m.egr;
+        break;
+      }
+    }
+    var objGanMes = FIN_OBJETIVOS.ganancia_mensual || 0;
+    var objGanAno = FIN_OBJETIVOS.ganancia_anual || 0;
+    
+    if(gananciaMonthCard && currentMonthGan !== null) {
+      var ganPct = objGanMes > 0 ? Math.min(100, Math.round(currentMonthGan/objGanMes*100)) : 0;
+      var ganColor = ganPct >= 80 ? '#059669' : ganPct >= 50 ? '#d97706' : '#dc2626';
+      gananciaMonthCard.innerHTML = '<div class="card" style="border-top:4px solid #f59e0b;padding:16px">'+
+        '<div style="font-size:11px;font-weight:700;color:#f59e0b;margin-bottom:6px">📈 GANANCIA MENSUAL</div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px">'+
+          '<div><div style="font-size:10px;color:#9ca3af">'+MES_ORDER[new Date().getMonth()]+'</div><div style="font-size:18px;font-weight:800;color:#374151">'+fmtM(currentMonthGan)+'</div></div>'+
+          '<div style="text-align:right"><div style="font-size:10px;color:#9ca3af">META</div><div style="font-size:13px;font-weight:700;color:#9ca3af">'+fmtM(objGanMes)+'</div></div>'+
+        '</div>'+
+        '<div style="background:#f1f5f9;border-radius:6px;height:6px;margin-top:6px">'+
+          '<div style="background:'+ganColor+';width:'+ganPct+'%;height:100%;border-radius:6px"></div>'+
+        '</div>'+
+        '<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="font-size:11px;font-weight:700;color:'+ganColor+'">'+ganPct+'% de objetivo</span><span style="font-size:10px;color:#9ca3af">'+fmtM(Math.max(0,objGanMes-currentMonthGan))+' falta</span></div>'+
+      '</div>';
+    }
+    
+    if(gananciaYearCard) {
+      var yearGan = totalIng - totalEgr;
+      var ganYearPct = objGanAno > 0 ? Math.min(100, Math.round(yearGan/objGanAno*100)) : 0;
+      var ganYearColor = ganYearPct >= 80 ? '#059669' : ganYearPct >= 50 ? '#d97706' : '#dc2626';
+      gananciaYearCard.innerHTML = '<div class="card" style="border-top:4px solid #10b981;padding:16px">'+
+        '<div style="font-size:11px;font-weight:700;color:#10b981;margin-bottom:6px">📈 GANANCIA ANUAL '+y+'</div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px">'+
+          '<div><div style="font-size:10px;color:#9ca3af">ACUMULADO</div><div style="font-size:18px;font-weight:800;color:#374151">'+fmtM(yearGan)+'</div></div>'+
+          '<div style="text-align:right"><div style="font-size:10px;color:#9ca3af">META</div><div style="font-size:13px;font-weight:700;color:#9ca3af">'+fmtM(objGanAno)+'</div></div>'+
+        '</div>'+
+        '<div style="background:#f1f5f9;border-radius:6px;height:6px;margin-top:6px">'+
+          '<div style="background:'+ganYearColor+';width:'+ganYearPct+'%;height:100%;border-radius:6px"></div>'+
+        '</div>'+
+        '<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="font-size:11px;font-weight:700;color:'+ganYearColor+'">'+ganYearPct+'% de objetivo</span><span style="font-size:10px;color:#9ca3af">'+fmtM(Math.max(0,objGanAno-yearGan))+' falta</span></div>'+
+      '</div>';
+    }
+  }
+  
+  // ── PRODUCCIÓN CARDS ──
+  var produccionCards = document.getElementById('fin-obj-produccion-cards');
+  if(produccionCards) {
+    // Use COS_DET length as production proxy, or default to simple calculation
+    var totalProduction = 0; // Placeholder - would need COS_DET data
+    
+    var objProdSem = FIN_OBJETIVOS.produccion_semanal || 4000;
+    var objProdMes = FIN_OBJETIVOS.produccion_mensual || 16000;
+    var objProdAno = FIN_OBJETIVOS.produccion_anual || 200000;
+    
+    var html = '';
+    [
+      {label: 'PRODUCCIÓN SEMANAL', obj: objProdSem, color: '#f59e0b', icon: '📊'},
+      {label: 'PRODUCCIÓN MENSUAL', obj: objProdMes, color: '#34d399', icon: '📈'},
+      {label: 'PRODUCCIÓN ANUAL', obj: objProdAno, color: '#6c7ae0', icon: '🎯'}
+    ].forEach(function(p) {
+      var pct = p.obj > 0 ? 50 : 0; // Placeholder - would need actual production data
+      var color = pct >= 80 ? '#059669' : pct >= 50 ? '#d97706' : '#dc2626';
+      html += '<div class="card" style="border-top:4px solid '+p.color+';padding:14px">'+
+        '<div style="font-size:11px;font-weight:700;color:'+p.color+';margin-bottom:6px">'+p.icon+' '+p.label+'</div>'+
+        '<div style="font-size:16px;font-weight:800;color:#374151;margin-bottom:4px">0 / '+p.obj+'</div>'+
+        '<div style="background:#f1f5f9;border-radius:4px;height:5px"><div style="background:'+color+';width:'+pct+'%;height:100%;border-radius:4px"></div></div>'+
+      '</div>';
+    });
+    produccionCards.innerHTML = html;
+  }
+  
+  // ── KPIs SECTION ──
+  var kpisDiv = document.getElementById('fin-obj-kpis');
+  if(kpisDiv) {
+    var allMovs = getMovs();
+    var yrMovs = allMovs.filter(function(m) { return (m.anio||m['año']||0) == y; });
+    
+    // KPI 1: Ticket promedio
+    var ingMovs = yrMovs.filter(function(m) { return m.ingreso > 0; });
+    var ticketPromedio = ingMovs.length > 0 ? totalIng / ingMovs.length : 0;
+    
+    // KPI 2: Ratio costura/ventas
+    var costuraEgr = 0;
+    yrMovs.forEach(function(m) {
+      if(m.concepto && (m.concepto.includes('COSTURA') || m.concepto.includes('Costura'))) {
+        costuraEgr += m.egreso || 0;
+      }
+    });
+    var ratioCostura = totalIng > 0 ? (costuraEgr / totalIng * 100) : 0;
+    
+    // KPI 3: Rentabilidad bruta
+    var rentabilidad = totalIng > 0 ? ((totalIng - totalEgr) / totalIng * 100) : 0;
+    
+    // KPI 4: Crecimiento YoY
+    var prevYearMovs = allMovs.filter(function(m) { return (m.anio||m['año']||0) == y-1; });
+    var prevYearIng = 0;
+    prevYearMovs.forEach(function(m) { prevYearIng += m.ingreso || 0; });
+    var crecYoY = prevYearIng > 0 ? ((totalIng - prevYearIng) / prevYearIng * 100) : 0;
+    var monthsInYear = yrMovs.length > 0 ? Object.keys(FIN_YEAR_MONTHLY[ys]||{}).length : 12;
+    var crecYoYAnnualized = crecYoY * (12 / monthsInYear);
+    
+    // KPI 5: Eficiencia operativa
+    var sueldosEgr = 0;
+    yrMovs.forEach(function(m) {
+      if(m.concepto && (m.concepto.includes('SUELDOS') || m.concepto.includes('SALARIO'))) {
+        sueldosEgr += m.egreso || 0;
+      }
+    });
+    var eficiencia = (sueldosEgr + costuraEgr) > 0 ? (totalIng / (sueldosEgr + costuraEgr)) : 0;
+    
+    // KPI 6: Días de cobertura
+    var diasCobertura = totalEgr > 0 ? Math.round((totalSaldo / (totalEgr / 365))) : 0;
+    
+    var kpiHtml = '<div style="margin-top:20px;padding:16px;background:#f8fafc;border-radius:8px">'+
+      '<h4 style="margin-bottom:14px;font-size:13px;font-weight:700">📊 KPIs de crecimiento</h4>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">'+
+        '<div class="card" style="padding:12px"><div style="font-size:10px;color:#9ca3af;margin-bottom:4px">TICKET PROMEDIO</div><div style="font-size:16px;font-weight:800;color:#6c7ae0">'+fmtM(ticketPromedio)+'</div><div style="font-size:10px;color:#9ca3af;margin-top:2px">'+ingMovs.length+' operaciones</div></div>'+
+        '<div class="card" style="padding:12px"><div style="font-size:10px;color:#9ca3af;margin-bottom:4px">RATIO COSTURA/VENTAS</div><div style="font-size:16px;font-weight:800;color:'+(ratioCostura < 25 ? '#059669' : '#dc2626')+'">'+ratioCostura.toFixed(1)+'%</div><div style="font-size:10px;color:#9ca3af;margin-top:2px">Meta: <25%</div></div>'+
+        '<div class="card" style="padding:12px"><div style="font-size:10px;color:#9ca3af;margin-bottom:4px">RENTABILIDAD BRUTA</div><div style="font-size:16px;font-weight:800;color:'+(rentabilidad >= 15 ? '#059669' : '#dc2626')+'">'+rentabilidad.toFixed(1)+'%</div><div style="font-size:10px;color:#9ca3af;margin-top:2px">Meta: >15%</div></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'+
+        '<div class="card" style="padding:12px"><div style="font-size:10px;color:#9ca3af;margin-bottom:4px">CRECIMIENTO YoY</div><div style="font-size:16px;font-weight:800;color:'+(crecYoYAnnualized >= 40 ? '#059669' : '#dc2626')+'">'+crecYoYAnnualized.toFixed(1)+'%</div><div style="font-size:10px;color:#9ca3af;margin-top:2px">Meta: >40%</div></div>'+
+        '<div class="card" style="padding:12px"><div style="font-size:10px;color:#9ca3af;margin-bottom:4px">EFICIENCIA OPERATIVA</div><div style="font-size:16px;font-weight:800;color:#34d399">'+eficiencia.toFixed(2)+'x</div><div style="font-size:10px;color:#9ca3af;margin-top:2px">Ingresos/Costos</div></div>'+
+        '<div class="card" style="padding:12px"><div style="font-size:10px;color:#9ca3af;margin-bottom:4px">DÍAS DE COBERTURA</div><div style="font-size:16px;font-weight:800;color:#06b6d4">'+diasCobertura+' días</div><div style="font-size:10px;color:#9ca3af;margin-top:2px">Saldo/Egresos diarios</div></div>'+
+      '</div>'+
+      '<div style="margin-top:12px;padding:12px;background:#fff;border-radius:6px;border-left:3px solid #f59e0b">'+
+        '<div style="font-size:11px;color:#374151"><strong>💡 KPIs sugeridos para crecer:</strong> Reducir ratio costura/ventas a <25%, mantener rentabilidad >15%, lograr ticket promedio >150K, crecer 40% YoY en Tienda Online</div>'+
+      '</div>'+
+    '</div>';
+    kpisDiv.innerHTML = kpiHtml;
+  }
 
 function buildSparkline(values, color) {
   if(!values||!values.length) return '';
