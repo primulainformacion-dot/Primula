@@ -2355,8 +2355,15 @@ async function initApp() {
     }
     // Listen to auth changes
     sb.auth.onAuthStateChange(async (_event, session) => {
-      if (session) { await loadUserProfile(session.user); showApp(); }
-      else if (!APP_USER) { showLogin(); } // no cerrar si es login local
+      console.log('[AuthStateChange]', _event, session ? 'session OK' : 'no session');
+      if (_event === 'SIGNED_IN' && session) {
+        try { await loadUserProfile(session.user); } catch(e) {
+          APP_USER = { id: session.user.id, email: session.user.email, nombre: session.user.email.split('@')[0], rol: 'admin' };
+        }
+        showApp();
+      } else if (_event === 'SIGNED_OUT') {
+        if (!APP_USER || APP_USER.id !== 'local') showLogin();
+      }
     });
   } catch(e) {
     console.warn('Supabase initApp error:', e);
@@ -2388,34 +2395,47 @@ async function doLogin() {
 
   try {
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    console.log('[Login result]', { data, error });
+
     if (error) {
-      // Distinguir tipos de error
-      if (error.message && error.message.toLowerCase().includes('invalid')) {
+      var msg = error.message || '';
+      if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('credentials')) {
         errEl.textContent = '❌ Email o contraseña incorrectos';
-      } else if (error.message && error.message.toLowerCase().includes('network')) {
+      } else if (msg.toLowerCase().includes('confirm') || msg.toLowerCase().includes('verified')) {
+        errEl.textContent = '📧 Confirmá tu email antes de ingresar (revisá tu casilla)';
+      } else if (msg.toLowerCase().includes('network') || error.status === 0) {
         errEl.textContent = '🌐 Sin conexión. Verificá tu internet.';
-      } else if (error.status === 0 || error.status >= 500) {
-        errEl.textContent = '🔴 Servidor no disponible. Intentá en unos minutos.';
       } else {
-        errEl.textContent = '⚠️ ' + (error.message || 'Error desconocido');
+        errEl.textContent = '⚠️ ' + msg;
       }
       btn.disabled = false; btn.textContent = 'Entrar al sistema';
       console.error('[Login error]', error);
       return;
     }
-    // ✅ Éxito — botón verde
+
+    // ✅ Login OK
     btn.classList.add('success');
     btn.textContent = '✅ Acceso concedido';
-    if (data.session) {
-      try { await loadUserProfile(data.session.user); } catch(pe) { console.warn('Profile load failed, using defaults', pe); }
-      setTimeout(function(){ showApp(); }, 600);
+
+    var user = (data && data.user) ? data.user : (data && data.session && data.session.user) ? data.session.user : null;
+    if (user) {
+      // Cargar perfil en background, no bloquear entrada
+      try { await loadUserProfile(user); } catch(pe) {
+        // Perfil no existe aún (schema no corrido) — usar defaults
+        APP_USER = { id: user.id, email: user.email, nombre: user.email.split('@')[0], rol: 'admin' };
+        console.warn('[Profile] tabla profiles no encontrada, usando defaults');
+      }
     }
+    // Entrar siempre, con o sin perfil
+    setTimeout(function(){ showApp(); }, 500);
+
   } catch(e) {
     console.error('[Login catch]', e);
-    if (e && e.message && e.message.includes('fetch')) {
-      errEl.textContent = '🌐 Sin conexión al servidor. Verificá tu internet o que el proyecto Supabase esté activo.';
+    var msg = (e && e.message) ? e.message : 'Error desconocido';
+    if (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed')) {
+      errEl.textContent = '🌐 No se pudo conectar con el servidor. Usá el modo sin conexión.';
     } else {
-      errEl.textContent = '⚠️ Error: ' + (e.message || 'Intentá de nuevo.');
+      errEl.textContent = '⚠️ ' + msg;
     }
     btn.disabled = false; btn.textContent = 'Entrar al sistema';
   }
