@@ -215,7 +215,12 @@ td { font-size:13px; padding:11px 0; border-top:1px solid #f3f4f6; color:#374151
     <h1>Prímula ERP</h1>
     <p style="color:#9ca3af;margin-bottom:24px;font-size:14px">Sistema de gestión textil</p>
     <input class="login-input" id="login-email" type="email" placeholder="Email" autocomplete="email"/>
-    <input class="login-input" id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div style="position:relative">
+      <input class="login-input" id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:44px;margin-bottom:0"/>
+      <button type="button" onclick="togglePassVis()" id="pass-eye-btn"
+        style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:#9ca3af;padding:0;line-height:1"
+        title="Mostrar/ocultar contraseña">👁️</button>
+    </div>
     <div class="login-error" id="login-error"></div>
     <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar al sistema</button>
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f0f0f0">
@@ -2296,6 +2301,20 @@ const LOCAL_USERS = {
   'juanalonso.6a@gmail.com': { pass: 'primula2024', nombre: 'Juan Cruz', rol: 'admin' },
   'admin@primula.com':        { pass: 'primula2024', nombre: 'Administrador', rol: 'admin' },
 };
+
+function togglePassVis() {
+  var inp = document.getElementById('login-pass');
+  var btn = document.getElementById('pass-eye-btn');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🙈';
+    btn.title = 'Ocultar contraseña';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁️';
+    btn.title = 'Mostrar contraseña';
+  }
+}
 
 function loginOffline() {
   var email = document.getElementById('login-email').value.trim();
