@@ -2285,19 +2285,23 @@ function goToCaja(c) {
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); showToast('✅ Guardado correctamente'); }
-document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', function(e) { if(e.target===this) this.classList.remove('open'); }); });
+// deferred: document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', function(e) { if(e.target===this) this.classList.remove('open'); }); });
 
 // ===== SUPABASE CONFIG =====
-const SUPABASE_URL = 'https://faijpjmsokdfblcowzpc.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhaWpwam1zb2tkZmJsY293enBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5ODA4MjYsImV4cCI6MjA5MjU1NjgyNn0.fpndb0mO3Up5G_U-FPAprCkNjdMaFZEg3rpTvsxPOhY';
-const sb = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+var SUPABASE_URL = 'https://faijpjmsokdfblcowzpc.supabase.co';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhaWpwam1zb2tkZmJsY293enBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5ODA4MjYsImV4cCI6MjA5MjU1NjgyNn0.fpndb0mO3Up5G_U-FPAprCkNjdMaFZEg3rpTvsxPOhY';
+var sb = null;
+try {
+  if (typeof supabase !== 'undefined') {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+} catch(e) { console.warn('Supabase init error:', e); }
 
-let APP_USER = null; // { id, email, nombre, rol }
-let SUPABASE_MOVS = []; // movimientos cargados desde Supabase
+var APP_USER = null;
+var SUPABASE_MOVS = [];
 
 // ===== USUARIOS LOCALES (modo offline) =====
-// Acceso cuando Supabase no está disponible
-const LOCAL_USERS = {
+var LOCAL_USERS = {
   'primula.informacion@gmail.com': { pass: 'primula1986', nombre: 'Juan Cruz', rol: 'admin' },
   'juanalonso.6a@gmail.com':       { pass: 'primula1986', nombre: 'Juan Cruz', rol: 'admin' },
   'admin@primula.com':             { pass: 'primula1986', nombre: 'Administrador', rol: 'admin' },
@@ -2485,7 +2489,7 @@ function applyRoleNav(role) {
   });
 }
 
-const SECTION_TITLES = {
+var SECTION_TITLES = {
   inicio:'Panel Principal', clientes:'Clientes', proveedores:'Proveedores',
   presupuestos:'Presupuestos', pagos:'Pagos y Cobros', reportes:'Reportes',
   finanzas:'Finanzas / Cajas', pedidos:'Pedidos', tizadas:'Tizadas',
@@ -2988,6 +2992,10 @@ async function guardarObjetivosSupabase() {
 
 // ===== INIT ON LOAD =====
 window.addEventListener('load', function() {
+  // Attach modal close listeners now that DOM is ready
+  document.querySelectorAll('.modal-overlay').forEach(function(m) {
+    m.addEventListener('click', function(e) { if(e.target===this) this.classList.remove('open'); });
+  });
   initApp();
 });
 
