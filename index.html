@@ -18,8 +18,7 @@ body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; color:#333; }
 .role-card:hover,.role-card.selected{border-color:#6c7ae0;background:#eeecff;}
 .role-card-title{font-weight:700;font-size:14px;color:#1a1f36;margin-bottom:4px;}
 .role-card-desc{font-size:11px;color:#9ca3af;}
-.login-btn{width:100%;padding:14px;background:#6c7ae0;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;opacity:0.4;pointer-events:none;}
-.login-btn.ready{opacity:1;pointer-events:auto;}
+.login-btn{width:100%;padding:14px;background:#6c7ae0;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:background 0.3s,transform 0.15s;}
 .role-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-left:8px;}
 .role-badge.admin{background:#fee2e2;color:#991b1b;}
 .role-badge.produccion{background:#dcfce7;color:#166534;}
@@ -194,9 +193,9 @@ td { font-size:13px; padding:11px 0; border-top:1px solid #f3f4f6; color:#374151
 .login-input{width:100%;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:14px;outline:none;transition:border 0.2s;}
 .login-input:focus{border-color:#6c7ae0;}
 .login-error{color:#dc2626;font-size:13px;margin-bottom:10px;min-height:18px;}
-.login-btn{width:100%;padding:14px;background:#6c7ae0;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;}
-.login-btn:hover{background:#5a68ce;}
-.login-btn:disabled{opacity:0.6;cursor:not-allowed;}
+.login-btn:hover:not(:disabled){background:#5a68ce;transform:translateY(-1px);}
+.login-btn:disabled{opacity:0.7;cursor:not-allowed;}
+.login-btn.success{background:#059669 !important;transform:none;}
 
 /* INITIAL HIDE - sidebar and main hidden until logged in */
 .sidebar,.main{display:none;}
@@ -2314,13 +2313,27 @@ async function doLogin() {
   const btn = document.getElementById('login-btn');
   errEl.textContent = '';
   if (!email || !pass) { errEl.textContent = 'Ingresá email y contraseña'; return; }
-  btn.disabled = true; btn.textContent = 'Entrando...';
-  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-  if (error) {
-    errEl.textContent = 'Email o contraseña incorrectos';
+  btn.disabled = true; btn.textContent = '⏳ Verificando...';
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) {
+      errEl.textContent = 'Email o contraseña incorrectos';
+      btn.disabled = false; btn.textContent = 'Entrar al sistema';
+      return;
+    }
+    // Éxito — botón verde
+    btn.classList.add('success');
+    btn.textContent = '✅ Acceso concedido';
+    // Cargar perfil y mostrar app directamente (no esperar solo onAuthStateChange)
+    if (data.session) {
+      await loadUserProfile(data.session.user);
+      setTimeout(function(){ showApp(); }, 600);
+    }
+  } catch(e) {
+    errEl.textContent = 'Error de conexión. Intentá de nuevo.';
     btn.disabled = false; btn.textContent = 'Entrar al sistema';
   }
-  // showApp() is called by onAuthStateChange
 }
 
 async function doLogout() {
@@ -2333,6 +2346,11 @@ function showLogin() {
   document.querySelector('.sidebar').style.display = 'none';
   document.querySelector('.main').style.display = 'none';
   APP_USER = null;
+  // Reset login form
+  var btn = document.getElementById('login-btn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Entrar al sistema'; btn.classList.remove('success'); }
+  var err = document.getElementById('login-error');
+  if (err) err.textContent = '';
 }
 
 function showApp() {
