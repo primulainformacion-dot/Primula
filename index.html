@@ -202,7 +202,7 @@ td { font-size:13px; padding:11px 0; border-top:1px solid #f3f4f6; color:#374151
 </style>
 
 <!-- Supabase JS SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
 </head>
 <body>
 
@@ -2291,11 +2291,19 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 var SUPABASE_URL = 'https://faijpjmsokdfblcowzpc.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhaWpwam1zb2tkZmJsY293enBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5ODA4MjYsImV4cCI6MjA5MjU1NjgyNn0.fpndb0mO3Up5G_U-FPAprCkNjdMaFZEg3rpTvsxPOhY';
 var sb = null;
-try {
-  if (typeof supabase !== 'undefined') {
-    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
-} catch(e) { console.warn('Supabase init error:', e); }
+// Intentar inicializar Supabase — se reintenta al hacer click si aún no cargó
+function getSB() {
+  if (sb) return sb;
+  try {
+    if (typeof supabase !== 'undefined') {
+      sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      console.log('✅ Supabase inicializado');
+    }
+  } catch(e) { console.warn('Supabase init error:', e); }
+  return sb;
+}
+// Intentar al cargar
+try { getSB(); } catch(e) {}
 
 var APP_USER = null;
 var SUPABASE_MOVS = [];
@@ -2351,6 +2359,7 @@ async function initApp() {
   const today = new Date();
   document.getElementById('topbar-date').textContent = today.toLocaleDateString('es-AR', {weekday:'long',month:'long',day:'numeric'});
   // Si Supabase no está disponible, quedarse en login
+  getSB();
   if (!sb) { console.warn('Supabase no disponible — usar modo offline'); return; }
   try {
     const { data: { session } } = await sb.auth.getSession();
@@ -2390,9 +2399,10 @@ async function doLogin() {
 
   if (!email || !pass) { errEl.textContent = 'Ingresá email y contraseña'; return; }
 
-  // Verificar que Supabase esté cargado
-  if (typeof supabase === 'undefined' || !sb) {
-    errEl.innerHTML = '⚠️ Supabase no disponible. Usá el botón <b>"modo sin conexión"</b> de abajo.';
+  // Reintentar inicializar Supabase por si cargó después del parse
+  getSB();
+  if (!sb) {
+    errEl.innerHTML = '⚠️ Librería no disponible. Usá el botón <b>"modo sin conexión"</b> de abajo.';
     return;
   }
 
