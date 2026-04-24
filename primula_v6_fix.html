@@ -2288,8 +2288,8 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', function(e) { if(e.target===this) this.classList.remove('open'); }); });
 
 // ===== SUPABASE CONFIG =====
-const SUPABASE_URL = 'https://erjfpuaiitecfarhbuhv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyamZwdWFpaXRlY2ZhcmhidWh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2Mzc2NzQsImV4cCI6MjA5MjIxMzY3NH0.o5nBv9JsQazsW-b6exHRbk7i7teAYsIVWGQJCrUTfSY';
+const SUPABASE_URL = 'https://faijpjmsokdfblcowzpc.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhaWpwam1zb2tkZmJsY293enBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5ODA4MjYsImV4cCI6MjA5MjU1NjgyNn0.fpndb0mO3Up5G_U-FPAprCkNjdMaFZEg3rpTvsxPOhY';
 const sb = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 let APP_USER = null; // { id, email, nombre, rol }
