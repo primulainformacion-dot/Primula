@@ -215,9 +215,20 @@ td { font-size:13px; padding:11px 0; border-top:1px solid #f3f4f6; color:#374151
     <h1>Prímula ERP</h1>
     <p style="color:#9ca3af;margin-bottom:24px;font-size:14px">Sistema de gestión textil</p>
     <input class="login-input" id="login-email" type="email" placeholder="Email" autocomplete="email"/>
-    <input class="login-input" id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div style="position:relative">
+      <input class="login-input" id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:44px;margin-bottom:0"/>
+      <button type="button" onclick="togglePassVis()" id="pass-eye-btn"
+        style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:#9ca3af;padding:0;line-height:1"
+        title="Mostrar/ocultar contraseña">👁️</button>
+    </div>
     <div class="login-error" id="login-error"></div>
     <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar al sistema</button>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f0f0f0">
+      <p style="font-size:12px;color:#9ca3af;margin-bottom:8px">¿Problemas para ingresar?</p>
+      <button onclick="loginOffline()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:8px 16px;font-size:12px;color:#6b7280;cursor:pointer;width:100%">
+        🔌 Entrar en modo sin conexión
+      </button>
+    </div>
   </div>
 </div>
 
@@ -2277,28 +2288,80 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', function(e) { if(e.target===this) this.classList.remove('open'); }); });
 
 // ===== SUPABASE CONFIG =====
-// TODO: Reemplazar con tus credenciales de Supabase (Settings → API)
-const SUPABASE_URL = 'https://erjfpuaiitecfarhbuhv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyamZwdWFpaXRlY2ZhcmhidWh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2Mzc2NzQsImV4cCI6MjA5MjIxMzY3NH0.o5nBv9JsQazsW-b6exHRbk7i7teAYsIVWGQJCrUTfSY';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_URL = 'https://faijpjmsokdfblcowzpc.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhaWpwam1zb2tkZmJsY293enBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5ODA4MjYsImV4cCI6MjA5MjU1NjgyNn0.fpndb0mO3Up5G_U-FPAprCkNjdMaFZEg3rpTvsxPOhY';
+const sb = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 let APP_USER = null; // { id, email, nombre, rol }
 let SUPABASE_MOVS = []; // movimientos cargados desde Supabase
+
+// ===== USUARIOS LOCALES (modo offline) =====
+// Acceso cuando Supabase no está disponible
+const LOCAL_USERS = {
+  'juanalonso.6a@gmail.com': { pass: 'primula2024', nombre: 'Juan Cruz', rol: 'admin' },
+  'admin@primula.com':        { pass: 'primula2024', nombre: 'Administrador', rol: 'admin' },
+};
+
+function togglePassVis() {
+  var inp = document.getElementById('login-pass');
+  var btn = document.getElementById('pass-eye-btn');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🙈';
+    btn.title = 'Ocultar contraseña';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁️';
+    btn.title = 'Mostrar contraseña';
+  }
+}
+
+function loginOffline() {
+  var email = document.getElementById('login-email').value.trim();
+  var pass  = document.getElementById('login-pass').value;
+  var errEl = document.getElementById('login-error');
+  var btn   = document.getElementById('login-btn');
+  errEl.textContent = '';
+
+  // Si no hay credenciales ingresadas, mostrar ayuda
+  if (!email || !pass) {
+    errEl.innerHTML = 'Ingresá tus credenciales y luego hacé clic en "sin conexión".<br><span style="font-size:11px;color:#6b7280">Usuario: juanalonso.6a@gmail.com / Contraseña: primula2024</span>';
+    return;
+  }
+
+  var user = LOCAL_USERS[email.toLowerCase()];
+  if (!user || user.pass !== pass) {
+    errEl.textContent = '❌ Credenciales incorrectas para modo offline';
+    return;
+  }
+
+  btn.classList.add('success');
+  btn.textContent = '✅ Acceso local concedido';
+  APP_USER = { id: 'local', email: email, nombre: user.nombre, rol: user.rol };
+  setTimeout(function(){ showApp(); }, 500);
+}
 
 // ===== AUTH =====
 async function initApp() {
   const today = new Date();
   document.getElementById('topbar-date').textContent = today.toLocaleDateString('es-AR', {weekday:'long',month:'long',day:'numeric'});
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    await loadUserProfile(session.user);
-    showApp();
+  // Si Supabase no está disponible, quedarse en login
+  if (!sb) { console.warn('Supabase no disponible — usar modo offline'); return; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      await loadUserProfile(session.user);
+      showApp();
+    }
+    // Listen to auth changes
+    sb.auth.onAuthStateChange(async (_event, session) => {
+      if (session) { await loadUserProfile(session.user); showApp(); }
+      else if (!APP_USER) { showLogin(); } // no cerrar si es login local
+    });
+  } catch(e) {
+    console.warn('Supabase initApp error:', e);
+    // no hacer nada, dejar en pantalla de login
   }
-  // Listen to auth changes
-  sb.auth.onAuthStateChange(async (_event, session) => {
-    if (session) { await loadUserProfile(session.user); showApp(); }
-    else { showLogin(); }
-  });
 }
 
 async function loadUserProfile(user) {
@@ -2312,26 +2375,48 @@ async function doLogin() {
   const errEl = document.getElementById('login-error');
   const btn = document.getElementById('login-btn');
   errEl.textContent = '';
+
   if (!email || !pass) { errEl.textContent = 'Ingresá email y contraseña'; return; }
+
+  // Verificar que Supabase esté cargado
+  if (typeof supabase === 'undefined' || !sb) {
+    errEl.innerHTML = '⚠️ Supabase no disponible. Usá el botón <b>"modo sin conexión"</b> de abajo.';
+    return;
+  }
+
   btn.disabled = true; btn.textContent = '⏳ Verificando...';
 
   try {
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
     if (error) {
-      errEl.textContent = 'Email o contraseña incorrectos';
+      // Distinguir tipos de error
+      if (error.message && error.message.toLowerCase().includes('invalid')) {
+        errEl.textContent = '❌ Email o contraseña incorrectos';
+      } else if (error.message && error.message.toLowerCase().includes('network')) {
+        errEl.textContent = '🌐 Sin conexión. Verificá tu internet.';
+      } else if (error.status === 0 || error.status >= 500) {
+        errEl.textContent = '🔴 Servidor no disponible. Intentá en unos minutos.';
+      } else {
+        errEl.textContent = '⚠️ ' + (error.message || 'Error desconocido');
+      }
       btn.disabled = false; btn.textContent = 'Entrar al sistema';
+      console.error('[Login error]', error);
       return;
     }
-    // Éxito — botón verde
+    // ✅ Éxito — botón verde
     btn.classList.add('success');
     btn.textContent = '✅ Acceso concedido';
-    // Cargar perfil y mostrar app directamente (no esperar solo onAuthStateChange)
     if (data.session) {
-      await loadUserProfile(data.session.user);
+      try { await loadUserProfile(data.session.user); } catch(pe) { console.warn('Profile load failed, using defaults', pe); }
       setTimeout(function(){ showApp(); }, 600);
     }
   } catch(e) {
-    errEl.textContent = 'Error de conexión. Intentá de nuevo.';
+    console.error('[Login catch]', e);
+    if (e && e.message && e.message.includes('fetch')) {
+      errEl.textContent = '🌐 Sin conexión al servidor. Verificá tu internet o que el proyecto Supabase esté activo.';
+    } else {
+      errEl.textContent = '⚠️ Error: ' + (e.message || 'Intentá de nuevo.');
+    }
     btn.disabled = false; btn.textContent = 'Entrar al sistema';
   }
 }
