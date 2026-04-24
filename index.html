@@ -2298,8 +2298,9 @@ let SUPABASE_MOVS = []; // movimientos cargados desde Supabase
 // ===== USUARIOS LOCALES (modo offline) =====
 // Acceso cuando Supabase no está disponible
 const LOCAL_USERS = {
-  'juanalonso.6a@gmail.com': { pass: 'primula2024', nombre: 'Juan Cruz', rol: 'admin' },
-  'admin@primula.com':        { pass: 'primula2024', nombre: 'Administrador', rol: 'admin' },
+  'primula.informacion@gmail.com': { pass: 'primula1986', nombre: 'Juan Cruz', rol: 'admin' },
+  'juanalonso.6a@gmail.com':       { pass: 'primula1986', nombre: 'Juan Cruz', rol: 'admin' },
+  'admin@primula.com':             { pass: 'primula1986', nombre: 'Administrador', rol: 'admin' },
 };
 
 function togglePassVis() {
@@ -2325,7 +2326,7 @@ function loginOffline() {
 
   // Si no hay credenciales ingresadas, mostrar ayuda
   if (!email || !pass) {
-    errEl.innerHTML = 'Ingresá tus credenciales y luego hacé clic en "sin conexión".<br><span style="font-size:11px;color:#6b7280">Usuario: juanalonso.6a@gmail.com / Contraseña: primula2024</span>';
+    errEl.innerHTML = 'Ingresá tus credenciales y luego hacé clic en "sin conexión".<br><span style="font-size:11px;color:#6b7280">Usuario: primula.informacion@gmail.com / Contraseña: primula1986</span>';
     return;
   }
 
