@@ -191,24 +191,24 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="nav-label">Administración</div>
     <div class="nav-item" onclick="nav('clientes',this)"><span class="ni">👥</span> Clientes</div>
     <div class="nav-item" onclick="nav('proveedores',this)"><span class="ni">🤝</span> Proveedores</div>
+    <div class="nav-item" onclick="nav('productos',this)"><span class="ni">👔</span> Productos</div>
     <div class="nav-item" onclick="nav('presupuestos',this)"><span class="ni">📄</span> Presupuestos</div>
     <div class="nav-item" onclick="nav('reportes',this)"><span class="ni">📊</span> Reportes</div>
   </div>
 
+  <div class="nav-group">
+    <div class="nav-label">Finanzas</div>
+    <div class="nav-item" onclick="nav('finanzas',this)"><span class="ni">💹</span> Movimientos</div>
+  </div>
+
   <div class="nav-group nav-local-ll">
     <div class="nav-label" style="color:#d97706;">📍 Llavallol</div>
-    <div class="nav-item" onclick="navLocal('llavallol','ventas',this)"><span class="ni">🛒</span> Ventas</div>
-    <div class="nav-item" onclick="navLocal('llavallol','cobros',this)"><span class="ni">💰</span> Cobros</div>
-    <div class="nav-item" onclick="navLocal('llavallol','stock',this)"><span class="ni">🗃️</span> Stock</div>
-    <div class="nav-item" onclick="navLocal('llavallol','facturacion',this)"><span class="ni">📈</span> Facturación</div>
+    <div class="nav-item" onclick="navLocal('llavallol','ventas',this)"><span class="ni">🏪</span> Local Llavallol</div>
   </div>
 
   <div class="nav-group nav-local-mg">
     <div class="nav-label" style="color:#10b981;">📍 Monte Grande</div>
-    <div class="nav-item" onclick="navLocal('montegrande','ventas',this)"><span class="ni">🛒</span> Ventas</div>
-    <div class="nav-item" onclick="navLocal('montegrande','cobros',this)"><span class="ni">💰</span> Cobros</div>
-    <div class="nav-item" onclick="navLocal('montegrande','stock',this)"><span class="ni">🗃️</span> Stock</div>
-    <div class="nav-item" onclick="navLocal('montegrande','facturacion',this)"><span class="ni">📈</span> Facturación</div>
+    <div class="nav-item" onclick="navLocal('montegrande','ventas',this)"><span class="ni">🏪</span> Local Monte Grande</div>
   </div>
 
   <div class="nav-group">
@@ -217,11 +217,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="nav-item" onclick="nav('costura',this)"><span class="ni">🧵</span> Costura</div>
     <div class="nav-item" onclick="nav('entregas',this)"><span class="ni">📦</span> Entregas</div>
     <div class="nav-item" onclick="nav('materiales',this)"><span class="ni">🎨</span> Materiales</div>
-  </div>
-
-  <div class="nav-group">
-    <div class="nav-label">Finanzas</div>
-    <div class="nav-item" onclick="nav('finanzas',this)"><span class="ni">💹</span> Movimientos</div>
   </div>
 
   <div class="sidebar-footer">
@@ -300,6 +295,50 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     </div>
   </div>
 
+  <!-- ════════════ PRODUCTOS ════════════ -->
+  <div class="section" id="sec-productos">
+    <!-- Estadísticas rápidas -->
+    <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
+      <div class="stat"><div class="stat-icon" style="background:#ede9fe;">👔</div><h3 id="pr-total-prod">0</h3><p>Productos activos</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#fef3c7;">📍</div><h3 id="pr-total-ll">0</h3><p>Unidades Llavallol</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#d1fae5;">📍</div><h3 id="pr-total-mg">0</h3><p>Unidades Monte Grande</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#dbeafe;">💰</div><h3 id="pr-valor-total">$0</h3><p>Valor stock (minorista)</p></div>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="search-row" style="flex-wrap:wrap;">
+          <input id="pr-q" placeholder="Buscar código o nombre..." oninput="renderProductos()" style="min-width:200px;"/>
+          <select id="pr-cat" onchange="renderProductos()" style="width:160px;">
+            <option value="">Todas las categorías</option>
+          </select>
+          <select id="pr-local" onchange="renderProductos()" style="width:160px;">
+            <option value="">Ambos locales</option>
+            <option value="llavallol">Solo Llavallol</option>
+            <option value="montegrande">Solo Monte Grande</option>
+          </select>
+          <select id="pr-precio" onchange="renderProductos()" style="width:150px;">
+            <option value="">Mayor. y Minor.</option>
+            <option value="mayorista">Solo mayorista</option>
+            <option value="minorista">Solo minorista</option>
+          </select>
+        </div>
+        <button class="btn" onclick="openProdModal()">+ Nuevo producto</button>
+      </div>
+      <div class="tbl"><table>
+        <thead><tr>
+          <th>Código</th><th>Nombre</th><th>Categoría</th>
+          <th style="text-align:right" id="pr-th-may">P. Mayorista</th>
+          <th style="text-align:right" id="pr-th-min">P. Minorista</th>
+          <th style="text-align:right">Stock LL</th>
+          <th style="text-align:right">Stock MG</th>
+          <th style="text-align:right">Total</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="pr-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
   <!-- ════════════ PRESUPUESTOS ════════════ -->
   <div class="section" id="sec-presupuestos">
     <div class="panel">
@@ -347,6 +386,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="tab active" onclick="setLocalTab('ventas',this)">🛒 Ventas</div>
       <div class="tab" onclick="setLocalTab('cobros',this)">💰 Cobros</div>
       <div class="tab" onclick="setLocalTab('stock',this)">🗃️ Stock</div>
+      <div class="tab" onclick="setLocalTab('productos',this)">👔 Productos</div>
       <div class="tab" onclick="setLocalTab('facturacion',this)">📈 Facturación</div>
     </div>
 
@@ -396,6 +436,26 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <div class="tbl"><table>
           <thead><tr><th>Producto</th><th>Talle</th><th>Color</th><th>Cantidad</th><th></th></tr></thead>
           <tbody id="ls-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- Tab Productos (local) -->
+    <div id="lt-productos" style="display:none">
+      <div class="panel">
+        <div class="panel-hdr">
+          <input id="lp-q" placeholder="Buscar producto..." oninput="renderLocalProductos()" style="max-width:280px"/>
+          <button class="btn btn-outline btn-sm" onclick="nav('productos',null)">Ver catálogo completo →</button>
+        </div>
+        <div class="tbl"><table>
+          <thead><tr>
+            <th>Código</th><th>Nombre</th><th>Categoría</th>
+            <th style="text-align:right">P. Minorista</th>
+            <th style="text-align:right">P. Mayorista</th>
+            <th>Disponible (talle / color)</th>
+            <th style="text-align:right">Total</th>
+          </tr></thead>
+          <tbody id="lp-tbody"></tbody>
         </table></div>
       </div>
     </div>
@@ -852,6 +912,32 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Producto -->
+<div class="modal-bg" id="m-prod">
+  <div class="modal">
+    <h3 id="m-prod-title">Nuevo producto</h3>
+    <div class="grid2">
+      <div class="field"><label>Código</label><input id="mprod-codigo" placeholder="Ej: REM-001"/></div>
+      <div class="field"><label>Categoría</label>
+        <select id="mprod-cat">
+          <option value="">— Sin categoría —</option>
+        </select>
+      </div>
+      <div class="field full"><label>Nombre *</label><input id="mprod-nombre" placeholder="Nombre del producto"/></div>
+      <div class="field full"><label>Descripción</label><input id="mprod-desc" placeholder="Descripción adicional (opcional)"/></div>
+      <div class="field"><label>Precio mayorista $</label><input type="number" id="mprod-pmay" min="0" placeholder="0"/></div>
+      <div class="field"><label>Precio minorista $</label><input type="number" id="mprod-pmin" min="0" placeholder="0"/></div>
+      <div class="field"><label>Estado</label>
+        <select id="mprod-activo">
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-prod')">Cancelar</button><button class="btn" onclick="saveProd()">Guardar</button></div>
+  </div>
+</div>
+
 <!-- Importar movimientos CSV -->
 <div class="modal-bg" id="m-import">
   <div class="modal" style="max-width:720px;">
@@ -957,10 +1043,11 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs()]);
-  renderDash(); renderClientes(); renderProveedores(); renderPres(); renderFin();
-  poblarSelectClientes(); poblarSelectProductos();
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs()]);
+  renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFin();
+  poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias();
 }
+async function loadCategorias(){ var {data}=await sb.from('categorias').select('*').order('nombre'); CATEGORIAS=data||[]; }
 async function loadClientes(){ var {data}=await sb.from('clientes').select('*').order('nombre'); CLIENTES=data||[]; }
 async function loadProveedores(){ var {data}=await sb.from('proveedores').select('*').order('nombre'); PROVEEDORES=data||[]; }
 async function loadProductos(){ var {data}=await sb.from('productos').select('*,categorias(nombre)').order('nombre'); PRODUCTOS=data||[]; }
@@ -1267,7 +1354,7 @@ function renderLocalHero(){
     '</div>';
 }
 function setLocalTab(tab, el){
-  ['ventas','cobros','stock','facturacion'].forEach(function(t){
+  ['ventas','cobros','stock','productos','facturacion'].forEach(function(t){
     var d=document.getElementById('lt-'+t);if(d)d.style.display=t===tab?'block':'none';
   });
   document.querySelectorAll('#local-tabs .tab').forEach(function(t){t.classList.remove('active');});
@@ -1276,6 +1363,7 @@ function setLocalTab(tab, el){
   if(tab==='ventas')renderLocalVentas();
   else if(tab==='cobros')renderLocalCobros();
   else if(tab==='stock')renderLocalStock();
+  else if(tab==='productos')renderLocalProductos();
   else if(tab==='facturacion')renderLocalFact();
 }
 function renderLocalVentas(){
@@ -1673,6 +1761,145 @@ async function generarReporte(){
       '<td><span class="badge '+(v.estado==='cobrado'?'b-green':v.estado==='parcial'?'b-blue':'b-yellow')+'">'+v.estado+'</span></td></tr>';
     }).join(''):'<tr><td colspan="8"><div class="empty"><p>Sin resultados</p></div></td></tr>')+
     '</tbody></table></div></div>';
+}
+
+// ════════════════════════════════════
+// PRODUCTOS (sección general)
+// ════════════════════════════════════
+var editProdId=null;
+
+function poblarSelectCategorias(){
+  var selectores=['mprod-cat','pr-cat'];
+  selectores.forEach(function(id){
+    var s=document.getElementById(id);if(!s)return;
+    var v=s.value;
+    s.innerHTML=id==='mprod-cat'?'<option value="">— Sin categoría —</option>':'<option value="">Todas las categorías</option>';
+    CATEGORIAS.forEach(function(c){
+      var o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;s.appendChild(o);
+    });
+    s.value=v;
+  });
+}
+
+function renderProductos(){
+  var q=(document.getElementById('pr-q').value||'').toLowerCase();
+  var cat=document.getElementById('pr-cat').value;
+  var local=document.getElementById('pr-local').value;
+  var precio=document.getElementById('pr-precio').value;
+
+  // Mostrar/ocultar columnas de precio según filtro
+  var thMay=document.getElementById('pr-th-may');
+  var thMin=document.getElementById('pr-th-min');
+  if(thMay)thMay.style.display=precio==='minorista'?'none':'';
+  if(thMin)thMin.style.display=precio==='mayorista'?'none':'';
+
+  var list=PRODUCTOS.filter(function(p){
+    return p.activo
+      &&(!q||p.nombre.toLowerCase().includes(q)||(p.codigo||'').toLowerCase().includes(q))
+      &&(!cat||String(p.categoria_id)===cat);
+  });
+
+  // Calcular stats globales
+  var totalLL=STOCK.filter(function(s){return s.local==='llavallol';}).reduce(function(s,x){return s+x.cantidad;},0);
+  var totalMG=STOCK.filter(function(s){return s.local==='montegrande';}).reduce(function(s,x){return s+x.cantidad;},0);
+  var valorTotal=STOCK.reduce(function(sum,s){
+    var p=PRODUCTOS.find(function(x){return x.id===s.producto_id;});
+    return sum+(p?Number(p.precio_minorista)*s.cantidad:0);
+  },0);
+  var elN=document.getElementById('pr-total-prod');if(elN)elN.textContent=PRODUCTOS.filter(function(p){return p.activo;}).length;
+  var elL=document.getElementById('pr-total-ll');if(elL)elL.textContent=totalLL;
+  var elM=document.getElementById('pr-total-mg');if(elM)elM.textContent=totalMG;
+  var elV=document.getElementById('pr-valor-total');if(elV)elV.textContent=$p(valorTotal);
+
+  var tb=document.getElementById('pr-tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><div class="ei">👔</div><p>Sin productos</p></div></td></tr>';return;}
+
+  tb.innerHTML=list.map(function(p){
+    var stLL=STOCK.filter(function(s){return s.producto_id===p.id&&s.local==='llavallol';}).reduce(function(s,x){return s+x.cantidad;},0);
+    var stMG=STOCK.filter(function(s){return s.producto_id===p.id&&s.local==='montegrande';}).reduce(function(s,x){return s+x.cantidad;},0);
+    var total=stLL+stMG;
+    if(local==='llavallol'&&stLL===0)return'';
+    if(local==='montegrande'&&stMG===0)return'';
+    var col=total===0?'#dc2626':total<5?'#ca8a04':'#16a34a';
+    var mayCol=stLL===0&&stMG===0?'#dc2626':'#374151';
+    return'<tr>'+
+      '<td><span class="badge b-gray">'+(p.codigo||'—')+'</span></td>'+
+      '<td><strong>'+esc(p.nombre)+'</strong>'+(p.descripcion?'<br><span style="font-size:11px;color:#9ca3af;">'+esc(p.descripcion)+'</span>':'')+'</td>'+
+      '<td><span class="badge b-gray" style="font-size:10px;">'+(p.categorias?p.categorias.nombre:'—')+'</span></td>'+
+      (precio!=='minorista'?'<td style="text-align:right;font-size:13px;">'+$p(p.precio_mayorista)+'</td>':'')+
+      (precio!=='mayorista'?'<td style="text-align:right;font-size:13px;">'+$p(p.precio_minorista)+'</td>':'')+
+      '<td style="text-align:right;color:'+(stLL===0?'#dc2626':'#374151')+';font-weight:600;">'+stLL+'</td>'+
+      '<td style="text-align:right;color:'+(stMG===0?'#dc2626':'#374151')+';font-weight:600;">'+stMG+'</td>'+
+      '<td style="text-align:right;font-weight:800;color:'+col+';">'+total+'</td>'+
+      '<td><button class="btn btn-sm btn-gray btn-icon" onclick="openProdModal('+p.id+')">✏️</button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+// Tab Productos dentro de cada local
+function renderLocalProductos(){
+  var q=(document.getElementById('lp-q').value||'').toLowerCase();
+  var stk=STOCK.filter(function(s){return s.local===currentLocal&&s.cantidad>0;});
+  var prodIds=stk.map(function(s){return s.producto_id;}).filter(function(v,i,a){return a.indexOf(v)===i;});
+  var list=PRODUCTOS.filter(function(p){
+    return prodIds.indexOf(p.id)>=0&&(!q||p.nombre.toLowerCase().includes(q)||(p.codigo||'').toLowerCase().includes(q));
+  });
+  var tb=document.getElementById('lp-tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="ei">👔</div><p>Sin productos con stock en este local</p></div></td></tr>';return;}
+  tb.innerHTML=list.map(function(p){
+    var ps=stk.filter(function(s){return s.producto_id===p.id;});
+    var total=ps.reduce(function(s,x){return s+x.cantidad;},0);
+    var detalle=ps.map(function(s){
+      var lbl=[s.talle,s.color].filter(Boolean).join('/');
+      return'<span class="badge b-gray" style="font-size:10px;">'+(lbl||'único')+': <strong>'+s.cantidad+'</strong></span>';
+    }).join(' ');
+    return'<tr>'+
+      '<td><span class="badge b-gray">'+(p.codigo||'—')+'</span></td>'+
+      '<td><strong>'+esc(p.nombre)+'</strong></td>'+
+      '<td style="font-size:11px;">'+(p.categorias?p.categorias.nombre:'—')+'</td>'+
+      '<td style="text-align:right;">'+$p(p.precio_minorista)+'</td>'+
+      '<td style="text-align:right;">'+$p(p.precio_mayorista)+'</td>'+
+      '<td>'+detalle+'</td>'+
+      '<td style="text-align:right;font-weight:800;color:'+(total<5?'#ca8a04':'#16a34a')+';">'+total+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function openProdModal(id){
+  editProdId=id||null;
+  document.getElementById('m-prod-title').textContent=id?'Editar producto':'Nuevo producto';
+  var p=id?PRODUCTOS.find(function(x){return x.id===id;})||{}:{};
+  document.getElementById('mprod-codigo').value=p.codigo||'';
+  document.getElementById('mprod-nombre').value=p.nombre||'';
+  document.getElementById('mprod-desc').value=p.descripcion||'';
+  document.getElementById('mprod-cat').value=p.categoria_id||'';
+  document.getElementById('mprod-pmay').value=p.precio_mayorista||0;
+  document.getElementById('mprod-pmin').value=p.precio_minorista||0;
+  document.getElementById('mprod-activo').value=String(p.activo!==false);
+  poblarSelectCategorias();
+  if(id)document.getElementById('mprod-cat').value=p.categoria_id||'';
+  openM('m-prod');
+}
+
+async function saveProd(){
+  var n=document.getElementById('mprod-nombre').value.trim();
+  if(!n){toast('El nombre es obligatorio','err');return;}
+  var d={
+    nombre:n,
+    codigo:document.getElementById('mprod-codigo').value.trim()||null,
+    descripcion:document.getElementById('mprod-desc').value.trim()||null,
+    categoria_id:document.getElementById('mprod-cat').value||null,
+    precio_mayorista:parseFloat(document.getElementById('mprod-pmay').value)||0,
+    precio_minorista:parseFloat(document.getElementById('mprod-pmin').value)||0,
+    activo:document.getElementById('mprod-activo').value==='true',
+    updated_at:new Date().toISOString()
+  };
+  var r=editProdId?await sb.from('productos').update(d).eq('id',editProdId):await sb.from('productos').insert(d);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast(editProdId?'Producto actualizado':'Producto creado');
+  closeM('m-prod');
+  await loadProductos();
+  renderProductos();poblarSelectProductos();
 }
 
 // ════════════════════════════════════
