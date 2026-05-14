@@ -584,7 +584,11 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             </select>
             <input id="fin-q" placeholder="Buscar..." oninput="renderFin()" style="min-width:150px;"/>
           </div>
-          <button class="btn" onclick="openMovModal()">+ Nuevo movimiento</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" onclick="exportMovsCSV()" title="Exportar movimientos del período a CSV">↓ Exportar</button>
+            <button class="btn btn-outline btn-sm" onclick="openImportModal()" title="Importar movimientos desde CSV">↑ Importar</button>
+            <button class="btn" onclick="openMovModal()">+ Nuevo movimiento</button>
+          </div>
         </div>
         <div id="fin-period-totals" style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;"></div>
         <div class="tbl"><table>
@@ -845,6 +849,49 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
     </div>
     <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-mov')">Cancelar</button><button class="btn" onclick="saveMov()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Importar movimientos CSV -->
+<div class="modal-bg" id="m-import">
+  <div class="modal" style="max-width:720px;">
+    <h3>Importar movimientos desde CSV</h3>
+
+    <div style="background:#f0f9ff;border:2px dashed #bae6fd;border-radius:10px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:12px;color:#0369a1;margin-bottom:10px;line-height:1.6;">
+        El CSV debe tener estas columnas en este orden:<br>
+        <code style="background:#e0f2fe;padding:3px 8px;border-radius:4px;font-size:11px;">fecha · caja · tipo · concepto · detalle · ingreso · egreso · referencia · fecha_vencimiento</code><br>
+        <span style="font-size:11px;color:#6b7280;">Las filas con errores se omiten. Podés combinar ingresos y egresos en el mismo archivo.</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <label style="background:#6c7ae0;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+          Seleccionar archivo CSV
+          <input type="file" id="import-file" accept=".csv,.txt" onchange="previewImport(this)" style="display:none;"/>
+        </label>
+        <button class="btn btn-outline btn-sm" onclick="downloadPlantilla()">Descargar plantilla</button>
+        <span id="import-file-name" style="font-size:12px;color:#9ca3af;"></span>
+      </div>
+    </div>
+
+    <div id="import-preview" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:700;" id="import-count"></span>
+        <span style="font-size:12px;color:#9ca3af;" id="import-valid-count"></span>
+      </div>
+      <div id="import-errors" style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;line-height:1.6;display:none;"></div>
+      <div class="tbl" style="max-height:280px;overflow-y:auto;">
+        <table>
+          <thead><tr><th>#</th><th>Fecha</th><th>Caja</th><th>Tipo</th><th>Concepto</th><th>Detalle</th><th style="text-align:right">Ingreso</th><th style="text-align:right">Egreso</th><th>Estado</th></tr></thead>
+          <tbody id="import-tbody"></tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:6px;" id="import-more-rows"></div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-import')">Cancelar</button>
+      <button class="btn btn-green" id="import-confirm-btn" style="display:none;" onclick="confirmImport()">Importar</button>
+    </div>
   </div>
 </div>
 
@@ -1872,6 +1919,164 @@ function renderTransfHistorial(){
         '<td style="font-weight:700;color:#16a34a;">'+$p(m.ingreso)+'</td>'+
         '<td style="font-size:12px;color:#6b7280;">'+(m.detalle||'—')+'</td></tr>';
     }).join('')+'</tbody></table></div>';
+}
+
+// ════════════════════════════════════
+// EXPORTAR / IMPORTAR MOVIMIENTOS
+// ════════════════════════════════════
+function exportMovsCSV(){
+  var anio=parseInt(document.getElementById('fin-anio').value);
+  var mes=document.getElementById('fin-mes').value;
+  var caja=document.getElementById('fin-caja').value;
+  var list=MOVS.filter(function(m){
+    return m.anio===anio&&(!mes||m.mes===mes)&&(!caja||m.caja===caja);
+  });
+  if(!list.length){toast('Sin movimientos para exportar','info');return;}
+  var hdrs=['fecha','caja','tipo','concepto','detalle','ingreso','egreso','referencia','fecha_vencimiento'];
+  var csvEsc=function(v){
+    var s=String(v||'');
+    return s.includes(',')||s.includes('"')||s.includes('\n')?'"'+s.replace(/"/g,'""')+'"':s;
+  };
+  var rows=list.map(function(m){
+    return[m.fecha,m.caja,m.tipo,m.concepto||'',m.detalle||'',m.ingreso||0,m.egreso||0,m.referencia||'',m.fecha_vencimiento||''].map(csvEsc).join(',');
+  });
+  var csv='﻿'+hdrs.join(',')+'\n'+rows.join('\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='movimientos_'+(mes||'todo')+'_'+anio+'.csv';
+  a.click();URL.revokeObjectURL(url);
+  toast(list.length+' movimientos exportados');
+}
+
+function downloadPlantilla(){
+  var hdrs='fecha,caja,tipo,concepto,detalle,ingreso,egreso,referencia,fecha_vencimiento\n';
+  var ej=[
+    '2026-05-14,EFECTIVO ADMINISTRACIÓN,egreso,COSTUREROS,María González,0,15000,,',
+    '2026-05-14,BANCO SRL,ingreso,COBRO CLIENTE,La Moda SRL,80000,0,TRANSF-0012,',
+    '2026-05-13,LOCAL LLAVALLOL,ingreso,VENTA MINORISTA,Ventas del día,32000,0,,',
+    '2026-05-10,ECHEQ/CHEQUE,ingreso,COBRO CLIENTE,Empresa XYZ,200000,0,CHQ-045,2026-06-10'
+  ].join('\n');
+  var blob=new Blob(['﻿'+hdrs+ej],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='plantilla_movimientos.csv';
+  a.click();URL.revokeObjectURL(url);
+}
+
+var IMPORT_ROWS=[];
+var CAJAS_VALIDAS=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL'];
+
+function openImportModal(){
+  IMPORT_ROWS=[];
+  document.getElementById('import-file').value='';
+  document.getElementById('import-preview').style.display='none';
+  document.getElementById('import-confirm-btn').style.display='none';
+  document.getElementById('import-file-name').textContent='';
+  openM('m-import');
+}
+
+function parseCSVLine(line){
+  var res=[],cur='',inQ=false;
+  for(var i=0;i<line.length;i++){
+    var c=line[i];
+    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+    else if(c===','&&!inQ){res.push(cur.trim());cur='';}
+    else cur+=c;
+  }
+  res.push(cur.trim());
+  return res;
+}
+
+function previewImport(input){
+  var file=input.files[0];
+  if(!file)return;
+  document.getElementById('import-file-name').textContent=file.name;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var text=e.target.result;
+    if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+    var lines=text.split(/\r?\n/).map(function(l){return l.trim();}).filter(Boolean);
+    if(lines.length<2){toast('El archivo está vacío o le falta el encabezado','err');return;}
+    var dataLines=lines.slice(1);
+    var rows=dataLines.map(function(line,idx){
+      var c=parseCSVLine(line);
+      var fecha=(c[0]||'').trim();
+      var caja=(c[1]||'').trim();
+      var tipo=(c[2]||'egreso').trim().toLowerCase();
+      var concepto=(c[3]||'').trim();
+      var detalle=(c[4]||'').trim();
+      var ingreso=parseFloat(c[5])||0;
+      var egreso=parseFloat(c[6])||0;
+      var referencia=(c[7]||'').trim()||null;
+      var fvenc=(c[8]||'').trim()||null;
+      var errs=[];
+      if(!fecha||!/^\d{4}-\d{2}-\d{2}$/.test(fecha))errs.push('fecha inválida (usar AAAA-MM-DD)');
+      if(!CAJAS_VALIDAS.includes(caja))errs.push('caja no reconocida');
+      if(!['ingreso','egreso','transferencia'].includes(tipo))errs.push('tipo debe ser ingreso/egreso/transferencia');
+      if(!detalle)errs.push('detalle vacío');
+      if(ingreso===0&&egreso===0)errs.push('ingreso y egreso son ambos 0');
+      return{num:idx+2,fecha,caja,tipo,concepto,detalle,ingreso,egreso,referencia,fvenc,errs};
+    });
+    IMPORT_ROWS=rows;
+    var validas=rows.filter(function(r){return r.errs.length===0;});
+    var conError=rows.filter(function(r){return r.errs.length>0;});
+    document.getElementById('import-preview').style.display='block';
+    document.getElementById('import-count').textContent=rows.length+' filas — '+validas.length+' válidas';
+    document.getElementById('import-valid-count').textContent=conError.length>0?conError.length+' con error (se omitirán)':'';
+    var errDiv=document.getElementById('import-errors');
+    if(conError.length){
+      errDiv.style.display='block';
+      errDiv.innerHTML='<strong>Filas con error (se saltearán):</strong><br>'+
+        conError.slice(0,8).map(function(r){return'Fila '+r.num+': '+r.errs.join(', ');}).join('<br>')+
+        (conError.length>8?'<br>… y '+(conError.length-8)+' más':''  );
+    } else errDiv.style.display='none';
+    var mostrar=rows.slice(0,40);
+    document.getElementById('import-tbody').innerHTML=mostrar.map(function(r){
+      var ok=r.errs.length===0;
+      var tipoBadge=r.tipo==='ingreso'?'b-green':r.tipo==='transferencia'?'b-purple':'b-red';
+      return'<tr style="'+(ok?'':'background:#fff1f2;')+'">'+
+        '<td style="font-size:11px;color:#9ca3af;">'+r.num+'</td>'+
+        '<td>'+r.fecha+'</td>'+
+        '<td style="font-size:11px;color:'+(CAJA_COLORES[r.caja]||'#6b7280')+';font-weight:700;">'+r.caja+'</td>'+
+        '<td><span class="badge '+tipoBadge+'">'+r.tipo+'</span></td>'+
+        '<td style="font-size:11px;">'+(r.concepto||'—')+'</td>'+
+        '<td>'+r.detalle+'</td>'+
+        '<td style="text-align:right;color:#16a34a;">'+(r.ingreso>0?$p(r.ingreso):'')+'</td>'+
+        '<td style="text-align:right;color:#dc2626;">'+(r.egreso>0?$p(r.egreso):'')+'</td>'+
+        '<td>'+(ok?'<span class="badge b-green">OK</span>':'<span class="badge b-red" title="'+esc(r.errs.join(', '))+'">Error</span>')+'</td>'+
+      '</tr>';
+    }).join('');
+    document.getElementById('import-more-rows').textContent=rows.length>40?'Mostrando 40 de '+rows.length+' filas':'';
+    var btn=document.getElementById('import-confirm-btn');
+    if(validas.length>0){btn.style.display='';btn.textContent='Importar '+validas.length+' movimientos';}
+    else btn.style.display='none';
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+async function confirmImport(){
+  var validas=IMPORT_ROWS.filter(function(r){return r.errs.length===0;});
+  if(!validas.length)return;
+  var btn=document.getElementById('import-confirm-btn');
+  btn.disabled=true;btn.textContent='Importando…';
+  var inserts=validas.map(function(r){
+    var d=new Date(r.fecha+'T12:00:00');
+    return{fecha:r.fecha,caja:r.caja,tipo:r.tipo,concepto:r.concepto,detalle:r.detalle,
+      ingreso:r.ingreso,egreso:r.egreso,referencia:r.referencia,fecha_vencimiento:r.fvenc,
+      anio:d.getFullYear(),mes:MESES_ARR[d.getMonth()],sem:0};
+  });
+  var ok=0,errs=0;
+  for(var i=0;i<inserts.length;i+=100){
+    var batch=inserts.slice(i,i+100);
+    var res=await sb.from('movimientos').insert(batch);
+    if(res.error)errs+=batch.length;else ok+=batch.length;
+  }
+  btn.disabled=false;
+  closeM('m-import');
+  IMPORT_ROWS=[];
+  if(errs>0)toast(ok+' importados, '+errs+' fallaron','info');
+  else toast(ok+' movimientos importados');
+  await loadMovs();renderFin();
 }
 </script>
 </body>
