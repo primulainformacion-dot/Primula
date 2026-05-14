@@ -448,34 +448,98 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
   <!-- ════════════ FINANZAS ════════════ -->
   <div class="section" id="sec-finanzas">
-    <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
-      <div class="stat"><div class="stat-icon" style="background:#dcfce7;">📈</div><h3 id="fin-ing" style="color:#16a34a;">$0</h3><p>Ingresos del período</p></div>
-      <div class="stat"><div class="stat-icon" style="background:#fee2e2;">📉</div><h3 id="fin-egr" style="color:#dc2626;">$0</h3><p>Egresos del período</p></div>
-      <div class="stat"><div class="stat-icon" style="background:#ede9fe;">💹</div><h3 id="fin-net" style="color:#6c7ae0;">$0</h3><p>Saldo neto</p></div>
+
+    <!-- Saldos por caja -->
+    <div id="fin-cajas-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;"></div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" onclick="setFinTab('movimientos',this)">📋 Movimientos</div>
+      <div class="tab" onclick="setFinTab('transferencia',this)">🔄 Transferencia entre cajas</div>
     </div>
-    <div class="panel">
-      <div class="panel-hdr">
-        <div class="search-row">
-          <select id="fin-anio" onchange="renderFin()"></select>
-          <select id="fin-mes" onchange="renderFin()">
-            <option value="">Todos los meses</option>
-            <option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option>
-            <option>MAYO</option><option>JUNIO</option><option>JULIO</option><option>AGOSTO</option>
-            <option>SEPTIEMBRE</option><option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option>
-          </select>
-          <select id="fin-caja" onchange="renderFin()">
-            <option value="">Todas las cajas</option>
-            <option>EFECTIVO</option><option>BANCO</option><option>MERCADO PAGO</option>
-          </select>
-          <input id="fin-q" placeholder="Buscar..." oninput="renderFin()"/>
+
+    <!-- Tab: Movimientos -->
+    <div id="ft-movimientos">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="search-row" style="flex-wrap:wrap;">
+            <select id="fin-anio" onchange="renderFin()" style="width:90px;"></select>
+            <select id="fin-mes" onchange="renderFin()" style="width:140px;">
+              <option value="">Todos los meses</option>
+              <option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option>
+              <option>MAYO</option><option>JUNIO</option><option>JULIO</option><option>AGOSTO</option>
+              <option>SEPTIEMBRE</option><option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option>
+            </select>
+            <select id="fin-caja" onchange="renderFin()" style="width:200px;">
+              <option value="">Todas las cajas</option>
+              <option>EFECTIVO ADMINISTRACIÓN</option>
+              <option>BANCO SRL</option>
+              <option>BANCO POLY</option>
+              <option>MERCADO PAGO</option>
+              <option>ECHEQ/CHEQUE</option>
+              <option>LOCAL MONTE GRANDE</option>
+              <option>LOCAL LLAVALLOL</option>
+            </select>
+            <select id="fin-tipo" onchange="renderFin()" style="width:130px;">
+              <option value="">Ing. + Egr.</option>
+              <option value="ingreso">Solo ingresos</option>
+              <option value="egreso">Solo egresos</option>
+              <option value="transferencia">Transferencias</option>
+            </select>
+            <input id="fin-q" placeholder="Buscar..." oninput="renderFin()" style="min-width:150px;"/>
+          </div>
+          <button class="btn" onclick="openMovModal()">+ Nuevo movimiento</button>
         </div>
-        <button class="btn" onclick="openMovModal()">+ Movimiento</button>
+        <!-- Totales del período -->
+        <div id="fin-period-totals" style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;"></div>
+        <div class="tbl"><table>
+          <thead><tr>
+            <th>Fecha</th><th>Caja</th><th>Tipo</th><th>Concepto</th><th>Detalle</th>
+            <th style="text-align:right">Ingreso</th><th style="text-align:right">Egreso</th>
+            <th>Referencia</th><th></th>
+          </tr></thead>
+          <tbody id="fin-tbody"></tbody>
+        </table></div>
       </div>
-      <div class="tbl"><table>
-        <thead><tr><th>Fecha</th><th>Caja</th><th>Concepto</th><th>Detalle</th><th style="text-align:right">Ingreso</th><th style="text-align:right">Egreso</th></tr></thead>
-        <tbody id="fin-tbody"></tbody>
-      </table></div>
     </div>
+
+    <!-- Tab: Transferencia -->
+    <div id="ft-transferencia" style="display:none;">
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-hdr"><h4>🔄 Nueva transferencia</h4></div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div class="field"><label>Desde (caja origen)</label>
+              <select id="tr-origen">
+                <option>EFECTIVO ADMINISTRACIÓN</option>
+                <option>BANCO SRL</option><option>BANCO POLY</option>
+                <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
+                <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
+              </select>
+            </div>
+            <div style="text-align:center;font-size:22px;color:#6c7ae0;">↓</div>
+            <div class="field"><label>Hacia (caja destino)</label>
+              <select id="tr-destino">
+                <option>BANCO SRL</option><option>BANCO POLY</option>
+                <option>EFECTIVO ADMINISTRACIÓN</option>
+                <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
+                <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
+              </select>
+            </div>
+            <div class="field"><label>Monto *</label><input type="number" id="tr-monto" min="0" placeholder="0"/></div>
+            <div class="field"><label>Fecha</label><input type="date" id="tr-fecha"/></div>
+            <div class="field"><label>Detalle</label><input id="tr-detalle" placeholder="Motivo de la transferencia"/></div>
+            <div class="field"><label>Referencia / Comprobante</label><input id="tr-ref" placeholder="Nº transferencia, cheque..."/></div>
+            <button class="btn btn-green" style="margin-top:4px;" onclick="saveTransferencia()">Registrar transferencia</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><h4>Últimas transferencias</h4></div>
+          <div id="tr-historial"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 </div><!-- /main -->
@@ -636,12 +700,43 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="modal">
     <h3>Nuevo movimiento</h3>
     <div class="grid2">
-      <div class="field"><label>Caja</label><select id="mm-caja"><option>EFECTIVO</option><option>BANCO</option><option>MERCADO PAGO</option></select></div>
-      <div class="field"><label>Fecha</label><input type="date" id="mm-fecha"/></div>
-      <div class="field"><label>Concepto</label><input id="mm-concepto" placeholder="Ej: VENTAS MG"/></div>
-      <div class="field"><label>Detalle</label><input id="mm-detalle" placeholder="Descripción"/></div>
-      <div class="field"><label>Ingreso $</label><input type="number" id="mm-ing" min="0" placeholder="0"/></div>
-      <div class="field"><label>Egreso $</label><input type="number" id="mm-egr" min="0" placeholder="0"/></div>
+      <div class="field"><label>Tipo *</label>
+        <select id="mm-tipo" onchange="mm_onTipo()">
+          <option value="egreso">Egreso (salida de dinero)</option>
+          <option value="ingreso">Ingreso (entrada de dinero)</option>
+        </select>
+      </div>
+      <div class="field"><label>Caja *</label>
+        <select id="mm-caja">
+          <option>EFECTIVO ADMINISTRACIÓN</option>
+          <option>BANCO SRL</option><option>BANCO POLY</option>
+          <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
+          <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
+        </select>
+      </div>
+      <div class="field"><label>Concepto *</label>
+        <select id="mm-concepto">
+          <optgroup label="Egresos comunes" id="mm-opt-egr">
+            <option>SUELDOS/JORNALES</option>
+            <option>MATERIALES/TELAS</option>
+            <option>PROVEEDORES</option>
+            <option>SERVICIOS</option>
+            <option>IMPUESTOS/AFIP</option>
+            <option>FLETES/ENVÍOS</option>
+            <option>GASTOS VARIOS</option>
+          </optgroup>
+          <optgroup label="Ingresos comunes" id="mm-opt-ing" style="display:none">
+            <option>VENTAS</option>
+            <option>COBRO CLIENTE</option>
+            <option>OTROS INGRESOS</option>
+          </optgroup>
+          <option>OTROS</option>
+        </select>
+      </div>
+      <div class="field"><label>Fecha *</label><input type="date" id="mm-fecha"/></div>
+      <div class="field full"><label>Detalle / nombre *</label><input id="mm-detalle" placeholder="A quién se le pagó o de quién viene"/></div>
+      <div class="field"><label>Monto $ *</label><input type="number" id="mm-monto" min="0" placeholder="0"/></div>
+      <div class="field"><label>Referencia / Comprobante</label><input id="mm-ref" placeholder="Nº transferencia, cheque, factura..."/></div>
     </div>
     <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-mov')">Cancelar</button><button class="btn" onclick="saveMov()">Guardar</button></div>
   </div>
@@ -695,6 +790,7 @@ window.addEventListener('DOMContentLoaded', function(){
       document.getElementById('app').style.display='none';
     }
   });
+  document.getElementById('tr-fecha').value=today();
   document.getElementById('lg-pass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 });
 
@@ -1429,47 +1525,159 @@ async function generarReporte(){
 // ════════════════════════════════════
 // FINANZAS
 // ════════════════════════════════════
+var CAJAS_SISTEMA=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL'];
+var CAJA_COLORES={'EFECTIVO ADMINISTRACIÓN':'#6c7ae0','BANCO SRL':'#0ea5e9','BANCO POLY':'#14b8a6','MERCADO PAGO':'#3b82f6','ECHEQ/CHEQUE':'#8b5cf6','LOCAL MONTE GRANDE':'#10b981','LOCAL LLAVALLOL':'#f59e0b'};
+var MESES_ARR=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+function saldoCaja(caja){
+  return MOVS.filter(function(m){return m.caja===caja;}).reduce(function(s,m){return s+Number(m.ingreso)-Number(m.egreso);},0);
+}
+
+function renderFinCajas(){
+  var grid=document.getElementById('fin-cajas-grid');
+  grid.innerHTML=CAJAS_SISTEMA.map(function(caja){
+    var saldo=saldoCaja(caja);
+    var color=CAJA_COLORES[caja]||'#6c7ae0';
+    var pos=saldo>=0;
+    return '<div class="stat" style="cursor:pointer;border-top:3px solid '+color+';" onclick="filtrarPorCaja(\''+caja+'\')">'+
+      '<div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">'+caja+'</div>'+
+      '<div style="font-size:20px;font-weight:800;color:'+(pos?'#1a1f36':'#dc2626')+';">'+$p(saldo)+'</div>'+
+      '<div style="font-size:11px;color:#9ca3af;margin-top:3px;">'+(pos?'saldo disponible':'saldo negativo')+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+function filtrarPorCaja(caja){
+  document.getElementById('fin-caja').value=caja;
+  setFinTab('movimientos',document.querySelectorAll('#sec-finanzas .tab')[0]);
+  renderFin();
+}
+
+function setFinTab(tab,el){
+  document.getElementById('ft-movimientos').style.display=tab==='movimientos'?'block':'none';
+  document.getElementById('ft-transferencia').style.display=tab==='transferencia'?'block':'none';
+  document.querySelectorAll('#sec-finanzas .tab').forEach(function(t){t.classList.remove('active');});
+  if(el)el.classList.add('active');
+  if(tab==='transferencia') renderTransfHistorial();
+}
+
 function renderFin(){
+  renderFinCajas();
   var anio=parseInt(document.getElementById('fin-anio').value);
   var mes=document.getElementById('fin-mes').value;
   var caja=document.getElementById('fin-caja').value;
+  var tipo=document.getElementById('fin-tipo').value;
   var q=(document.getElementById('fin-q').value||'').toLowerCase();
   var list=MOVS.filter(function(m){
-    return m.anio===anio&&(!mes||m.mes===mes)&&(!caja||m.caja===caja)&&(!q||(m.concepto||'').toLowerCase().includes(q)||(m.detalle||'').toLowerCase().includes(q));
+    return m.anio===anio
+      &&(!mes||m.mes===mes)
+      &&(!caja||m.caja===caja)
+      &&(!tipo||m.tipo===tipo)
+      &&(!q||(m.concepto||'').toLowerCase().includes(q)||(m.detalle||'').toLowerCase().includes(q)||(m.referencia||'').toLowerCase().includes(q));
   });
   var ing=list.reduce(function(s,m){return s+Number(m.ingreso);},0);
   var egr=list.reduce(function(s,m){return s+Number(m.egreso);},0);
-  document.getElementById('fin-ing').textContent=$p(ing);
-  document.getElementById('fin-egr').textContent=$p(egr);
-  document.getElementById('fin-net').textContent=$p(ing-egr);
+  document.getElementById('fin-period-totals').innerHTML=
+    '<span style="background:#dcfce7;color:#16a34a;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:700;">↑ Ingresos: '+$p(ing)+'</span>'+
+    '<span style="background:#fee2e2;color:#dc2626;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:700;">↓ Egresos: '+$p(egr)+'</span>'+
+    '<span style="background:#ede9fe;color:#7c3aed;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:700;">= Neto: '+$p(ing-egr)+'</span>'+
+    '<span style="color:#9ca3af;font-size:12px;align-self:center;">'+list.length+' movimientos</span>';
   var tb=document.getElementById('fin-tbody');
-  if(!list.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><p>Sin movimientos en el período</p></div></td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><p>Sin movimientos en el período</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(m){
+    var esIng=Number(m.ingreso)>0;
+    var tipoBadge=m.tipo==='ingreso'?'b-green':m.tipo==='transferencia'?'b-purple':'b-red';
     return '<tr>'+
-      '<td>'+(m.fecha||m.mes+' '+m.anio)+'</td>'+
-      '<td><span class="badge b-gray">'+m.caja+'</span></td>'+
-      '<td>'+(m.concepto||'—')+'</td><td>'+(m.detalle||'—')+'</td>'+
-      '<td style="text-align:right;color:#16a34a;font-weight:600;">'+(Number(m.ingreso)>0?$p(m.ingreso):'—')+'</td>'+
-      '<td style="text-align:right;color:#dc2626;font-weight:600;">'+(Number(m.egreso)>0?$p(m.egreso):'—')+'</td>'+
+      '<td>'+m.fecha+'</td>'+
+      '<td><span style="font-size:11px;font-weight:700;color:'+( CAJA_COLORES[m.caja]||'#6b7280')+';">'+m.caja+'</span></td>'+
+      '<td><span class="badge '+tipoBadge+'">'+m.tipo+'</span></td>'+
+      '<td>'+(m.concepto||'—')+'</td>'+
+      '<td>'+(m.detalle||'—')+'</td>'+
+      '<td style="text-align:right;color:#16a34a;font-weight:600;">'+(Number(m.ingreso)>0?$p(m.ingreso):'')+'</td>'+
+      '<td style="text-align:right;color:#dc2626;font-weight:600;">'+(Number(m.egreso)>0?$p(m.egreso):'')+'</td>'+
+      '<td style="font-size:11px;color:#9ca3af;">'+(m.referencia||'—')+'</td>'+
+      '<td>'+(m.cobro_id?'<span class="badge b-blue" title="Generado automáticamente desde cobro">Auto</span>':'')+'</td>'+
     '</tr>';
   }).join('');
 }
+
+function mm_onTipo(){
+  var tipo=document.getElementById('mm-tipo').value;
+  document.getElementById('mm-opt-egr').style.display=tipo==='egreso'?'':'none';
+  document.getElementById('mm-opt-ing').style.display=tipo==='ingreso'?'':'none';
+}
+
 function openMovModal(){
+  document.getElementById('mm-tipo').value='egreso';
   document.getElementById('mm-fecha').value=today();
-  document.getElementById('mm-concepto').value='';
   document.getElementById('mm-detalle').value='';
-  document.getElementById('mm-ing').value='';
-  document.getElementById('mm-egr').value='';
+  document.getElementById('mm-monto').value='';
+  document.getElementById('mm-ref').value='';
+  mm_onTipo();
   openM('m-mov');
 }
+
 async function saveMov(){
   var fecha=document.getElementById('mm-fecha').value;
-  if(!fecha){toast('La fecha es obligatoria','err');return;}
-  var meses=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-  var d={caja:document.getElementById('mm-caja').value,anio:new Date(fecha).getFullYear(),mes:meses[new Date(fecha).getMonth()],sem:0,fecha,concepto:document.getElementById('mm-concepto').value,detalle:document.getElementById('mm-detalle').value,ingreso:parseFloat(document.getElementById('mm-ing').value)||0,egreso:parseFloat(document.getElementById('mm-egr').value)||0};
+  var monto=parseFloat(document.getElementById('mm-monto').value)||0;
+  var detalle=document.getElementById('mm-detalle').value.trim();
+  if(!fecha||!monto||!detalle){toast('Completá fecha, monto y detalle','err');return;}
+  var tipo=document.getElementById('mm-tipo').value;
+  var d={
+    caja:document.getElementById('mm-caja').value,
+    anio:new Date(fecha).getFullYear(),
+    mes:MESES_ARR[new Date(fecha).getMonth()],
+    sem:0,fecha,tipo,
+    concepto:document.getElementById('mm-concepto').value,
+    detalle,
+    ingreso:tipo==='ingreso'?monto:0,
+    egreso:tipo==='egreso'?monto:0,
+    referencia:document.getElementById('mm-ref').value
+  };
   var r=await sb.from('movimientos').insert(d);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
-  toast('Movimiento registrado');closeM('m-mov');await loadMovs();renderFin();
+  toast('Movimiento registrado');closeM('m-mov');
+  await loadMovs();renderFin();
+}
+
+// ── TRANSFERENCIAS ENTRE CAJAS ──
+async function saveTransferencia(){
+  var origen=document.getElementById('tr-origen').value;
+  var destino=document.getElementById('tr-destino').value;
+  var monto=parseFloat(document.getElementById('tr-monto').value)||0;
+  var fecha=document.getElementById('tr-fecha').value;
+  var detalle=document.getElementById('tr-detalle').value.trim();
+  var ref=document.getElementById('tr-ref').value.trim();
+  if(origen===destino){toast('La caja origen y destino no pueden ser la misma','err');return;}
+  if(!monto){toast('Ingresá un monto','err');return;}
+  if(!fecha){toast('Ingresá una fecha','err');return;}
+  var tref='TRANSF-'+Date.now();
+  var anio=new Date(fecha).getFullYear();
+  var mes=MESES_ARR[new Date(fecha).getMonth()];
+  var base={anio,mes,sem:0,fecha,tipo:'transferencia',concepto:'TRANSFERENCIA',detalle:detalle||(origen+' → '+destino),referencia:ref||tref,transferencia_ref:tref};
+  var r=await sb.from('movimientos').insert([
+    {...base,caja:origen, egreso:monto,ingreso:0},
+    {...base,caja:destino,ingreso:monto,egreso:0}
+  ]);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast($p(monto)+' transferido de '+origen+' a '+destino);
+  document.getElementById('tr-monto').value='';
+  document.getElementById('tr-detalle').value='';
+  document.getElementById('tr-ref').value='';
+  await loadMovs();renderFin();renderTransfHistorial();
+}
+
+function renderTransfHistorial(){
+  var transfMovs=MOVS.filter(function(m){return m.tipo==='transferencia'&&Number(m.ingreso)>0;}).slice(0,15);
+  var el=document.getElementById('tr-historial');
+  if(!transfMovs.length){el.innerHTML='<div class="empty"><p>Sin transferencias registradas</p></div>';return;}
+  el.innerHTML='<div class="tbl"><table><thead><tr><th>Fecha</th><th>Hacia</th><th>Monto</th><th>Detalle</th></tr></thead><tbody>'+
+    transfMovs.map(function(m){
+      return '<tr><td>'+m.fecha+'</td>'+
+        '<td><span style="font-size:11px;font-weight:700;color:'+(CAJA_COLORES[m.caja]||'#6b7280')+'">'+m.caja+'</span></td>'+
+        '<td style="font-weight:700;color:#16a34a;">'+$p(m.ingreso)+'</td>'+
+        '<td style="font-size:12px;color:#6b7280;">'+(m.detalle||'—')+'</td></tr>';
+    }).join('')+'</tbody></table></div>';
 }
 </script>
 </body>
