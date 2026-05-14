@@ -450,26 +450,122 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="section" id="sec-finanzas">
 
     <!-- Saldos por caja -->
-    <div id="fin-cajas-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;"></div>
+    <div id="fin-cajas-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;"></div>
+
+    <!-- Período compartido -->
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+      <select id="fin-anio" onchange="renderFin()" style="width:90px;"></select>
+      <select id="fin-mes" onchange="renderFin()" style="width:150px;">
+        <option value="">Todo el año</option>
+        <option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option>
+        <option>MAYO</option><option>JUNIO</option><option>JULIO</option><option>AGOSTO</option>
+        <option>SEPTIEMBRE</option><option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option>
+      </select>
+      <span style="font-size:12px;color:#9ca3af;">← período activo para todos los módulos de finanzas</span>
+    </div>
 
     <!-- Tabs -->
     <div class="tabs">
-      <div class="tab active" onclick="setFinTab('movimientos',this)">📋 Movimientos</div>
+      <div class="tab active" onclick="setFinTab('general',this)">📊 Panel General</div>
+      <div class="tab" onclick="setFinTab('movimientos',this)">📋 Movimientos</div>
       <div class="tab" onclick="setFinTab('transferencia',this)">🔄 Transferencia entre cajas</div>
     </div>
 
+    <!-- Tab: Panel General -->
+    <div id="ft-general">
+
+      <!-- ACTIVOS -->
+      <div class="panel" style="margin-bottom:16px;">
+        <div class="panel-hdr">
+          <h4 style="color:#166534;">ACTIVOS — Lo que tenemos</h4>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;">
+          <div class="stat" style="border-top:3px solid #6c7ae0;">
+            <div class="stat-icon" style="background:#ede9fe;">💵</div>
+            <h3 id="pg-efectivo">$0</h3>
+            <p>Efectivo disponible</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Admin · Llavallol · Monte Grande</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #0ea5e9;">
+            <div class="stat-icon" style="background:#e0f2fe;">🏦</div>
+            <h3 id="pg-bancos">$0</h3>
+            <p>Bancos</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Banco SRL · Banco Poly</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #3b82f6;">
+            <div class="stat-icon" style="background:#dbeafe;">📱</div>
+            <h3 id="pg-mp">$0</h3>
+            <p>Mercado Pago</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">QR · Tarjetas · Transferencias</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #8b5cf6;">
+            <div class="stat-icon" style="background:#ede9fe;">🧾</div>
+            <h3 id="pg-echeq-act">$0</h3>
+            <p>Cheques en cartera</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">ECHEQ/Cheques a cobrar</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #f59e0b;">
+            <div class="stat-icon" style="background:#fef3c7;">👥</div>
+            <h3 id="pg-acobrar">$0</h3>
+            <p>Cuentas a cobrar</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Deudas de clientes</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #10b981;">
+            <div class="stat-icon" style="background:#d1fae5;">👔</div>
+            <h3 id="pg-stock-val">$0</h3>
+            <p>Stock mercadería</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Valor a precio minorista</div>
+          </div>
+        </div>
+        <div style="background:#f0fdf4;border-radius:10px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:14px;font-weight:700;color:#166534;">TOTAL ACTIVOS (calculables)</span>
+          <span style="font-size:24px;font-weight:800;color:#166534;" id="pg-total-activos">$0</span>
+        </div>
+      </div>
+
+      <!-- PASIVOS -->
+      <div class="panel" style="margin-bottom:16px;">
+        <div class="panel-hdr">
+          <h4 style="color:#991b1b;">PASIVOS — Lo que debemos</h4>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;">
+          <div class="stat" style="border-top:3px solid #8b5cf6;">
+            <div class="stat-icon" style="background:#ede9fe;">🧾</div>
+            <h3 id="pg-echeq-pas">$0</h3>
+            <p>Cheques emitidos</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">ECHEQ / Cheques a pagar</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #e5e7eb;opacity:.65;">
+            <div class="stat-icon" style="background:#f3f4f6;">🤝</div>
+            <h3 style="color:#d1d5db;">—</h3>
+            <p style="color:#9ca3af;">Deuda proveedores</p>
+            <div style="font-size:11px;color:#d1d5db;margin-top:4px;">Próximamente</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #e5e7eb;opacity:.65;">
+            <div class="stat-icon" style="background:#f3f4f6;">📋</div>
+            <h3 style="color:#d1d5db;">—</h3>
+            <p style="color:#9ca3af;">Moratorias / planes de pago</p>
+            <div style="font-size:11px;color:#d1d5db;margin-top:4px;">Próximamente</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FLUJO POR CAJA -->
+      <div class="panel">
+        <div class="panel-hdr">
+          <h4>Flujo por caja</h4>
+          <span style="font-size:12px;color:#9ca3af;" id="pg-periodo-lbl"></span>
+        </div>
+        <div id="pg-flujo-cajas"></div>
+      </div>
+
+    </div>
+
     <!-- Tab: Movimientos -->
-    <div id="ft-movimientos">
+    <div id="ft-movimientos" style="display:none;">
       <div class="panel">
         <div class="panel-hdr">
           <div class="search-row" style="flex-wrap:wrap;">
-            <select id="fin-anio" onchange="renderFin()" style="width:90px;"></select>
-            <select id="fin-mes" onchange="renderFin()" style="width:140px;">
-              <option value="">Todos los meses</option>
-              <option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option>
-              <option>MAYO</option><option>JUNIO</option><option>JULIO</option><option>AGOSTO</option>
-              <option>SEPTIEMBRE</option><option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option>
-            </select>
             <select id="fin-caja" onchange="renderFin()" style="width:200px;">
               <option value="">Todas las cajas</option>
               <option>EFECTIVO ADMINISTRACIÓN</option>
@@ -490,24 +586,23 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           </div>
           <button class="btn" onclick="openMovModal()">+ Nuevo movimiento</button>
         </div>
-        <!-- Totales del período -->
         <div id="fin-period-totals" style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;"></div>
         <div class="tbl"><table>
           <thead><tr>
             <th>Fecha</th><th>Caja</th><th>Tipo</th><th>Concepto</th><th>Detalle</th>
             <th style="text-align:right">Ingreso</th><th style="text-align:right">Egreso</th>
-            <th>Referencia</th><th></th>
+            <th>Referencia</th><th>Vto.</th><th></th>
           </tr></thead>
           <tbody id="fin-tbody"></tbody>
         </table></div>
       </div>
     </div>
 
-    <!-- Tab: Transferencia -->
+    <!-- Tab: Transferencia entre cajas -->
     <div id="ft-transferencia" style="display:none;">
       <div class="two-col">
         <div class="panel">
-          <div class="panel-hdr"><h4>🔄 Nueva transferencia</h4></div>
+          <div class="panel-hdr"><h4>🔄 Nueva transferencia entre cajas</h4></div>
           <div style="display:flex;flex-direction:column;gap:12px;">
             <div class="field"><label>Desde (caja origen)</label>
               <select id="tr-origen">
@@ -530,7 +625,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <div class="field"><label>Fecha</label><input type="date" id="tr-fecha"/></div>
             <div class="field"><label>Detalle</label><input id="tr-detalle" placeholder="Motivo de la transferencia"/></div>
             <div class="field"><label>Referencia / Comprobante</label><input id="tr-ref" placeholder="Nº transferencia, cheque..."/></div>
-            <button class="btn btn-green" style="margin-top:4px;" onclick="saveTransferencia()">Registrar transferencia</button>
+            <button class="btn btn-green" style="margin-top:4px;" onclick="saveTransferencia()">Registrar transferencia entre cajas</button>
           </div>
         </div>
         <div class="panel">
@@ -707,7 +802,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </select>
       </div>
       <div class="field"><label>Caja *</label>
-        <select id="mm-caja">
+        <select id="mm-caja" onchange="mm_onCaja()">
           <option>EFECTIVO ADMINISTRACIÓN</option>
           <option>BANCO SRL</option><option>BANCO POLY</option>
           <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
@@ -716,18 +811,24 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
       <div class="field"><label>Concepto *</label>
         <select id="mm-concepto">
-          <optgroup label="Egresos comunes" id="mm-opt-egr">
+          <optgroup label="— Egresos —" id="mm-opt-egr">
             <option>SUELDOS/JORNALES</option>
+            <option>COSTUREROS</option>
             <option>MATERIALES/TELAS</option>
             <option>PROVEEDORES</option>
-            <option>SERVICIOS</option>
+            <option>GASTOS BANCARIOS</option>
             <option>IMPUESTOS/AFIP</option>
+            <option>ALQUILER</option>
+            <option>SERVICIOS/EXPENSAS</option>
             <option>FLETES/ENVÍOS</option>
+            <option>MANTENIMIENTO</option>
             <option>GASTOS VARIOS</option>
           </optgroup>
-          <optgroup label="Ingresos comunes" id="mm-opt-ing" style="display:none">
-            <option>VENTAS</option>
+          <optgroup label="— Ingresos —" id="mm-opt-ing" style="display:none">
+            <option>VENTA MAYORISTA</option>
+            <option>VENTA MINORISTA</option>
             <option>COBRO CLIENTE</option>
+            <option>CHEQUES COBRADOS</option>
             <option>OTROS INGRESOS</option>
           </optgroup>
           <option>OTROS</option>
@@ -736,7 +837,12 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="field"><label>Fecha *</label><input type="date" id="mm-fecha"/></div>
       <div class="field full"><label>Detalle / nombre *</label><input id="mm-detalle" placeholder="A quién se le pagó o de quién viene"/></div>
       <div class="field"><label>Monto $ *</label><input type="number" id="mm-monto" min="0" placeholder="0"/></div>
-      <div class="field"><label>Referencia / Comprobante</label><input id="mm-ref" placeholder="Nº transferencia, cheque, factura..."/></div>
+      <div class="field"><label>Referencia / N° cheque</label><input id="mm-ref" placeholder="Nº transferencia, cheque, factura..."/></div>
+      <div class="field full" id="mm-fvenc-wrap" style="display:none;">
+        <label>Fecha de vencimiento del cheque</label>
+        <input type="date" id="mm-fvenc"/>
+        <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Fecha en que el cheque puede cobrarse / será debitado</div>
+      </div>
     </div>
     <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-mov')">Cancelar</button><button class="btn" onclick="saveMov()">Guardar</button></div>
   </div>
@@ -790,7 +896,7 @@ window.addEventListener('DOMContentLoaded', function(){
       document.getElementById('app').style.display='none';
     }
   });
-  document.getElementById('tr-fecha').value=today();
+  document.getElementById('tr-fecha').value=today;
   document.getElementById('lg-pass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 });
 
@@ -814,7 +920,7 @@ async function loadProductos(){ var {data}=await sb.from('productos').select('*,
 async function loadVentas(){ var {data}=await sb.from('ventas').select('*').order('fecha',{ascending:false}).limit(500); VENTAS=data||[]; }
 async function loadStock(){ var {data}=await sb.from('stock').select('*,productos(nombre,codigo)').order('id'); STOCK=data||[]; }
 async function loadPresupuestos(){ var {data}=await sb.from('presupuestos').select('*').order('fecha',{ascending:false}).limit(200); PRESUPUESTOS=data||[]; }
-async function loadMovs(){ var {data}=await sb.from('movimientos').select('*').order('fecha',{ascending:false}).limit(2000); MOVS=data||[]; }
+async function loadMovs(){ var {data}=await sb.from('movimientos').select('*').order('fecha',{ascending:false}).limit(3000); MOVS=data||[]; }
 
 // ── NAV ──
 function nav(sec, el){
@@ -1549,20 +1655,23 @@ function renderFinCajas(){
 
 function filtrarPorCaja(caja){
   document.getElementById('fin-caja').value=caja;
-  setFinTab('movimientos',document.querySelectorAll('#sec-finanzas .tab')[0]);
+  setFinTab('movimientos',document.querySelectorAll('#sec-finanzas .tab')[1]);
   renderFin();
 }
 
 function setFinTab(tab,el){
+  document.getElementById('ft-general').style.display=tab==='general'?'block':'none';
   document.getElementById('ft-movimientos').style.display=tab==='movimientos'?'block':'none';
   document.getElementById('ft-transferencia').style.display=tab==='transferencia'?'block':'none';
   document.querySelectorAll('#sec-finanzas .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
-  if(tab==='transferencia') renderTransfHistorial();
+  if(tab==='transferencia')renderTransfHistorial();
+  if(tab==='general')renderPanelGeneral();
 }
 
 function renderFin(){
   renderFinCajas();
+  renderPanelGeneral();
   var anio=parseInt(document.getElementById('fin-anio').value);
   var mes=document.getElementById('fin-mes').value;
   var caja=document.getElementById('fin-caja').value;
@@ -1583,22 +1692,96 @@ function renderFin(){
     '<span style="background:#ede9fe;color:#7c3aed;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:700;">= Neto: '+$p(ing-egr)+'</span>'+
     '<span style="color:#9ca3af;font-size:12px;align-self:center;">'+list.length+' movimientos</span>';
   var tb=document.getElementById('fin-tbody');
-  if(!list.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><p>Sin movimientos en el período</p></div></td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><p>Sin movimientos en el período</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(m){
-    var esIng=Number(m.ingreso)>0;
     var tipoBadge=m.tipo==='ingreso'?'b-green':m.tipo==='transferencia'?'b-purple':'b-red';
     return '<tr>'+
       '<td>'+m.fecha+'</td>'+
-      '<td><span style="font-size:11px;font-weight:700;color:'+( CAJA_COLORES[m.caja]||'#6b7280')+';">'+m.caja+'</span></td>'+
+      '<td><span style="font-size:11px;font-weight:700;color:'+(CAJA_COLORES[m.caja]||'#6b7280')+';">'+m.caja+'</span></td>'+
       '<td><span class="badge '+tipoBadge+'">'+m.tipo+'</span></td>'+
       '<td>'+(m.concepto||'—')+'</td>'+
       '<td>'+(m.detalle||'—')+'</td>'+
       '<td style="text-align:right;color:#16a34a;font-weight:600;">'+(Number(m.ingreso)>0?$p(m.ingreso):'')+'</td>'+
       '<td style="text-align:right;color:#dc2626;font-weight:600;">'+(Number(m.egreso)>0?$p(m.egreso):'')+'</td>'+
       '<td style="font-size:11px;color:#9ca3af;">'+(m.referencia||'—')+'</td>'+
+      '<td style="font-size:11px;color:#8b5cf6;">'+(m.fecha_vencimiento||'')+'</td>'+
       '<td>'+(m.cobro_id?'<span class="badge b-blue" title="Generado automáticamente desde cobro">Auto</span>':'')+'</td>'+
     '</tr>';
   }).join('');
+}
+
+// ── PANEL GENERAL ──
+function calcStockValue(){
+  return STOCK.reduce(function(sum,s){
+    var prod=PRODUCTOS.find(function(p){return p.id===s.producto_id;});
+    return sum+(prod?Number(prod.precio_minorista)*s.cantidad:0);
+  },0);
+}
+
+function renderPanelGeneral(){
+  var efectivo=saldoCaja('EFECTIVO ADMINISTRACIÓN')+saldoCaja('LOCAL LLAVALLOL')+saldoCaja('LOCAL MONTE GRANDE');
+  var bancos=saldoCaja('BANCO SRL')+saldoCaja('BANCO POLY');
+  var mp=saldoCaja('MERCADO PAGO');
+  var echeqNet=saldoCaja('ECHEQ/CHEQUE');
+  var acobrar=VENTAS.filter(function(v){return v.estado!=='cobrado';}).reduce(function(s,v){return s+Number(v.saldo);},0);
+  var stockVal=calcStockValue();
+  var echeqActivo=Math.max(echeqNet,0);
+  var echeqPasivo=Math.max(-echeqNet,0);
+  var totalActivos=efectivo+bancos+mp+echeqActivo+acobrar+stockVal;
+  var el=function(id){return document.getElementById(id);};
+  if(!el('pg-efectivo'))return;
+  el('pg-efectivo').textContent=$p(efectivo);
+  el('pg-bancos').textContent=$p(bancos);
+  el('pg-mp').textContent=$p(mp);
+  el('pg-echeq-act').textContent=$p(echeqActivo);
+  el('pg-acobrar').textContent=$p(acobrar);
+  el('pg-stock-val').textContent=$p(stockVal);
+  el('pg-total-activos').textContent=$p(totalActivos);
+  el('pg-echeq-pas').textContent=$p(echeqPasivo);
+  var anio=parseInt(document.getElementById('fin-anio').value);
+  var mes=document.getElementById('fin-mes').value;
+  var periodoLabel=mes?(mes+' '+anio):('Todo '+anio);
+  if(el('pg-periodo-lbl'))el('pg-periodo-lbl').textContent=periodoLabel;
+  renderFlujoCajas(anio,mes);
+}
+
+function renderFlujoCajas(anio,mes){
+  var rows=CAJAS_SISTEMA.map(function(caja){
+    var mc=MOVS.filter(function(m){return m.caja===caja&&m.anio===anio&&(!mes||m.mes===mes);});
+    var ing=mc.reduce(function(s,m){return s+Number(m.ingreso);},0);
+    var egr=mc.reduce(function(s,m){return s+Number(m.egreso);},0);
+    return{caja:caja,ing:ing,egr:egr,neto:ing-egr,saldo:saldoCaja(caja)};
+  });
+  var totIng=rows.reduce(function(s,r){return s+r.ing;},0);
+  var totEgr=rows.reduce(function(s,r){return s+r.egr;},0);
+  var totNeto=rows.reduce(function(s,r){return s+r.neto;},0);
+  var totSaldo=rows.reduce(function(s,r){return s+r.saldo;},0);
+  var el=document.getElementById('pg-flujo-cajas');
+  el.innerHTML='<div class="tbl"><table>'+
+    '<thead><tr>'+
+      '<th>Caja</th>'+
+      '<th style="text-align:right">Ingresos período</th>'+
+      '<th style="text-align:right">Egresos período</th>'+
+      '<th style="text-align:right">Neto período</th>'+
+      '<th style="text-align:right">Saldo acumulado</th>'+
+    '</tr></thead><tbody>'+
+    rows.map(function(r){
+      var color=CAJA_COLORES[r.caja]||'#6b7280';
+      return '<tr>'+
+        '<td><span style="font-weight:700;font-size:12px;color:'+color+';">'+r.caja+'</span></td>'+
+        '<td style="text-align:right;color:#16a34a;font-weight:600;">'+(r.ing>0?$p(r.ing):'—')+'</td>'+
+        '<td style="text-align:right;color:#dc2626;font-weight:600;">'+(r.egr>0?$p(r.egr):'—')+'</td>'+
+        '<td style="text-align:right;font-weight:700;color:'+(r.neto>0?'#16a34a':r.neto<0?'#dc2626':'#9ca3af')+'">'+(r.ing>0||r.egr>0?$p(r.neto):'—')+'</td>'+
+        '<td style="text-align:right;font-weight:800;color:'+(r.saldo>=0?'#1a1f36':'#dc2626')+';">'+$p(r.saldo)+'</td>'+
+      '</tr>';
+    }).join('')+
+    '</tbody><tfoot><tr style="border-top:2px solid #e5e7eb;background:#f9fafb;">'+
+      '<td style="font-weight:800;font-size:12px;">TOTAL</td>'+
+      '<td style="text-align:right;font-weight:800;color:#16a34a;">'+$p(totIng)+'</td>'+
+      '<td style="text-align:right;font-weight:800;color:#dc2626;">'+$p(totEgr)+'</td>'+
+      '<td style="text-align:right;font-weight:800;color:'+(totNeto>=0?'#16a34a':'#dc2626')+';">'+$p(totNeto)+'</td>'+
+      '<td style="text-align:right;font-weight:800;">'+$p(totSaldo)+'</td>'+
+    '</tr></tfoot></table></div>';
 }
 
 function mm_onTipo(){
@@ -1607,13 +1790,22 @@ function mm_onTipo(){
   document.getElementById('mm-opt-ing').style.display=tipo==='ingreso'?'':'none';
 }
 
+function mm_onCaja(){
+  var caja=document.getElementById('mm-caja').value;
+  var wrap=document.getElementById('mm-fvenc-wrap');
+  if(wrap)wrap.style.display=(caja==='ECHEQ/CHEQUE')?'':'none';
+}
+
 function openMovModal(){
   document.getElementById('mm-tipo').value='egreso';
+  document.getElementById('mm-caja').value='EFECTIVO ADMINISTRACIÓN';
   document.getElementById('mm-fecha').value=today();
   document.getElementById('mm-detalle').value='';
   document.getElementById('mm-monto').value='';
   document.getElementById('mm-ref').value='';
+  document.getElementById('mm-fvenc').value='';
   mm_onTipo();
+  mm_onCaja();
   openM('m-mov');
 }
 
@@ -1623,6 +1815,7 @@ async function saveMov(){
   var detalle=document.getElementById('mm-detalle').value.trim();
   if(!fecha||!monto||!detalle){toast('Completá fecha, monto y detalle','err');return;}
   var tipo=document.getElementById('mm-tipo').value;
+  var fvenc=document.getElementById('mm-fvenc').value||null;
   var d={
     caja:document.getElementById('mm-caja').value,
     anio:new Date(fecha).getFullYear(),
@@ -1632,7 +1825,8 @@ async function saveMov(){
     detalle,
     ingreso:tipo==='ingreso'?monto:0,
     egreso:tipo==='egreso'?monto:0,
-    referencia:document.getElementById('mm-ref').value
+    referencia:document.getElementById('mm-ref').value,
+    fecha_vencimiento:fvenc
   };
   var r=await sb.from('movimientos').insert(d);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
