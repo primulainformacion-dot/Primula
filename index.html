@@ -188,13 +188,19 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 
   <div class="nav-group">
+    <div class="nav-label">Ventas</div>
+    <div class="nav-item" onclick="nav('mayorista',this)"><span class="ni">🏭</span> Ropa Mayorista</div>
+    <div class="nav-item nav-local-ll" onclick="navLocal('llavallol','ventas',this)"><span class="ni">🏪</span> Local Llavallol</div>
+    <div class="nav-item nav-local-mg" onclick="navLocal('montegrande','ventas',this)"><span class="ni">🏪</span> Local Monte Grande</div>
+  </div>
+
+  <div class="nav-group">
     <div class="nav-label">Administración</div>
     <div class="nav-item" onclick="nav('clientes',this)"><span class="ni">👥</span> Clientes</div>
     <div class="nav-item" onclick="nav('proveedores',this)"><span class="ni">🤝</span> Proveedores</div>
     <div class="nav-item" onclick="nav('talleristas',this)"><span class="ni">🧵</span> Talleristas</div>
     <div class="nav-item" onclick="nav('personal',this)"><span class="ni">👤</span> Personal</div>
     <div class="nav-item" onclick="nav('productos',this)"><span class="ni">👔</span> Productos</div>
-    <div class="nav-item" onclick="nav('presupuestos',this)"><span class="ni">📄</span> Presupuestos</div>
   </div>
 
   <div class="nav-group">
@@ -203,16 +209,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="nav-item" onclick="nav('finanzas',this)"><span class="ni">💹</span> Movimientos</div>
     <div class="nav-item" onclick="nav('cheques',this)"><span class="ni">🧾</span> Cheques</div>
     <div class="nav-item" onclick="nav('moratorias',this)"><span class="ni">📋</span> Moratorias</div>
-  </div>
-
-  <div class="nav-group nav-local-ll">
-    <div class="nav-label" style="color:#d97706;">📍 Llavallol</div>
-    <div class="nav-item" onclick="navLocal('llavallol','ventas',this)"><span class="ni">🏪</span> Local Llavallol</div>
-  </div>
-
-  <div class="nav-group nav-local-mg">
-    <div class="nav-label" style="color:#10b981;">📍 Monte Grande</div>
-    <div class="nav-item" onclick="navLocal('montegrande','ventas',this)"><span class="ni">🏪</span> Local Monte Grande</div>
   </div>
 
   <div class="nav-group">
@@ -1587,6 +1583,40 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Modal: objetivo -->
+<div class="modal-bg" id="m-obj">
+  <div class="modal" style="max-width:420px;">
+    <h3 id="m-obj-title">Editar objetivo</h3>
+    <div class="grid2">
+      <div class="field full" id="m-obj-canal-wrap" style="display:none;">
+        <label>Nombre del objetivo *</label>
+        <input id="m-obj-canal" placeholder="ej. Exportaciones, Online, Outlet..."/>
+      </div>
+      <div class="field">
+        <label>Meta en $ (0 = sin meta $)</label>
+        <input type="number" id="m-obj-meta-pesos" placeholder="0" min="0" step="1000"/>
+      </div>
+      <div class="field">
+        <label>Meta en unidades</label>
+        <input type="number" id="m-obj-meta-unid" placeholder="0" min="0"/>
+      </div>
+      <div class="field full" id="m-obj-real-unid-wrap" style="display:none;">
+        <label>Unidades producidas real (cargado a mano)</label>
+        <input type="number" id="m-obj-real-unid" placeholder="0" min="0"/>
+      </div>
+      <div class="field full">
+        <label>Nota (opcional)</label>
+        <input id="m-obj-nota" placeholder="Descripción, contexto del objetivo..."/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeM('m-obj')">Cancelar</button>
+      <button id="m-obj-del" class="btn btn-red" style="display:none;" onclick="deleteObjetivo()">Eliminar</button>
+      <button class="btn" onclick="saveObjetivo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: depositar cheque en banco -->
 <div class="modal-bg" id="m-chqd">
   <div class="modal" style="max-width:420px;">
@@ -1794,7 +1824,7 @@ var SB_URL = 'https://qaaausnrgokkycxucdrp.supabase.co';
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3ODI1NjYsImV4cCI6MjA5NDM1ODU2Nn0.1Rus0piCnrCXnlL5vMsZCr-3_S_GHAqw7MadQ1kJ9ww';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[];
 var PRENDAS_LIST=[
   'Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal',
   'Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre',
@@ -1857,11 +1887,12 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
 async function loadCierresCaja(){ var {data}=await sb.from('cierres_caja').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false}); CIERRES_CAJA=data||[]; }
+async function loadObjetivos(){ var {data}=await sb.from('objetivos').select('*').order('anio',{ascending:false}); OBJETIVOS=data||[]; }
 async function loadCategorias(){ var {data}=await sb.from('categorias').select('*').order('nombre'); CATEGORIAS=data||[]; }
 async function loadTalleristas(){ var {data}=await sb.from('talleristas').select('*').order('nombre'); TALLERISTAS=data||[]; }
 async function loadTalHistorial(){ var {data}=await sb.from('tallerista_precios_historial').select('*').order('created_at',{ascending:false}); TAL_PRECIOS_HIST=data||[]; }
@@ -3602,7 +3633,11 @@ function renderVentasPanel(anio,mes){
 
 // ── OBJETIVOS ──
 var currentObjTab='mensual';
-var objEditMode=false;
+var OBJ_CANALES=[
+  {key:'MAYORISTA',icon:'🏭',color:'#6c7ae0'},
+  {key:'LOCAL LLAVALLOL',icon:'🏪',color:'#f59e0b'},
+  {key:'LOCAL MONTE GRANDE',icon:'🏪',color:'#10b981'}
+];
 
 function setObjTab(tab,el){
   currentObjTab=tab;
@@ -3613,118 +3648,200 @@ function setObjTab(tab,el){
   renderObjetivos();
 }
 
-function toggleObjEdit(){
-  objEditMode=!objEditMode;
-  renderObjetivos();
-}
-
-function saveObjTargets(){
-  var key='primula_obj_'+currentObjTab;
-  var get=function(id){return parseFloat(document.getElementById(id).value)||0;};
-  var data={
-    mayorista_fact:get('obj-may-fact-t'),mayorista_unid:get('obj-may-unid-t'),
-    ll_fact:get('obj-ll-fact-t'),ll_unid:get('obj-ll-unid-t'),
-    mg_fact:get('obj-mg-fact-t'),mg_unid:get('obj-mg-unid-t')
-  };
-  localStorage.setItem(key,JSON.stringify(data));
-  objEditMode=false;
-  renderObjetivos();
-  toast('Objetivos guardados');
-}
-
 function renderObjetivos(){
   var cont=document.getElementById('obj-content');
   if(!cont)return;
   var anio=parseInt(document.getElementById('obj-anio').value)||new Date().getFullYear();
   var mes=currentObjTab==='mensual'?(document.getElementById('obj-mes').value||null):null;
+  var periodoLbl=mes?(mes+' '+anio):('Año '+anio);
 
-  var key='primula_obj_'+currentObjTab;
-  var defs={mayorista_fact:500000,mayorista_unid:60,ll_fact:150000,ll_unid:30,mg_fact:100000,mg_unid:20};
-  var stored={}; try{stored=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
-  var tgt=Object.assign({},defs,stored);
-
-  // Actuales de MOVS
+  // Real ventas desde MOVS
   var movsF=MOVS.filter(function(m){return m.tipo==='ingreso'&&m.anio===anio&&(!mes||m.mes===mes)&&m.concepto!=='TRANSFERENCIA';});
-  var mayFact=movsF.filter(function(m){return (m.concepto||'').includes('MAYORISTA')||(m.concepto||'').includes('COBRO CLIENTE');}).reduce(function(s,m){return s+Number(m.ingreso);},0);
-  var llFact=movsF.filter(function(m){return m.caja==='LOCAL LLAVALLOL'||(m.caja==='MERCADO PAGO'&&(m.detalle||'').toLowerCase().includes('llavallol'));}).reduce(function(s,m){return s+Number(m.ingreso);},0);
-  var mgFact=movsF.filter(function(m){return m.caja==='LOCAL MONTE GRANDE'||(m.caja==='MERCADO PAGO'&&(m.detalle||'').toLowerCase().includes('monte grande'));}).reduce(function(s,m){return s+Number(m.ingreso);},0);
-
-  // Unidades de VENTAS
+  var realPesos={
+    'MAYORISTA':movsF.filter(function(m){return (m.concepto||'').includes('MAYORISTA')||(m.concepto||'').includes('COBRO CLIENTE');}).reduce(function(s,m){return s+Number(m.ingreso);},0),
+    'LOCAL LLAVALLOL':movsF.filter(function(m){return m.caja==='LOCAL LLAVALLOL'||(m.caja==='MERCADO PAGO'&&(m.detalle||'').toLowerCase().includes('llavallol'));}).reduce(function(s,m){return s+Number(m.ingreso);},0),
+    'LOCAL MONTE GRANDE':movsF.filter(function(m){return m.caja==='LOCAL MONTE GRANDE'||(m.caja==='MERCADO PAGO'&&(m.detalle||'').toLowerCase().includes('monte grande'));}).reduce(function(s,m){return s+Number(m.ingreso);},0)
+  };
+  // Real unidades desde VENTAS
   var ventasF=VENTAS.filter(function(v){
     if(!v.fecha)return false;
-    var y=new Date(v.fecha+'T12:00:00').getFullYear();
-    var m2=MESES_ARR[new Date(v.fecha+'T12:00:00').getMonth()];
-    return y===anio&&(!mes||m2===mes);
+    var d=new Date(v.fecha+'T12:00:00');
+    return d.getFullYear()===anio&&(!mes||MESES_ARR[d.getMonth()]===mes);
   });
-  var mayUnid=ventasF.filter(function(v){return v.tipo==='mayorista';}).length;
-  var llUnid=ventasF.filter(function(v){return v.tipo==='minorista'&&(!v.local||v.local==='llavallol');}).length;
-  var mgUnid=ventasF.filter(function(v){return v.tipo==='minorista'&&v.local==='montegrande';}).length;
+  var realUnidVentas={
+    'MAYORISTA':ventasF.filter(function(v){return v.tipo==='mayorista';}).length,
+    'LOCAL LLAVALLOL':ventasF.filter(function(v){return v.tipo==='minorista'&&(!v.local||v.local==='llavallol');}).length,
+    'LOCAL MONTE GRANDE':ventasF.filter(function(v){return v.tipo==='minorista'&&v.local==='montegrande';}).length
+  };
 
-  var periodoLbl=mes?(mes+' '+anio):('Año '+anio);
-  var canales=[
-    {id:'may',icon:'🏭',label:'Mayorista',color:'#6c7ae0',fact:mayFact,factT:tgt.mayorista_fact,unid:mayUnid,unidT:tgt.mayorista_unid},
-    {id:'ll', icon:'🏪',label:'Local Llavallol',color:'#f59e0b',fact:llFact,factT:tgt.ll_fact,unid:llUnid,unidT:tgt.ll_unid},
-    {id:'mg', icon:'🏪',label:'Local Monte Grande',color:'#10b981',fact:mgFact,factT:tgt.mg_fact,unid:mgUnid,unidT:tgt.mg_unid}
-  ];
-
+  function findObj(cat,canal){
+    return OBJETIVOS.find(function(o){
+      return o.categoria===cat&&o.canal===canal&&o.anio===anio&&(mes?o.mes===mes:!o.mes);
+    });
+  }
   function pBar(actual,target,color){
     var pct=target>0?Math.min(100,Math.round(actual/target*100)):0;
-    var c=pct>=100?'#16a34a':pct>=70?color:'#f59e0b';
-    return {pct:pct,color:c,bar:'<div style="height:10px;background:#f3f4f6;border-radius:5px;overflow:hidden;margin:5px 0 2px;">'+
-      '<div style="height:10px;background:'+c+';border-radius:5px;width:'+pct+'%;transition:width .6s ease;"></div></div>'+
-      '<div style="font-size:11px;color:'+c+';font-weight:700;text-align:right;">'+pct+'%'+(pct>=100?' 🎯':'')+'</div>'};
+    var c=pct>=100?'#16a34a':pct>=60?color:'#f59e0b';
+    return '<div style="background:#f3f4f6;border-radius:5px;overflow:hidden;margin:4px 0 1px;height:7px;">'+
+      '<div style="height:7px;background:'+c+';border-radius:5px;width:'+pct+'%;transition:width .6s;"></div></div>'+
+      '<div style="font-size:10px;color:'+c+';font-weight:700;text-align:right;margin-bottom:6px;">'+pct+'%'+(pct>=100?' 🎯':'')+'</div>';
   }
-
-  var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'+
-    '<span style="font-size:13px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;">Ventas — '+periodoLbl+'</span>'+
-    (objEditMode?
-      '<div style="display:flex;gap:6px;"><button class="btn btn-green btn-sm" onclick="saveObjTargets()">💾 Guardar</button><button class="btn btn-gray btn-sm" onclick="toggleObjEdit()">Cancelar</button></div>':
-      '<button class="btn btn-outline btn-sm" onclick="toggleObjEdit()">✏️ Editar objetivos</button>'
-    )+'</div>';
-
-  canales.forEach(function(c){
-    var fb=pBar(c.fact,c.factT,c.color);
-    var ub=pBar(c.unid,c.unidT,c.color);
-    var factInput=objEditMode?'<input type="number" id="obj-'+c.id+'-fact-t" value="'+c.factT+'" style="width:110px;padding:2px 6px;font-size:12px;border:1px solid #e5e7eb;border-radius:5px;" />':'<strong>'+$p(c.factT)+'</strong>';
-    var unidInput=objEditMode?'<input type="number" id="obj-'+c.id+'-unid-t" value="'+c.unidT+'" style="width:70px;padding:2px 6px;font-size:12px;border:1px solid #e5e7eb;border-radius:5px;" />':'<strong>'+c.unidT+' ventas</strong>';
-    html+='<div class="panel" style="margin-bottom:14px;">'+
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">'+
-        '<span style="font-size:22px;">'+c.icon+'</span>'+
-        '<div style="font-size:15px;font-weight:800;color:'+c.color+';">'+c.label+'</div>'+
-        (fb.pct>=100?'<span class="badge b-green" style="margin-left:auto;">🎯 Meta alcanzada</span>':'')
-      +'</div>'+
-      '<div style="margin-bottom:14px;">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;">'+
-          '<span style="font-size:13px;font-weight:600;color:#374151;">💰 Facturación</span>'+
-          '<span style="font-size:13px;color:#374151;">'+$p(c.fact)+' / '+factInput+'</span>'+
-        '</div>'+fb.bar+
+  function ms_(v){return v?"'"+v+"'":'null';}
+  function renderCard(cat,canal,cfg){
+    var obj=findObj(cat,canal);
+    var logrado=!!(obj&&obj.logrado);
+    var metaP=obj?Number(obj.meta_pesos||0):0;
+    var metaU=obj?Number(obj.meta_unidades||0):0;
+    var realP=cat==='ventas'?(realPesos[canal]||0):0;
+    var realU=cat==='ventas'?(realUnidVentas[canal]||0):(obj?Number(obj.real_unidades_manual||0):0);
+    var id=obj?obj.id:null;
+    var oc1="openObjetivoModal('"+cat+"','"+canal+"',"+anio+','+ms_(mes)+','+(id||'null')+')';
+    var oc2="toggleObjetivoLogrado('"+cat+"','"+canal+"',"+anio+','+ms_(mes)+','+(id||'null')+')';
+    return '<div style="border:2px solid '+(logrado?'#16a34a':'#e5e7eb')+';border-radius:14px;padding:14px 16px;background:'+(logrado?'#f0fdf4':'#fff')+';display:flex;flex-direction:column;">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'+
+        '<span style="font-size:18px;">'+cfg.icon+'</span>'+
+        '<div style="font-size:12px;font-weight:800;color:'+(logrado?'#166534':cfg.color)+';flex:1;line-height:1.2;">'+canal+'</div>'+
+        (logrado?'<span style="font-size:9px;font-weight:800;color:#16a34a;background:#dcfce7;padding:2px 7px;border-radius:20px;white-space:nowrap;">🎯 LOGRADO</span>':'')+
       '</div>'+
-      '<div>'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;">'+
-          '<span style="font-size:13px;font-weight:600;color:#374151;">📦 Unidades vendidas</span>'+
-          '<span style="font-size:13px;color:#374151;">'+c.unid+' ventas / '+unidInput+'</span>'+
-        '</div>'+ub.bar+
+      (cat==='ventas'?
+        '<div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:2px;">💰 Facturación</div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:1px;">'+
+          '<span>Real: <strong style="color:#374151;">'+$p(realP)+'</strong></span>'+
+          '<span>Meta: <strong>'+$p(metaP)+'</strong></span>'+
+        '</div>'+pBar(realP,metaP,cfg.color)+
+        '<div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:2px;">📦 Unidades</div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:1px;">'+
+          '<span>Real: <strong style="color:#374151;">'+realU+'</strong></span>'+
+          '<span>Meta: <strong>'+metaU+' u.</strong></span>'+
+        '</div>'+pBar(realU,metaU,cfg.color)
+      :
+        '<div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:2px;">🧵 Unidades producidas</div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:1px;">'+
+          '<span>Real: <strong style="color:#374151;">'+realU+' u.</strong></span>'+
+          '<span>Meta: <strong>'+metaU+' u.</strong></span>'+
+        '</div>'+pBar(realU,metaU,cfg.color)
+      )+
+      '<div style="display:flex;gap:6px;margin-top:auto;padding-top:8px;">'+
+        '<button class="btn btn-gray btn-sm" onclick="'+oc1+'">✏️ Editar</button>'+
+        '<button class="btn btn-sm" onclick="'+oc2+'" style="'+(logrado?'background:#dcfce7;color:#166534;border-color:#bbf7d0;':'background:#f9fafb;color:#374151;border-color:#e5e7eb;')+'">'+(logrado?'✓ Logrado':'Marcar logrado')+'</button>'+
       '</div>'+
     '</div>';
-  });
+  }
 
-  // Producción y Entrega (placeholders)
-  html+='<div class="panel" style="margin-bottom:14px;">'+
-    '<div style="display:flex;align-items:center;gap:10px;">'+
-      '<span style="font-size:22px;">🏗️</span>'+
-      '<div><div style="font-size:15px;font-weight:800;color:#d1d5db;">Producción</div>'+
-      '<div style="font-size:12px;color:#d1d5db;margin-top:4px;">Disponible con el módulo de producción</div></div>'+
-      '<span class="badge b-blue" style="margin-left:auto;">Próximamente</span>'+
-    '</div></div>'+
-  '<div class="panel">'+
-    '<div style="display:flex;align-items:center;gap:10px;">'+
-      '<span style="font-size:22px;">🚚</span>'+
-      '<div><div style="font-size:15px;font-weight:800;color:#d1d5db;">Entrega</div>'+
-      '<div style="font-size:12px;color:#d1d5db;margin-top:4px;">Disponible con el módulo de logística</div></div>'+
-      '<span class="badge b-blue" style="margin-left:auto;">Próximamente</span>'+
-    '</div></div>';
+  var html='';
+
+  // ── Fila 1: Ventas ──
+  html+='<div style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">📦 Ventas — '+periodoLbl+'</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">';
+  OBJ_CANALES.forEach(function(c){html+=renderCard('ventas',c.key,c);});
+  html+='</div>';
+
+  // ── Fila 2: Producción ──
+  html+='<div style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">🧵 Producción — '+periodoLbl+'</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">';
+  OBJ_CANALES.forEach(function(c){html+=renderCard('produccion',c.key,c);});
+  html+='</div>';
+
+  // ── Objetivos personalizados ──
+  var customs=OBJETIVOS.filter(function(o){
+    return o.categoria==='custom'&&o.anio===anio&&(mes?o.mes===mes:!o.mes);
+  });
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'+
+    '<span style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;">🎯 Objetivos personalizados</span>'+
+    '<button class="btn btn-sm" onclick="openObjetivoModal(\'custom\',null,'+anio+','+ms_(mes)+',null)" style="font-size:12px;">+ Agregar</button>'+
+  '</div>';
+  if(customs.length){
+    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">';
+    customs.forEach(function(o){
+      var logrado=!!o.logrado;
+      var oc1="openObjetivoModal('custom','"+o.canal.replace(/'/g,"\\'")+"',"+o.anio+','+ms_(o.mes)+','+o.id+')';
+      var oc2="toggleObjetivoLogrado('custom','"+o.canal.replace(/'/g,"\\'")+"',"+o.anio+','+ms_(o.mes)+','+o.id+')';
+      html+='<div style="border:2px solid '+(logrado?'#16a34a':'#e5e7eb')+';border-radius:14px;padding:14px 16px;background:'+(logrado?'#f0fdf4':'#fff')+';">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'+
+          '<span style="font-size:18px;">🎯</span>'+
+          '<div style="font-size:12px;font-weight:800;color:'+(logrado?'#166534':'#374151')+';flex:1;">'+o.canal+'</div>'+
+          (logrado?'<span style="font-size:9px;font-weight:800;color:#16a34a;background:#dcfce7;padding:2px 7px;border-radius:20px;">🎯</span>':'')+
+        '</div>'+
+        (Number(o.meta_pesos||0)>0?'<div style="font-size:11px;color:#6b7280;margin-bottom:3px;">Meta $: <strong>'+$p(Number(o.meta_pesos))+'</strong></div>':'')+
+        (Number(o.meta_unidades||0)>0?'<div style="font-size:11px;color:#6b7280;margin-bottom:3px;">Meta unidades: <strong>'+Number(o.meta_unidades)+'</strong></div>':'')+
+        (o.nota?'<div style="font-size:11px;color:#9ca3af;margin-bottom:8px;font-style:italic;">'+o.nota+'</div>':'')+
+        '<div style="display:flex;gap:6px;margin-top:8px;">'+
+          '<button class="btn btn-gray btn-sm" onclick="'+oc1+'">✏️ Editar</button>'+
+          '<button class="btn btn-sm" onclick="'+oc2+'" style="'+(logrado?'background:#dcfce7;color:#166534;border-color:#bbf7d0;':'background:#f9fafb;color:#374151;border-color:#e5e7eb;')+'">'+(logrado?'✓ Logrado':'Marcar logrado')+'</button>'+
+        '</div>'+
+      '</div>';
+    });
+    html+='</div>';
+  } else {
+    html+='<div style="border:2px dashed #e5e7eb;border-radius:12px;padding:18px;text-align:center;color:#9ca3af;font-size:13px;">Sin objetivos personalizados — usá <strong>+ Agregar</strong></div>';
+  }
 
   cont.innerHTML=html;
+}
+
+// ── CRUD objetivos ──
+var editObjCat=null,editObjCanal=null,editObjAnio=null,editObjMes=null,editObjId=null;
+
+function openObjetivoModal(cat,canal,anio,mes,id){
+  editObjCat=cat;editObjCanal=canal||null;editObjAnio=anio;editObjMes=mes||null;editObjId=id||null;
+  var obj=id?OBJETIVOS.find(function(o){return o.id===id;}):null;
+  var isCustom=cat==='custom';
+  document.getElementById('m-obj-title').textContent=isCustom?(id?'Editar objetivo personalizado':'Nuevo objetivo personalizado'):'Editar objetivo — '+canal;
+  document.getElementById('m-obj-canal-wrap').style.display=isCustom?'block':'none';
+  document.getElementById('m-obj-canal').value=obj?obj.canal:(canal||'');
+  document.getElementById('m-obj-meta-pesos').value=obj&&obj.meta_pesos?obj.meta_pesos:'';
+  document.getElementById('m-obj-meta-unid').value=obj&&obj.meta_unidades?obj.meta_unidades:'';
+  var showProd=cat==='produccion';
+  document.getElementById('m-obj-real-unid-wrap').style.display=showProd?'block':'none';
+  if(showProd)document.getElementById('m-obj-real-unid').value=obj&&obj.real_unidades_manual?obj.real_unidades_manual:'';
+  document.getElementById('m-obj-nota').value=obj&&obj.nota?obj.nota:'';
+  document.getElementById('m-obj-del').style.display=(id&&isCustom)?'':'none';
+  openM('m-obj');
+}
+
+async function saveObjetivo(){
+  var canal=editObjCanal||document.getElementById('m-obj-canal').value.trim();
+  if(!canal){toast('Ingresá un nombre para el objetivo','err');return;}
+  var d={
+    anio:editObjAnio,mes:editObjMes||null,
+    categoria:editObjCat,canal:canal,
+    meta_pesos:parseFloat(document.getElementById('m-obj-meta-pesos').value)||0,
+    meta_unidades:parseInt(document.getElementById('m-obj-meta-unid').value)||0,
+    real_unidades_manual:editObjCat==='produccion'?(parseInt(document.getElementById('m-obj-real-unid').value)||0):null,
+    nota:document.getElementById('m-obj-nota').value||null,
+    updated_at:new Date().toISOString()
+  };
+  var r=editObjId?await sb.from('objetivos').update(d).eq('id',editObjId):await sb.from('objetivos').insert(d);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Objetivo guardado');
+  closeM('m-obj');
+  await loadObjetivos();
+  renderObjetivos();
+}
+
+async function deleteObjetivo(){
+  if(!editObjId)return;
+  if(!confirm('¿Eliminar este objetivo?'))return;
+  var r=await sb.from('objetivos').delete().eq('id',editObjId);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Objetivo eliminado','info');
+  closeM('m-obj');
+  await loadObjetivos();
+  renderObjetivos();
+}
+
+async function toggleObjetivoLogrado(cat,canal,anio,mes,id){
+  if(id){
+    var obj=OBJETIVOS.find(function(o){return o.id===id;});
+    if(!obj)return;
+    var r=await sb.from('objetivos').update({logrado:!obj.logrado,updated_at:new Date().toISOString()}).eq('id',id);
+    if(r.error){toast('Error: '+r.error.message,'err');return;}
+  } else {
+    var r=await sb.from('objetivos').insert({anio:anio,mes:mes||null,categoria:cat,canal:canal,meta_pesos:0,meta_unidades:0,logrado:true});
+    if(r.error){toast('Error: '+r.error.message,'err');return;}
+  }
+  await loadObjetivos();
+  renderObjetivos();
 }
 
 // ══════════════════════════════════════════════
