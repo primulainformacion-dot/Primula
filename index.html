@@ -191,6 +191,8 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="nav-label">Administración</div>
     <div class="nav-item" onclick="nav('clientes',this)"><span class="ni">👥</span> Clientes</div>
     <div class="nav-item" onclick="nav('proveedores',this)"><span class="ni">🤝</span> Proveedores</div>
+    <div class="nav-item" onclick="nav('talleristas',this)"><span class="ni">🧵</span> Talleristas</div>
+    <div class="nav-item" onclick="nav('personal',this)"><span class="ni">👤</span> Personal</div>
     <div class="nav-item" onclick="nav('productos',this)"><span class="ni">👔</span> Productos</div>
     <div class="nav-item" onclick="nav('presupuestos',this)"><span class="ni">📄</span> Presupuestos</div>
   </div>
@@ -357,6 +359,52 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="tbl"><table>
         <thead><tr><th>N°</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Estado</th><th></th></tr></thead>
         <tbody id="pres-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ════════════ TALLERISTAS ════════════ -->
+  <div class="section" id="sec-talleristas">
+    <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px;">
+      <div class="stat"><div class="stat-icon" style="background:#fce7f3;">🧵</div><h3 id="tal-total">0</h3><p>Talleristas activos</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#fef3c7;">💵</div><h3 id="tal-precio-prom">$0</h3><p>Precio prenda promedio</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#dcfce7;">📦</div><h3 id="tal-total-prendas">0</h3><p>Prendas pagadas (total)</p></div>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr">
+        <input id="tal-q" placeholder="Buscar tallerista..." oninput="renderTalleristas()" style="max-width:280px"/>
+        <button class="btn" onclick="openTalModal()">+ Nuevo tallerista</button>
+      </div>
+      <div class="tbl"><table>
+        <thead><tr>
+          <th>Nombre</th><th style="text-align:right">Precio/prenda</th>
+          <th>Teléfono</th><th>Nota</th><th>Estado</th><th></th>
+        </tr></thead>
+        <tbody id="tal-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ════════════ PERSONAL ════════════ -->
+  <div class="section" id="sec-personal">
+    <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px;">
+      <div class="stat"><div class="stat-icon" style="background:#dbeafe;">👤</div><h3 id="per-total">0</h3><p>Empleados activos</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#ede9fe;">💰</div><h3 id="per-masa-salarial">$0</h3><p>Masa salarial semanal</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#fef3c7;">📅</div><h3 id="per-masa-mensual">$0</h3><p>Equivalente mensual (×4.33)</p></div>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr">
+        <input id="per-q" placeholder="Buscar empleado..." oninput="renderPersonal()" style="max-width:280px"/>
+        <button class="btn" onclick="openPerModal()">+ Nuevo empleado</button>
+      </div>
+      <div class="tbl"><table>
+        <thead><tr>
+          <th>Nombre</th><th>Cargo</th>
+          <th style="text-align:right">Sueldo semanal</th>
+          <th style="text-align:right">Equiv. mensual</th>
+          <th>Teléfono</th><th>Estado</th><th></th>
+        </tr></thead>
+        <tbody id="per-tbody"></tbody>
       </table></div>
     </div>
   </div>
@@ -1027,6 +1075,38 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </select>
         <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Asocia este pago a una moratoria para el seguimiento del plan</div>
       </div>
+      <!-- Tallerista / costurero -->
+      <div class="field full" id="mm-tallerista-wrap" style="display:none;">
+        <label>Tallerista</label>
+        <select id="mm-tallerista-id" onchange="mm_onTallerista()">
+          <option value="">— Seleccionar tallerista —</option>
+        </select>
+      </div>
+      <div id="mm-prendas-wrap" style="display:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="field">
+          <label>Cantidad de prendas</label>
+          <input type="number" id="mm-prendas-qty" min="0" placeholder="0" oninput="mm_calcMonto()"/>
+        </div>
+        <div class="field">
+          <label>Precio por prenda $</label>
+          <input type="number" id="mm-precio-prenda" min="0" placeholder="0" oninput="mm_calcMonto()"/>
+        </div>
+      </div>
+      <!-- Personal / empleado -->
+      <div class="field full" id="mm-personal-wrap" style="display:none;">
+        <label>Empleado</label>
+        <select id="mm-personal-id" onchange="mm_onPersonal()">
+          <option value="">— Seleccionar empleado —</option>
+        </select>
+        <div style="font-size:11px;color:#9ca3af;margin-top:3px;" id="mm-personal-ref"></div>
+      </div>
+      <!-- Proveedor -->
+      <div class="field full" id="mm-proveedor-wrap" style="display:none;">
+        <label>Proveedor</label>
+        <select id="mm-proveedor-id">
+          <option value="">— Seleccionar proveedor —</option>
+        </select>
+      </div>
     </div>
     <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-mov')">Cancelar</button><button class="btn" onclick="saveMov()">Guardar</button></div>
   </div>
@@ -1094,6 +1174,55 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-mor-pago')">Cancelar</button>
       <button class="btn btn-green" onclick="pagarCuota()">Confirmar pago</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tallerista (alta / edición) -->
+<div class="modal-bg" id="m-tal">
+  <div class="modal">
+    <h3 id="m-tal-title">Nuevo tallerista</h3>
+    <input type="hidden" id="mtal-id"/>
+    <div class="grid2">
+      <div class="field full"><label>Nombre *</label><input id="mtal-nombre" placeholder="Nombre completo"/></div>
+      <div class="field"><label>Precio por prenda $ *</label><input type="number" id="mtal-precio" min="0" placeholder="0"/></div>
+      <div class="field"><label>Teléfono</label><input id="mtal-tel" placeholder="(Opcional)"/></div>
+      <div class="field full"><label>Nota</label><textarea id="mtal-nota" style="min-height:52px;" placeholder="Especialidad, condiciones, etc."></textarea></div>
+      <div class="field"><label>Estado</label>
+        <select id="mtal-activo">
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-tal')">Cancelar</button>
+      <button class="btn" onclick="saveTal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Personal (alta / edición) -->
+<div class="modal-bg" id="m-per">
+  <div class="modal">
+    <h3 id="m-per-title">Nuevo empleado</h3>
+    <input type="hidden" id="mper-id"/>
+    <div class="grid2">
+      <div class="field full"><label>Nombre *</label><input id="mper-nombre" placeholder="Nombre completo"/></div>
+      <div class="field"><label>Cargo</label><input id="mper-cargo" placeholder="Ej: Vendedora, Administrativo..."/></div>
+      <div class="field"><label>Sueldo semanal $ *</label><input type="number" id="mper-sueldo" min="0" placeholder="0"/></div>
+      <div class="field"><label>Teléfono</label><input id="mper-tel" placeholder="(Opcional)"/></div>
+      <div class="field full"><label>Nota</label><textarea id="mper-nota" style="min-height:52px;" placeholder="Observaciones..."></textarea></div>
+      <div class="field"><label>Estado</label>
+        <select id="mper-activo">
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-per')">Cancelar</button>
+      <button class="btn" onclick="savePer()">Guardar</button>
     </div>
   </div>
 </div>
@@ -1174,7 +1303,7 @@ var SB_URL = 'https://qaaausnrgokkycxucdrp.supabase.co';
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3ODI1NjYsImV4cCI6MjA5NDM1ODU2Nn0.1Rus0piCnrCXnlL5vMsZCr-3_S_GHAqw7MadQ1kJ9ww';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[];
 var editCliId=null, editProvId=null, editPresId=null;
 var mvItems=[], presItems=[];
 var currentLocal='llavallol'; // local activo en el módulo POS
@@ -1231,11 +1360,13 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias()]);
-  renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFin(); renderMoratorias(); renderPanelGeneral();
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal()]);
+  renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias();
 }
 async function loadCategorias(){ var {data}=await sb.from('categorias').select('*').order('nombre'); CATEGORIAS=data||[]; }
+async function loadTalleristas(){ var {data}=await sb.from('talleristas').select('*').order('nombre'); TALLERISTAS=data||[]; }
+async function loadPersonal(){ var {data}=await sb.from('personal').select('*').order('nombre'); PERSONAL=data||[]; }
 async function loadMoratorias(){ var {data}=await sb.from('moratorias').select('*').order('prox_vencimiento'); MORATORIAS=data||[]; }
 async function loadClientes(){ var {data}=await sb.from('clientes').select('*').order('nombre'); CLIENTES=data||[]; }
 async function loadProveedores(){ var {data}=await sb.from('proveedores').select('*').order('nombre'); PROVEEDORES=data||[]; }
@@ -2712,6 +2843,146 @@ function renderCheques(){
   }).join('');
 }
 
+// ══════════════════════════════════════════════
+// TALLERISTAS
+// ══════════════════════════════════════════════
+var editTalId=null;
+
+function renderTalleristas(){
+  var q=(document.getElementById('tal-q').value||'').toLowerCase();
+  var list=TALLERISTAS.filter(function(t){return t.activo&&(!q||t.nombre.toLowerCase().includes(q));});
+  var total=list.length;
+  var prom=total?Math.round(list.reduce(function(s,t){return s+Number(t.precio_prenda_default);},0)/total):0;
+  var totalPrendas=MOVS.filter(function(m){return m.tallerista_id&&m.prendas_cantidad;}).reduce(function(s,m){return s+Number(m.prendas_cantidad);},0);
+  document.getElementById('tal-total').textContent=total;
+  document.getElementById('tal-precio-prom').textContent=$p(prom);
+  document.getElementById('tal-total-prendas').textContent=totalPrendas.toLocaleString('es-AR');
+  var tb=document.getElementById('tal-tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><p>Sin talleristas registrados</p></div></td></tr>';return;}
+  tb.innerHTML=list.map(function(t){
+    var pagado=MOVS.filter(function(m){return m.tallerista_id===t.id;}).reduce(function(s,m){return s+Number(m.egreso);},0);
+    return '<tr>'+
+      '<td style="font-weight:700;">'+t.nombre+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:#6c7ae0;">'+$p(t.precio_prenda_default)+'</td>'+
+      '<td style="font-size:12px;color:#9ca3af;">'+(t.telefono||'—')+'</td>'+
+      '<td style="font-size:12px;color:#9ca3af;">'+(t.nota||'—')+'</td>'+
+      '<td><span class="badge '+(t.activo?'b-green':'b-red')+'">'+(t.activo?'Activo':'Inactivo')+'</span></td>'+
+      '<td><div class="actions">'+
+        '<button class="btn btn-sm btn-gray btn-icon" onclick="openTalModal('+t.id+')">✏️</button>'+
+        '<button class="btn btn-sm btn-red btn-icon" onclick="deleteTal('+t.id+')">🗑️</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function openTalModal(id){
+  editTalId=id||null;
+  document.getElementById('m-tal-title').textContent=id?'Editar tallerista':'Nuevo tallerista';
+  var t=id?TALLERISTAS.find(function(x){return x.id===id;}):null;
+  document.getElementById('mtal-id').value=id||'';
+  document.getElementById('mtal-nombre').value=t?t.nombre:'';
+  document.getElementById('mtal-precio').value=t?t.precio_prenda_default:'';
+  document.getElementById('mtal-tel').value=t?t.telefono||'':'';
+  document.getElementById('mtal-nota').value=t?t.nota||'':'';
+  document.getElementById('mtal-activo').value=t?(t.activo?'true':'false'):'true';
+  openM('m-tal');
+}
+
+async function saveTal(){
+  var nombre=document.getElementById('mtal-nombre').value.trim();
+  var precio=parseFloat(document.getElementById('mtal-precio').value)||0;
+  if(!nombre){toast('El nombre es obligatorio','err');return;}
+  var d={nombre,precio_prenda_default:precio,
+    telefono:document.getElementById('mtal-tel').value.trim()||null,
+    nota:document.getElementById('mtal-nota').value.trim()||null,
+    activo:document.getElementById('mtal-activo').value==='true',
+    updated_at:new Date().toISOString()};
+  var r=editTalId?await sb.from('talleristas').update(d).eq('id',editTalId):await sb.from('talleristas').insert(d);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast(editTalId?'Tallerista actualizado':'Tallerista registrado');
+  closeM('m-tal');
+  await loadTalleristas();renderTalleristas();
+}
+
+async function deleteTal(id){
+  var t=TALLERISTAS.find(function(x){return x.id===id;});
+  if(!confirm('¿Eliminar a '+t.nombre+'?\n\nLos movimientos vinculados quedarán sin tallerista asignado.'))return;
+  var r=await sb.from('talleristas').delete().eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Tallerista eliminado','info');
+  await loadTalleristas();renderTalleristas();
+}
+
+// ══════════════════════════════════════════════
+// PERSONAL
+// ══════════════════════════════════════════════
+var editPerId=null;
+
+function renderPersonal(){
+  var q=(document.getElementById('per-q').value||'').toLowerCase();
+  var list=PERSONAL.filter(function(p){return p.activo&&(!q||p.nombre.toLowerCase().includes(q));});
+  var masaSemanal=list.reduce(function(s,p){return s+Number(p.sueldo_semanal);},0);
+  document.getElementById('per-total').textContent=list.length;
+  document.getElementById('per-masa-salarial').textContent=$p(masaSemanal);
+  document.getElementById('per-masa-mensual').textContent=$p(Math.round(masaSemanal*4.33));
+  var tb=document.getElementById('per-tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><p>Sin empleados registrados</p></div></td></tr>';return;}
+  tb.innerHTML=list.map(function(p){
+    return '<tr>'+
+      '<td style="font-weight:700;">'+p.nombre+'</td>'+
+      '<td style="font-size:12px;color:#9ca3af;">'+(p.cargo||'—')+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:#6c7ae0;">'+$p(p.sueldo_semanal)+'</td>'+
+      '<td style="text-align:right;color:#9ca3af;">'+$p(Math.round(p.sueldo_semanal*4.33))+'</td>'+
+      '<td style="font-size:12px;color:#9ca3af;">'+(p.telefono||'—')+'</td>'+
+      '<td><span class="badge '+(p.activo?'b-green':'b-red')+'">'+(p.activo?'Activo':'Inactivo')+'</span></td>'+
+      '<td><div class="actions">'+
+        '<button class="btn btn-sm btn-gray btn-icon" onclick="openPerModal('+p.id+')">✏️</button>'+
+        '<button class="btn btn-sm btn-red btn-icon" onclick="deletePer('+p.id+')">🗑️</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function openPerModal(id){
+  editPerId=id||null;
+  document.getElementById('m-per-title').textContent=id?'Editar empleado':'Nuevo empleado';
+  var p=id?PERSONAL.find(function(x){return x.id===id;}):null;
+  document.getElementById('mper-id').value=id||'';
+  document.getElementById('mper-nombre').value=p?p.nombre:'';
+  document.getElementById('mper-cargo').value=p?p.cargo||'':'';
+  document.getElementById('mper-sueldo').value=p?p.sueldo_semanal:'';
+  document.getElementById('mper-tel').value=p?p.telefono||'':'';
+  document.getElementById('mper-nota').value=p?p.nota||'':'';
+  document.getElementById('mper-activo').value=p?(p.activo?'true':'false'):'true';
+  openM('m-per');
+}
+
+async function savePer(){
+  var nombre=document.getElementById('mper-nombre').value.trim();
+  var sueldo=parseFloat(document.getElementById('mper-sueldo').value)||0;
+  if(!nombre){toast('El nombre es obligatorio','err');return;}
+  var d={nombre,cargo:document.getElementById('mper-cargo').value.trim()||'',
+    sueldo_semanal:sueldo,
+    telefono:document.getElementById('mper-tel').value.trim()||null,
+    nota:document.getElementById('mper-nota').value.trim()||null,
+    activo:document.getElementById('mper-activo').value==='true',
+    updated_at:new Date().toISOString()};
+  var r=editPerId?await sb.from('personal').update(d).eq('id',editPerId):await sb.from('personal').insert(d);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast(editPerId?'Empleado actualizado':'Empleado registrado');
+  closeM('m-per');
+  await loadPersonal();renderPersonal();
+}
+
+async function deletePer(id){
+  var p=PERSONAL.find(function(x){return x.id===id;});
+  if(!confirm('¿Eliminar a '+p.nombre+'?\n\nLos movimientos vinculados quedarán sin empleado asignado.'))return;
+  var r=await sb.from('personal').delete().eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Empleado eliminado','info');
+  await loadPersonal();renderPersonal();
+}
+
 function mm_onTipo(){
   var tipo=document.getElementById('mm-tipo').value;
   document.getElementById('mm-opt-egr').style.display=(tipo==='egreso'||tipo==='transferencia')?'':'none';
@@ -2721,22 +2992,90 @@ function mm_onTipo(){
 
 function mm_onConcepto(){
   var concepto=document.getElementById('mm-concepto').value;
-  var wrap=document.getElementById('mm-moratoria-wrap');
-  if(!wrap)return;
-  var show=concepto==='MORATORIAS/PLANES';
-  wrap.style.display=show?'':'none';
-  if(show){
-    var sel=document.getElementById('mm-moratoria-id');
-    var prev=sel.value;
-    sel.innerHTML='<option value="">— Sin vincular —</option>';
-    MORATORIAS.filter(function(m){return m.estado!=='finalizada';}).forEach(function(m){
-      var o=document.createElement('option');
-      o.value=m.id;
-      o.textContent=m.nombre+(m.acreedor?' ('+m.acreedor+')':'');
-      sel.appendChild(o);
-    });
-    if(prev)sel.value=prev;
+  // Moratoria
+  var wMor=document.getElementById('mm-moratoria-wrap');
+  if(wMor){
+    var showMor=concepto==='MORATORIAS/PLANES';
+    wMor.style.display=showMor?'':'none';
+    if(showMor){
+      var selMor=document.getElementById('mm-moratoria-id');
+      var prevMor=selMor.value;
+      selMor.innerHTML='<option value="">— Sin vincular —</option>';
+      MORATORIAS.filter(function(m){return m.estado!=='finalizada';}).forEach(function(m){
+        var o=document.createElement('option');o.value=m.id;o.textContent=m.nombre+(m.acreedor?' ('+m.acreedor+')':'');selMor.appendChild(o);
+      });
+      if(prevMor)selMor.value=prevMor;
+    }
   }
+  // Tallerista
+  var wTal=document.getElementById('mm-tallerista-wrap');
+  var wPren=document.getElementById('mm-prendas-wrap');
+  var showTal=concepto==='COSTUREROS';
+  if(wTal)wTal.style.display=showTal?'':'none';
+  if(wPren)wPren.style.display=showTal?'grid':'none';
+  if(showTal){
+    var selTal=document.getElementById('mm-tallerista-id');
+    var prevTal=selTal.value;
+    selTal.innerHTML='<option value="">— Seleccionar tallerista —</option>';
+    TALLERISTAS.filter(function(t){return t.activo;}).forEach(function(t){
+      var o=document.createElement('option');o.value=t.id;o.textContent=t.nombre;selTal.appendChild(o);
+    });
+    if(prevTal)selTal.value=prevTal;
+  }
+  // Personal
+  var wPer=document.getElementById('mm-personal-wrap');
+  var showPer=concepto==='SUELDOS/JORNALES';
+  if(wPer)wPer.style.display=showPer?'':'none';
+  if(showPer){
+    var selPer=document.getElementById('mm-personal-id');
+    var prevPer=selPer.value;
+    selPer.innerHTML='<option value="">— Seleccionar empleado —</option>';
+    PERSONAL.filter(function(p){return p.activo;}).forEach(function(p){
+      var o=document.createElement('option');o.value=p.id;o.textContent=p.nombre+(p.cargo?' ('+p.cargo+')':'');selPer.appendChild(o);
+    });
+    if(prevPer)selPer.value=prevPer;
+  }
+  // Proveedor
+  var wProv=document.getElementById('mm-proveedor-wrap');
+  var showProv=concepto==='PROVEEDORES'||concepto==='MATERIALES/TELAS';
+  if(wProv)wProv.style.display=showProv?'':'none';
+  if(showProv){
+    var selProv=document.getElementById('mm-proveedor-id');
+    var prevProv=selProv.value;
+    selProv.innerHTML='<option value="">— Seleccionar proveedor —</option>';
+    PROVEEDORES.forEach(function(p){
+      var o=document.createElement('option');o.value=p.id;o.textContent=p.nombre;selProv.appendChild(o);
+    });
+    if(prevProv)selProv.value=prevProv;
+  }
+}
+
+function mm_onTallerista(){
+  var id=parseInt(document.getElementById('mm-tallerista-id').value)||null;
+  var t=id?TALLERISTAS.find(function(x){return x.id===id;}):null;
+  if(t&&t.precio_prenda_default){
+    document.getElementById('mm-precio-prenda').value=t.precio_prenda_default;
+    mm_calcMonto();
+  }
+}
+
+function mm_onPersonal(){
+  var id=parseInt(document.getElementById('mm-personal-id').value)||null;
+  var p=id?PERSONAL.find(function(x){return x.id===id;}):null;
+  var ref=document.getElementById('mm-personal-ref');
+  if(p){
+    if(ref)ref.textContent='Sueldo semanal: '+$p(p.sueldo_semanal)+' · Equiv. mensual: '+$p(Math.round(p.sueldo_semanal*4.33));
+    if(!document.getElementById('mm-monto').value)
+      document.getElementById('mm-monto').value=p.sueldo_semanal;
+  } else {
+    if(ref)ref.textContent='';
+  }
+}
+
+function mm_calcMonto(){
+  var qty=parseFloat(document.getElementById('mm-prendas-qty').value)||0;
+  var precio=parseFloat(document.getElementById('mm-precio-prenda').value)||0;
+  if(qty&&precio) document.getElementById('mm-monto').value=qty*precio;
 }
 
 function mm_onCaja(){
@@ -2772,12 +3111,14 @@ function openMovModal(id){
     document.getElementById('mm-monto').value=Number(m.ingreso)>0?m.ingreso:m.egreso;
     document.getElementById('mm-ref').value=m.referencia||'';
     document.getElementById('mm-fvenc').value=m.fecha_vencimiento||'';
-    mm_onTipo(); mm_onCaja();
-    // pre-seleccionar moratoria si ya tenía vínculo
-    if(m.concepto==='MORATORIAS/PLANES'){
-      mm_onConcepto();
-      document.getElementById('mm-moratoria-id').value=m.moratoria_id||'';
-    }
+    document.getElementById('mm-prendas-qty').value=m.prendas_cantidad||'';
+    document.getElementById('mm-precio-prenda').value=m.precio_prenda||'';
+    mm_onTipo(); mm_onCaja(); mm_onConcepto();
+    // pre-seleccionar entidades vinculadas
+    if(m.moratoria_id) document.getElementById('mm-moratoria-id').value=m.moratoria_id;
+    if(m.tallerista_id) document.getElementById('mm-tallerista-id').value=m.tallerista_id;
+    if(m.personal_id)  document.getElementById('mm-personal-id').value=m.personal_id;
+    if(m.proveedor_id) document.getElementById('mm-proveedor-id').value=m.proveedor_id;
   } else {
     document.getElementById('mm-tipo').value='egreso';
     document.getElementById('mm-caja').value='EFECTIVO ADMINISTRACIÓN';
@@ -2787,9 +3128,9 @@ function openMovModal(id){
     document.getElementById('mm-monto').value='';
     document.getElementById('mm-ref').value='';
     document.getElementById('mm-fvenc').value='';
-    document.getElementById('mm-moratoria-id').value='';
-    document.getElementById('mm-moratoria-wrap').style.display='none';
-    mm_onTipo(); mm_onCaja();
+    document.getElementById('mm-prendas-qty').value='';
+    document.getElementById('mm-precio-prenda').value='';
+    mm_onTipo(); mm_onCaja(); mm_onConcepto();
   }
   openM('m-mov');
 }
@@ -2803,6 +3144,11 @@ async function saveMov(){
   var fvenc=document.getElementById('mm-fvenc').value||null;
   var concepto=document.getElementById('mm-concepto').value;
   var morId=parseInt(document.getElementById('mm-moratoria-id').value)||null;
+  var talId=parseInt(document.getElementById('mm-tallerista-id').value)||null;
+  var perId=parseInt(document.getElementById('mm-personal-id').value)||null;
+  var provId=parseInt(document.getElementById('mm-proveedor-id').value)||null;
+  var prendasQty=parseInt(document.getElementById('mm-prendas-qty').value)||null;
+  var precioPrenda=parseFloat(document.getElementById('mm-precio-prenda').value)||null;
   var d={
     caja:document.getElementById('mm-caja').value,
     anio:new Date(fecha+'T12:00:00').getFullYear(),
@@ -2813,6 +3159,11 @@ async function saveMov(){
     referencia:document.getElementById('mm-ref').value||null,
     fecha_vencimiento:fvenc,
     moratoria_id:concepto==='MORATORIAS/PLANES'?morId:null,
+    tallerista_id:concepto==='COSTUREROS'?talId:null,
+    personal_id:concepto==='SUELDOS/JORNALES'?perId:null,
+    proveedor_id:(concepto==='PROVEEDORES'||concepto==='MATERIALES/TELAS')?provId:null,
+    prendas_cantidad:concepto==='COSTUREROS'?prendasQty:null,
+    precio_prenda:concepto==='COSTUREROS'?precioPrenda:null,
     updated_at:new Date().toISOString()
   };
   var r=editMovId?await sb.from('movimientos').update(d).eq('id',editMovId):await sb.from('movimientos').insert(d);
