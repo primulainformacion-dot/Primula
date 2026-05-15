@@ -193,11 +193,11 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="nav-item" onclick="nav('proveedores',this)"><span class="ni">🤝</span> Proveedores</div>
     <div class="nav-item" onclick="nav('productos',this)"><span class="ni">👔</span> Productos</div>
     <div class="nav-item" onclick="nav('presupuestos',this)"><span class="ni">📄</span> Presupuestos</div>
-    <div class="nav-item" onclick="nav('reportes',this)"><span class="ni">📊</span> Reportes</div>
   </div>
 
   <div class="nav-group">
     <div class="nav-label">Finanzas</div>
+    <div class="nav-item" onclick="nav('panel',this)"><span class="ni">📊</span> Panel General</div>
     <div class="nav-item" onclick="nav('finanzas',this)"><span class="ni">💹</span> Movimientos</div>
     <div class="nav-item" onclick="nav('moratorias',this)"><span class="ni">📋</span> Moratorias</div>
   </div>
@@ -361,23 +361,141 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     </div>
   </div>
 
-  <!-- ════════════ REPORTES ════════════ -->
-  <div class="section" id="sec-reportes">
-    <div class="panel">
-      <div class="panel-hdr"><h4>Filtros</h4></div>
-      <div class="grid2" style="margin-bottom:14px;">
-        <div class="field"><label>Desde</label><input type="date" id="rep-desde"/></div>
-        <div class="field"><label>Hasta</label><input type="date" id="rep-hasta"/></div>
-        <div class="field"><label>Local</label>
-          <select id="rep-local"><option value="">Ambos</option><option value="llavallol">Llavallol</option><option value="montegrande">Monte Grande</option></select>
+  <!-- ════════════ PANEL GENERAL ════════════ -->
+  <div class="section" id="sec-panel">
+
+    <!-- Saldos por caja -->
+    <div id="pan-cajas-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;"></div>
+
+    <!-- Período compartido del panel -->
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+      <select id="pan-anio" onchange="renderPanelGeneral()" style="width:90px;"></select>
+      <select id="pan-mes" onchange="renderPanelGeneral()" style="width:150px;">
+        <option value="">Todo el año</option>
+        <option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option>
+        <option>MAYO</option><option>JUNIO</option><option>JULIO</option><option>AGOSTO</option>
+        <option>SEPTIEMBRE</option><option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option>
+      </select>
+      <span style="font-size:12px;color:#9ca3af;">← período activo del panel</span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="pan-tabs">
+      <div class="tab active" onclick="setPanTab('resumen',this)">📊 Resumen financiero</div>
+      <div class="tab" onclick="setPanTab('reportes',this)">📈 Reportes de ventas</div>
+    </div>
+
+    <!-- Tab: Resumen -->
+    <div id="pan-tab-resumen">
+
+      <!-- ACTIVOS -->
+      <div class="panel" style="margin-bottom:16px;">
+        <div class="panel-hdr"><h4 style="color:#166534;">ACTIVOS — Lo que tenemos</h4></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;">
+          <div class="stat" style="border-top:3px solid #6c7ae0;">
+            <div class="stat-icon" style="background:#ede9fe;">💵</div>
+            <h3 id="pg-efectivo">$0</h3><p>Efectivo disponible</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Admin · Llavallol · Monte Grande</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #0ea5e9;">
+            <div class="stat-icon" style="background:#e0f2fe;">🏦</div>
+            <h3 id="pg-bancos">$0</h3><p>Bancos</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Banco SRL · Banco Poly</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #3b82f6;">
+            <div class="stat-icon" style="background:#dbeafe;">📱</div>
+            <h3 id="pg-mp">$0</h3><p>Mercado Pago</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">QR · Tarjetas · Transferencias</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #8b5cf6;">
+            <div class="stat-icon" style="background:#ede9fe;">🧾</div>
+            <h3 id="pg-echeq-act">$0</h3><p>Cheques en cartera</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">ECHEQ/Cheques a cobrar</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #f59e0b;">
+            <div class="stat-icon" style="background:#fef3c7;">👥</div>
+            <h3 id="pg-acobrar">$0</h3><p>Cuentas a cobrar</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Deudas de clientes</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #10b981;">
+            <div class="stat-icon" style="background:#d1fae5;">👔</div>
+            <h3 id="pg-stock-val">$0</h3><p>Stock mercadería</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Valor a precio minorista</div>
+          </div>
         </div>
-        <div class="field"><label>Tipo</label>
-          <select id="rep-tipo"><option value="">Todos</option><option value="mayorista">Mayorista</option><option value="minorista">Minorista</option></select>
+        <div style="background:#f0fdf4;border-radius:10px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:14px;font-weight:700;color:#166534;">TOTAL ACTIVOS (calculables)</span>
+          <span style="font-size:24px;font-weight:800;color:#166534;" id="pg-total-activos">$0</span>
         </div>
       </div>
-      <button class="btn" onclick="generarReporte()">Generar</button>
+
+      <!-- PASIVOS -->
+      <div class="panel" style="margin-bottom:16px;">
+        <div class="panel-hdr"><h4 style="color:#991b1b;">PASIVOS — Lo que debemos</h4></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;">
+          <div class="stat" style="border-top:3px solid #8b5cf6;">
+            <div class="stat-icon" style="background:#ede9fe;">🧾</div>
+            <h3 id="pg-echeq-pas">$0</h3><p>Cheques emitidos</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">ECHEQ / Cheques a pagar</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #e5e7eb;opacity:.65;">
+            <div class="stat-icon" style="background:#f3f4f6;">🤝</div>
+            <h3 style="color:#d1d5db;">—</h3>
+            <p style="color:#9ca3af;">Deuda proveedores</p>
+            <div style="font-size:11px;color:#d1d5db;margin-top:4px;">Próximamente</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #f97316;cursor:pointer;" onclick="nav('moratorias',null)">
+            <div class="stat-icon" style="background:#ffedd5;">📋</div>
+            <h3 id="pg-moratorias">$0</h3><p>Moratorias / planes de pago</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-moratorias-sub">—</div>
+          </div>
+        </div>
+        <div style="background:#fef2f2;border-radius:10px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+          <span style="font-size:14px;font-weight:700;color:#991b1b;">TOTAL PASIVOS (calculables)</span>
+          <span style="font-size:24px;font-weight:800;color:#991b1b;" id="pg-total-pasivos">$0</span>
+        </div>
+      </div>
+
+      <!-- FLUJO POR CAJA -->
+      <div class="panel" style="margin-bottom:16px;">
+        <div class="panel-hdr">
+          <h4>Flujo por caja</h4>
+          <span style="font-size:12px;color:#9ca3af;" id="pg-periodo-lbl"></span>
+        </div>
+        <div id="pg-flujo-cajas"></div>
+      </div>
+
+      <!-- VENTAS POR CANAL -->
+      <div class="panel">
+        <div class="panel-hdr">
+          <h4>Ventas por canal</h4>
+          <span style="font-size:12px;color:#9ca3af;" id="pan-ventas-lbl"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;" id="pan-ventas-cards"></div>
+        <div id="pan-ventas-tabla"></div>
+      </div>
+
+    </div><!-- /pan-tab-resumen -->
+
+    <!-- Tab: Reportes de ventas -->
+    <div id="pan-tab-reportes" style="display:none;">
+      <div class="panel">
+        <div class="panel-hdr"><h4>Filtros</h4></div>
+        <div class="grid2" style="margin-bottom:14px;">
+          <div class="field"><label>Desde</label><input type="date" id="rep-desde"/></div>
+          <div class="field"><label>Hasta</label><input type="date" id="rep-hasta"/></div>
+          <div class="field"><label>Local</label>
+            <select id="rep-local"><option value="">Ambos</option><option value="llavallol">Llavallol</option><option value="montegrande">Monte Grande</option></select>
+          </div>
+          <div class="field"><label>Tipo</label>
+            <select id="rep-tipo"><option value="">Todos</option><option value="mayorista">Mayorista</option><option value="minorista">Minorista</option></select>
+          </div>
+        </div>
+        <button class="btn" onclick="generarReporte()">Generar</button>
+      </div>
+      <div id="rep-result"></div>
     </div>
-    <div id="rep-result"></div>
+
   </div>
 
   <!-- ════════════ LOCAL (Llavallol / Monte Grande) ════════════ -->
@@ -570,9 +688,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <!-- ════════════ FINANZAS ════════════ -->
   <div class="section" id="sec-finanzas">
 
-    <!-- Saldos por caja -->
-    <div id="fin-cajas-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;"></div>
-
     <!-- Período compartido -->
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
       <select id="fin-anio" onchange="renderFin()" style="width:90px;"></select>
@@ -587,107 +702,13 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
     <!-- Tabs -->
     <div class="tabs">
-      <div class="tab active" onclick="setFinTab('general',this)">📊 Panel General</div>
-      <div class="tab" onclick="setFinTab('movimientos',this)">📋 Movimientos</div>
+      <div class="tab active" onclick="setFinTab('movimientos',this)">📋 Movimientos</div>
       <div class="tab" onclick="setFinTab('transferencia',this)">🔄 Transferencia entre cajas</div>
-    </div>
-
-    <!-- Tab: Panel General -->
-    <div id="ft-general">
-
-      <!-- ACTIVOS -->
-      <div class="panel" style="margin-bottom:16px;">
-        <div class="panel-hdr">
-          <h4 style="color:#166534;">ACTIVOS — Lo que tenemos</h4>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;">
-          <div class="stat" style="border-top:3px solid #6c7ae0;">
-            <div class="stat-icon" style="background:#ede9fe;">💵</div>
-            <h3 id="pg-efectivo">$0</h3>
-            <p>Efectivo disponible</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Admin · Llavallol · Monte Grande</div>
-          </div>
-          <div class="stat" style="border-top:3px solid #0ea5e9;">
-            <div class="stat-icon" style="background:#e0f2fe;">🏦</div>
-            <h3 id="pg-bancos">$0</h3>
-            <p>Bancos</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Banco SRL · Banco Poly</div>
-          </div>
-          <div class="stat" style="border-top:3px solid #3b82f6;">
-            <div class="stat-icon" style="background:#dbeafe;">📱</div>
-            <h3 id="pg-mp">$0</h3>
-            <p>Mercado Pago</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">QR · Tarjetas · Transferencias</div>
-          </div>
-          <div class="stat" style="border-top:3px solid #8b5cf6;">
-            <div class="stat-icon" style="background:#ede9fe;">🧾</div>
-            <h3 id="pg-echeq-act">$0</h3>
-            <p>Cheques en cartera</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">ECHEQ/Cheques a cobrar</div>
-          </div>
-          <div class="stat" style="border-top:3px solid #f59e0b;">
-            <div class="stat-icon" style="background:#fef3c7;">👥</div>
-            <h3 id="pg-acobrar">$0</h3>
-            <p>Cuentas a cobrar</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Deudas de clientes</div>
-          </div>
-          <div class="stat" style="border-top:3px solid #10b981;">
-            <div class="stat-icon" style="background:#d1fae5;">👔</div>
-            <h3 id="pg-stock-val">$0</h3>
-            <p>Stock mercadería</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Valor a precio minorista</div>
-          </div>
-        </div>
-        <div style="background:#f0fdf4;border-radius:10px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:14px;font-weight:700;color:#166534;">TOTAL ACTIVOS (calculables)</span>
-          <span style="font-size:24px;font-weight:800;color:#166534;" id="pg-total-activos">$0</span>
-        </div>
-      </div>
-
-      <!-- PASIVOS -->
-      <div class="panel" style="margin-bottom:16px;">
-        <div class="panel-hdr">
-          <h4 style="color:#991b1b;">PASIVOS — Lo que debemos</h4>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;">
-          <div class="stat" style="border-top:3px solid #8b5cf6;">
-            <div class="stat-icon" style="background:#ede9fe;">🧾</div>
-            <h3 id="pg-echeq-pas">$0</h3>
-            <p>Cheques emitidos</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">ECHEQ / Cheques a pagar</div>
-          </div>
-          <div class="stat" style="border-top:3px solid #e5e7eb;opacity:.65;">
-            <div class="stat-icon" style="background:#f3f4f6;">🤝</div>
-            <h3 style="color:#d1d5db;">—</h3>
-            <p style="color:#9ca3af;">Deuda proveedores</p>
-            <div style="font-size:11px;color:#d1d5db;margin-top:4px;">Próximamente</div>
-          </div>
-          <div class="stat" style="border-top:3px solid #f97316;cursor:pointer;" onclick="nav('moratorias',null)">
-            <div class="stat-icon" style="background:#ffedd5;">📋</div>
-            <h3 id="pg-moratorias">$0</h3>
-            <p>Moratorias / planes de pago</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-moratorias-sub">—</div>
-          </div>
-        </div>
-        <div style="background:#fef2f2;border-radius:10px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
-          <span style="font-size:14px;font-weight:700;color:#991b1b;">TOTAL PASIVOS (calculables)</span>
-          <span style="font-size:24px;font-weight:800;color:#991b1b;" id="pg-total-pasivos">$0</span>
-        </div>
-      </div>
-
-      <!-- FLUJO POR CAJA -->
-      <div class="panel">
-        <div class="panel-hdr">
-          <h4>Flujo por caja</h4>
-          <span style="font-size:12px;color:#9ca3af;" id="pg-periodo-lbl"></span>
-        </div>
-        <div id="pg-flujo-cajas"></div>
-      </div>
-
+      <div class="tab" onclick="setFinTab('cheques',this)">🧾 Cheques / ECHEQ</div>
     </div>
 
     <!-- Tab: Movimientos -->
-    <div id="ft-movimientos" style="display:none;">
+    <div id="ft-movimientos">
       <div class="panel">
         <div class="panel-hdr">
           <div class="search-row" style="flex-wrap:wrap;">
@@ -761,6 +782,24 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <div class="panel-hdr"><h4>Últimas transferencias</h4></div>
           <div id="tr-historial"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Tab: Cheques / ECHEQ -->
+    <div id="ft-cheques" style="display:none;">
+      <div class="panel">
+        <div class="panel-hdr">
+          <h4>🧾 Cheques y ECHEQ</h4>
+          <span style="font-size:12px;color:#9ca3af;" id="chq-periodo-lbl"></span>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;" id="chq-stats"></div>
+        <div class="tbl"><table>
+          <thead><tr>
+            <th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Detalle</th>
+            <th style="text-align:right">Monto</th><th>Referencia</th><th>Vto.</th><th>Estado</th>
+          </tr></thead>
+          <tbody id="chq-tbody"></tbody>
+        </table></div>
       </div>
     </div>
 
@@ -1156,13 +1195,15 @@ window.addEventListener('DOMContentLoaded', function(){
   document.getElementById('lf-desde').value=lfDesde;
   document.getElementById('lf-hasta').value=today;
 
-  // Años finanzas
-  var asel=document.getElementById('fin-anio');
-  for(var y=2024;y<=new Date().getFullYear()+1;y++){
-    var o=document.createElement('option');o.value=y;o.textContent=y;
-    if(y===new Date().getFullYear())o.selected=true;
-    asel.appendChild(o);
-  }
+  // Años finanzas (movimientos) y panel general
+  [document.getElementById('fin-anio'),document.getElementById('pan-anio')].forEach(function(asel){
+    if(!asel)return;
+    for(var y=2024;y<=new Date().getFullYear()+1;y++){
+      var o=document.createElement('option');o.value=y;o.textContent=y;
+      if(y===new Date().getFullYear())o.selected=true;
+      asel.appendChild(o);
+    }
+  });
 
   sb=supabase.createClient(SB_URL,SB_KEY);
   sb.auth.onAuthStateChange(function(ev,session){
@@ -1191,7 +1232,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 // ── LOAD ──
 async function loadAll(){
   await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias()]);
-  renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFin(); renderMoratorias();
+  renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFin(); renderMoratorias(); renderPanelGeneral();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias();
 }
 async function loadCategorias(){ var {data}=await sb.from('categorias').select('*').order('nombre'); CATEGORIAS=data||[]; }
@@ -1212,6 +1253,8 @@ function nav(sec, el){
   if(el) el.classList.add('active');
   document.getElementById('pg-title').textContent=el?el.textContent.trim():sec;
   document.getElementById('pg-sub').textContent='';
+  if(sec==='panel'){renderFinCajas();renderPanelGeneral();}
+  if(sec==='finanzas'){renderFin();}
 }
 
 function navLocal(local, tab, el){
@@ -2402,7 +2445,7 @@ function saldoCaja(caja){
 }
 
 function renderFinCajas(){
-  var grid=document.getElementById('fin-cajas-grid');
+  var grid=document.getElementById('pan-cajas-grid');
   grid.innerHTML=CAJAS_SISTEMA.map(function(caja){
     var saldo=saldoCaja(caja);
     var color=CAJA_COLORES[caja]||'#6c7ae0';
@@ -2417,23 +2460,22 @@ function renderFinCajas(){
 
 function filtrarPorCaja(caja){
   document.getElementById('fin-caja').value=caja;
-  setFinTab('movimientos',document.querySelectorAll('#sec-finanzas .tab')[1]);
+  nav('finanzas',document.querySelector('.nav-item[onclick*="finanzas"]'));
+  setFinTab('movimientos',document.querySelectorAll('#sec-finanzas .tab')[0]);
   renderFin();
 }
 
 function setFinTab(tab,el){
-  document.getElementById('ft-general').style.display=tab==='general'?'block':'none';
   document.getElementById('ft-movimientos').style.display=tab==='movimientos'?'block':'none';
   document.getElementById('ft-transferencia').style.display=tab==='transferencia'?'block':'none';
+  document.getElementById('ft-cheques').style.display=tab==='cheques'?'block':'none';
   document.querySelectorAll('#sec-finanzas .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
   if(tab==='transferencia')renderTransfHistorial();
-  if(tab==='general')renderPanelGeneral();
+  if(tab==='cheques')renderCheques();
 }
 
 function renderFin(){
-  renderFinCajas();
-  renderPanelGeneral();
   var anio=parseInt(document.getElementById('fin-anio').value);
   var mes=document.getElementById('fin-mes').value;
   var caja=document.getElementById('fin-caja').value;
@@ -2513,11 +2555,12 @@ function renderPanelGeneral(){
   if(el('pg-moratorias'))el('pg-moratorias').textContent=$p(morTotal);
   if(el('pg-moratorias-sub'))el('pg-moratorias-sub').textContent=morCuotas>0?(morCuotas+' cuota'+(morCuotas!==1?'s':'')+' pendiente'+(morCuotas!==1?'s':'')):'Sin cuotas pendientes';
   if(el('pg-total-pasivos'))el('pg-total-pasivos').textContent=$p(totalPasivos);
-  var anio=parseInt(document.getElementById('fin-anio').value);
-  var mes=document.getElementById('fin-mes').value;
+  var anio=parseInt(document.getElementById('pan-anio').value)||new Date().getFullYear();
+  var mes=document.getElementById('pan-mes').value;
   var periodoLabel=mes?(mes+' '+anio):('Todo '+anio);
   if(el('pg-periodo-lbl'))el('pg-periodo-lbl').textContent=periodoLabel;
   renderFlujoCajas(anio,mes);
+  renderVentasPanel(anio,mes);
 }
 
 function renderFlujoCajas(anio,mes){
@@ -2557,6 +2600,116 @@ function renderFlujoCajas(anio,mes){
       '<td style="text-align:right;font-weight:800;color:'+(totNeto>=0?'#16a34a':'#dc2626')+';">'+$p(totNeto)+'</td>'+
       '<td style="text-align:right;font-weight:800;">'+$p(totSaldo)+'</td>'+
     '</tr></tfoot></table></div>';
+}
+
+// ── PANEL TABS ──
+function setPanTab(tab,el){
+  document.getElementById('pan-tab-resumen').style.display=tab==='resumen'?'block':'none';
+  document.getElementById('pan-tab-reportes').style.display=tab==='reportes'?'block':'none';
+  document.querySelectorAll('#pan-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  if(el)el.classList.add('active');
+}
+
+// ── VENTAS POR CANAL ──
+function renderVentasPanel(anio,mes){
+  var cards=document.getElementById('pan-ventas-cards');
+  var tabla=document.getElementById('pan-ventas-tabla');
+  var lbl=document.getElementById('pan-ventas-lbl');
+  if(!cards||!tabla)return;
+  var movsFiltrados=MOVS.filter(function(m){
+    return m.tipo==='ingreso'&&m.anio===anio&&(!mes||m.mes===mes)&&m.concepto!=='TRANSFERENCIA';
+  });
+  var canales=[
+    {key:'mayorista',  label:'Mayorista',    icon:'🏭', color:'#6c7ae0',
+      filter:function(m){return (m.concepto||'').includes('MAYORISTA')||(m.concepto||'').includes('COBRO CLIENTE');},
+      cajas:['BANCO SRL','BANCO POLY','EFECTIVO ADMINISTRACIÓN','ECHEQ/CHEQUE']},
+    {key:'llavallol',  label:'Local Llavallol', icon:'🏪', color:'#f59e0b',
+      filter:function(m){return m.caja==='LOCAL LLAVALLOL'||(m.caja==='MERCADO PAGO'&&(m.detalle||'').toLowerCase().includes('llavallol'));},
+      cajas:[]},
+    {key:'montegrande',label:'Local Monte Grande', icon:'🏪', color:'#10b981',
+      filter:function(m){return m.caja==='LOCAL MONTE GRANDE'||(m.caja==='MERCADO PAGO'&&(m.detalle||'').toLowerCase().includes('monte grande'));},
+      cajas:[]},
+    {key:'mp',         label:'Mercado Pago',  icon:'📱', color:'#3b82f6',
+      filter:function(m){return m.caja==='MERCADO PAGO'&&!(m.detalle||'').toLowerCase().includes('llavallol')&&!(m.detalle||'').toLowerCase().includes('monte grande');},
+      cajas:[]}
+  ];
+  var totales=canales.map(function(c){
+    var monto=movsFiltrados.filter(c.filter).reduce(function(s,m){return s+Number(m.ingreso);},0);
+    return{label:c.label,icon:c.icon,color:c.color,monto:monto};
+  });
+  var total=totales.reduce(function(s,t){return s+t.monto;},0);
+  if(lbl)lbl.textContent=mes?(mes+' '+anio):('Todo '+anio);
+  cards.innerHTML=totales.map(function(t){
+    var pct=total>0?Math.round(t.monto/total*100):0;
+    return '<div class="stat" style="border-top:3px solid '+t.color+';min-width:140px;flex:1;">'+
+      '<div class="stat-icon" style="background:#f3f4f6;font-size:20px;">'+t.icon+'</div>'+
+      '<h3 style="font-size:17px;color:#1a1f36;">'+$p(t.monto)+'</h3>'+
+      '<p>'+t.label+'</p>'+
+      '<div style="font-size:11px;color:#9ca3af;margin-top:3px;">'+pct+'% del total</div>'+
+    '</div>';
+  }).join('');
+  tabla.innerHTML='<div class="tbl"><table>'+
+    '<thead><tr><th>Canal</th><th style="text-align:right">Ingresos</th><th style="text-align:right">% del total</th></tr></thead>'+
+    '<tbody>'+
+    totales.map(function(t){
+      var pct=total>0?(t.monto/total*100).toFixed(1):0;
+      var bar='<div style="height:6px;background:#f3f4f6;border-radius:3px;margin-top:4px;"><div style="height:6px;background:'+totales.find(function(x){return x.label===t.label;}).color+';border-radius:3px;width:'+pct+'%;"></div></div>';
+      return '<tr><td style="font-weight:600;">'+t.icon+' '+t.label+bar+'</td>'+
+        '<td style="text-align:right;font-weight:700;color:#1a1f36;">'+$p(t.monto)+'</td>'+
+        '<td style="text-align:right;color:#9ca3af;">'+pct+'%</td></tr>';
+    }).join('')+
+    '<tr style="border-top:2px solid #e5e7eb;background:#f9fafb;"><td style="font-weight:800;">TOTAL</td>'+
+    '<td style="text-align:right;font-weight:800;">'+$p(total)+'</td>'+
+    '<td style="text-align:right;color:#9ca3af;">100%</td></tr>'+
+    '</tbody></table></div>';
+}
+
+// ── CHEQUES / ECHEQ ──
+function renderCheques(){
+  var anio=parseInt(document.getElementById('fin-anio').value)||new Date().getFullYear();
+  var mes=document.getElementById('fin-mes').value;
+  var hoy=new Date().toISOString().split('T')[0];
+  var movs=MOVS.filter(function(m){return m.caja==='ECHEQ/CHEQUE';});
+  var enCartera=movs.filter(function(m){return m.tipo==='ingreso';}).reduce(function(s,m){return s+Number(m.ingreso);},0);
+  var emitidos=movs.filter(function(m){return m.tipo==='egreso';}).reduce(function(s,m){return s+Number(m.egreso);},0);
+  var lbl=document.getElementById('chq-periodo-lbl');
+  if(lbl)lbl.textContent=mes?(mes+' '+anio):('Todo '+anio);
+  var stats=document.getElementById('chq-stats');
+  if(stats)stats.innerHTML=
+    '<div style="background:#ede9fe;border-radius:10px;padding:12px 18px;flex:1;min-width:140px;">'+
+    '<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px;">EN CARTERA (a cobrar)</div>'+
+    '<div style="font-size:20px;font-weight:800;color:#7c3aed;">'+$p(enCartera)+'</div></div>'+
+    '<div style="background:#fee2e2;border-radius:10px;padding:12px 18px;flex:1;min-width:140px;">'+
+    '<div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:4px;">EMITIDOS (a pagar)</div>'+
+    '<div style="font-size:20px;font-weight:800;color:#dc2626;">'+$p(emitidos)+'</div></div>'+
+    '<div style="background:'+(enCartera-emitidos>=0?'#dcfce7':'#fee2e2')+';border-radius:10px;padding:12px 18px;flex:1;min-width:140px;">'+
+    '<div style="font-size:11px;font-weight:700;color:'+(enCartera-emitidos>=0?'#16a34a':'#dc2626')+';margin-bottom:4px;">POSICIÓN NETA</div>'+
+    '<div style="font-size:20px;font-weight:800;color:'+(enCartera-emitidos>=0?'#16a34a':'#dc2626')+';">'+$p(enCartera-emitidos)+'</div></div>';
+  var tb=document.getElementById('chq-tbody');
+  if(!tb)return;
+  if(!movs.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><p>Sin movimientos en ECHEQ/CHEQUE</p></div></td></tr>';return;}
+  var sorted=movs.slice().sort(function(a,b){return(a.fecha_vencimiento||a.fecha)<(b.fecha_vencimiento||b.fecha)?-1:1;});
+  tb.innerHTML=sorted.map(function(m){
+    var esIngreso=m.tipo==='ingreso';
+    var monto=esIngreso?Number(m.ingreso):Number(m.egreso);
+    var vto=m.fecha_vencimiento||'';
+    var vencido=vto&&vto<hoy;
+    var pronto=vto&&!vencido&&vto<=new Date(Date.now()+7*86400000).toISOString().split('T')[0];
+    var estadoBadge=vencido?'<span class="badge b-red">Vencido</span>':
+      pronto?'<span class="badge b-yellow">Próximo</span>':
+      esIngreso?'<span class="badge b-purple">En cartera</span>':
+      '<span class="badge b-blue">Emitido</span>';
+    return '<tr>'+
+      '<td>'+m.fecha+'</td>'+
+      '<td><span class="badge '+(esIngreso?'b-green':'b-red')+'">'+(esIngreso?'A cobrar':'A pagar')+'</span></td>'+
+      '<td>'+(m.concepto||'—')+'</td>'+
+      '<td>'+(m.detalle||'—')+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:'+(esIngreso?'#16a34a':'#dc2626')+';">'+$p(monto)+'</td>'+
+      '<td style="font-size:11px;color:#9ca3af;">'+(m.referencia||'—')+'</td>'+
+      '<td style="font-size:12px;font-weight:600;color:'+(vencido?'#dc2626':pronto?'#d97706':'#374151')+'">'+(vto||'—')+'</td>'+
+      '<td>'+estadoBadge+'</td>'+
+    '</tr>';
+  }).join('');
 }
 
 function mm_onTipo(){
