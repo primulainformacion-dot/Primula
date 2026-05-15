@@ -498,7 +498,29 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <!-- Tab: Resumen -->
     <div id="pan-tab-resumen">
 
-      <!-- ACTIVOS -->
+      <!-- TARJETAS MACRO: activos / pasivos / neto -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:22px;">
+
+        <div style="background:#dcfce7;border-radius:14px;padding:22px 24px;border:2px solid #16a34a;">
+          <div style="font-size:10px;font-weight:800;color:#166534;letter-spacing:.9px;text-transform:uppercase;margin-bottom:10px;">ACTIVOS — LO QUE TENEMOS</div>
+          <div style="font-size:30px;font-weight:900;color:#166534;line-height:1;" id="pg-resumen-activos">$0</div>
+          <div style="font-size:11px;color:#15803d;margin-top:8px;">Efectivo · Bancos · Cheques · Stock · A cobrar</div>
+        </div>
+
+        <div style="background:#fee2e2;border-radius:14px;padding:22px 24px;border:2px solid #dc2626;">
+          <div style="font-size:10px;font-weight:800;color:#991b1b;letter-spacing:.9px;text-transform:uppercase;margin-bottom:10px;">PASIVOS — LO QUE DEBEMOS</div>
+          <div style="font-size:30px;font-weight:900;color:#991b1b;line-height:1;" id="pg-resumen-pasivos">$0</div>
+          <div style="font-size:11px;color:#b91c1c;margin-top:8px;">Cheques emitidos · Moratorias pendientes</div>
+        </div>
+
+        <div id="pg-resumen-neto-card" style="border-radius:14px;padding:22px 24px;border:2px solid #e5e7eb;background:#f9fafb;">
+          <div style="font-size:10px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;margin-bottom:10px;color:#6b7280;" id="pg-resumen-neto-lbl">RESULTADO NETO</div>
+          <div style="font-size:30px;font-weight:900;line-height:1;color:#374151;" id="pg-resumen-neto">$0</div>
+          <div style="font-size:11px;margin-top:8px;color:#9ca3af;" id="pg-resumen-neto-sub">Activos menos pasivos</div>
+        </div>
+
+      </div>
+
       <!-- ACTIVOS -->
       <div class="panel" style="margin-bottom:16px;">
         <div class="panel-hdr" style="margin-bottom:18px;">
@@ -2917,10 +2939,24 @@ function renderPanelGeneral(){
     .reduce(function(s,m){return s+morPendiente(m);},0);
   var morCuotas=MORATORIAS.filter(function(m){return m.estado!=='finalizada';})
     .reduce(function(s,m){return s+Math.max(m.cuotas_total-m.cuotas_pagadas,0);},0);
-  var totalPasivos=echeqPasivo+morTotal;
+  var chqpPasivo=CHEQUES_PROPIOS.filter(function(c){return c.estado==='pendiente';}).reduce(function(s,c){return s+Number(c.monto);},0);
+  var totalPasivos=echeqPasivo+morTotal+chqpPasivo;
   if(el('pg-moratorias'))el('pg-moratorias').textContent=$p(morTotal);
   if(el('pg-moratorias-sub'))el('pg-moratorias-sub').textContent=morCuotas>0?(morCuotas+' cuota'+(morCuotas!==1?'s':'')+' pendiente'+(morCuotas!==1?'s':'')):'Sin cuotas pendientes';
   if(el('pg-total-pasivos'))el('pg-total-pasivos').textContent=$p(totalPasivos);
+  // Tarjetas macro resumen
+  if(el('pg-resumen-activos'))el('pg-resumen-activos').textContent=$p(totalActivos);
+  if(el('pg-resumen-pasivos'))el('pg-resumen-pasivos').textContent=$p(totalPasivos);
+  var neto=totalActivos-totalPasivos;
+  var netoPos=neto>=0;
+  var netoCard=el('pg-resumen-neto-card');
+  if(netoCard){netoCard.style.background=netoPos?'#dcfce7':'#fee2e2';netoCard.style.borderColor=netoPos?'#16a34a':'#dc2626';}
+  var netoLbl=el('pg-resumen-neto-lbl');
+  if(netoLbl){netoLbl.style.color=netoPos?'#166534':'#991b1b';netoLbl.textContent=netoPos?'RESULTADO NETO POSITIVO':'RESULTADO NETO NEGATIVO';}
+  var netoNum=el('pg-resumen-neto');
+  if(netoNum){netoNum.style.color=netoPos?'#166534':'#991b1b';netoNum.textContent=(netoPos?'+':'-')+$p(Math.abs(neto));}
+  var netoSub=el('pg-resumen-neto-sub');
+  if(netoSub){netoSub.style.color=netoPos?'#15803d':'#b91c1c';netoSub.textContent=netoPos?'Los activos superan a los pasivos':'Los pasivos superan a los activos';}
   var anio=parseInt(document.getElementById('pan-anio').value)||new Date().getFullYear();
   var mes=document.getElementById('pan-mes').value;
   var periodoLabel=mes?(mes+' '+anio):('Todo '+anio);
