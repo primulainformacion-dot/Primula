@@ -434,44 +434,50 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div id="pan-tab-resumen">
 
       <!-- ACTIVOS -->
+      <!-- ACTIVOS -->
       <div class="panel" style="margin-bottom:16px;">
-        <div class="panel-hdr"><h4 style="color:#166534;">ACTIVOS — Lo que tenemos</h4></div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+        <div class="panel-hdr" style="margin-bottom:18px;">
+          <h4 style="color:#166534;text-transform:uppercase;letter-spacing:.5px;font-size:13px;font-weight:800;">ACTIVOS — LO QUE TENEMOS</h4>
+          <span style="font-size:22px;font-weight:800;color:#166534;" id="pg-total-activos">$0</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
 
-          <!-- Fila 1: posición líquida -->
+          <!-- Fila 1: disponible líquido -->
           <div class="stat" style="border-top:3px solid #6c7ae0;">
             <div class="stat-icon" style="background:#ede9fe;">💵</div>
-            <h3 id="pg-efectivo">$0</h3><p>Efectivo</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Admin · LL · MG</div>
+            <h3 id="pg-efectivo">$0</h3><p>Efectivo disponible</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Admin · Llavallol · Monte Grande</div>
           </div>
           <div class="stat" style="border-top:3px solid #0ea5e9;">
             <div class="stat-icon" style="background:#e0f2fe;">🏦</div>
             <h3 id="pg-bancos">$0</h3><p>Bancos</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">SRL · Poly</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Banco SRL · Banco Poly</div>
           </div>
           <div class="stat" style="border-top:3px solid #3b82f6;">
             <div class="stat-icon" style="background:#dbeafe;">📱</div>
             <h3 id="pg-mp">$0</h3><p>Mercado Pago</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">QR · Tarjetas</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">QR · Tarjetas · Transferencias</div>
           </div>
-          <div class="stat" style="border-top:3px solid #8b5cf6;">
-            <div class="stat-icon" style="background:#ede9fe;">🧾</div>
-            <h3 id="pg-echeq-act">$0</h3><p>Cheques en cartera</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">ECHEQ a cobrar</div>
-          </div>
-          <div class="stat" style="border-top:3px solid #166534;background:linear-gradient(135deg,#f0fdf4,#dcfce7);">
-            <div class="stat-icon" style="background:#bbf7d0;">📊</div>
-            <h3 id="pg-total-activos" style="color:#166534;">$0</h3>
-            <p style="color:#166534;font-weight:700;">Total Activos</p>
-            <div style="font-size:11px;color:#16a34a;margin-top:4px;">Suma calculable</div>
+          <div class="stat" style="border-top:3px solid #166534;background:#f0fdf4;">
+            <div class="stat-icon" style="background:#dcfce7;">💰</div>
+            <h3 id="pg-saldo-liquido" style="color:#166534;">$0</h3>
+            <p style="color:#166534;font-weight:700;">Total disponible</p>
+            <div style="font-size:11px;color:#16a34a;margin-top:4px;">Efectivo + Bancos + MP</div>
           </div>
 
-          <!-- Fila 2: otras activos -->
-          <div class="stat" style="border-top:3px solid #f59e0b;">
+          <!-- Fila 2: por cobrar -->
+          <div class="stat" style="border-top:3px solid #8b5cf6;grid-column:span 2;">
+            <div class="stat-icon" style="background:#ede9fe;">🧾</div>
+            <h3 id="pg-echeq-act">$0</h3><p>Cheques en cartera</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">ECHEQ / Cheques a cobrar</div>
+          </div>
+          <div class="stat" style="border-top:3px solid #f59e0b;grid-column:span 2;">
             <div class="stat-icon" style="background:#fef3c7;">👥</div>
             <h3 id="pg-acobrar">$0</h3><p>Cuentas a cobrar</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Deudas de clientes</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Deudas de clientes activas</div>
           </div>
+
+          <!-- Fila 3: stock -->
           <div class="stat" style="border-top:3px solid #e5e7eb;opacity:.55;">
             <div class="stat-icon" style="background:#f3f4f6;">🧶</div>
             <h3 style="color:#d1d5db;">—</h3><p style="color:#9ca3af;">Materia prima</p>
@@ -480,17 +486,17 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <div class="stat" style="border-top:3px solid #6c7ae0;">
             <div class="stat-icon" style="background:#ede9fe;">👔</div>
             <h3 id="pg-stock-may">$0</h3><p>Stock mayorista</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-stock-may-u">0 u · precio mayorista</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-stock-may-u">0 u</div>
           </div>
           <div class="stat" style="border-top:3px solid #f59e0b;">
             <div class="stat-icon" style="background:#fef3c7;">🏪</div>
             <h3 id="pg-stock-ll">$0</h3><p>Stock Llavallol</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-stock-ll-u">0 u · precio minorista</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-stock-ll-u">0 u</div>
           </div>
           <div class="stat" style="border-top:3px solid #10b981;">
             <div class="stat-icon" style="background:#d1fae5;">🏪</div>
             <h3 id="pg-stock-mg">$0</h3><p>Stock Monte Grande</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-stock-mg-u">0 u · precio minorista</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-stock-mg-u">0 u</div>
           </div>
 
         </div>
@@ -498,8 +504,11 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
       <!-- PASIVOS -->
       <div class="panel" style="margin-bottom:16px;">
-        <div class="panel-hdr"><h4 style="color:#991b1b;">PASIVOS — Lo que debemos</h4></div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;">
+        <div class="panel-hdr" style="margin-bottom:18px;">
+          <h4 style="color:#991b1b;text-transform:uppercase;letter-spacing:.5px;font-size:13px;font-weight:800;">PASIVOS — LO QUE DEBEMOS</h4>
+          <span style="font-size:22px;font-weight:800;color:#991b1b;" id="pg-total-pasivos">$0</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
           <div class="stat" style="border-top:3px solid #8b5cf6;">
             <div class="stat-icon" style="background:#ede9fe;">🧾</div>
             <h3 id="pg-echeq-pas">$0</h3><p>Cheques emitidos</p>
@@ -516,10 +525,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <h3 id="pg-moratorias">$0</h3><p>Moratorias / planes de pago</p>
             <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-moratorias-sub">—</div>
           </div>
-        </div>
-        <div style="background:#fef2f2;border-radius:10px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
-          <span style="font-size:14px;font-weight:700;color:#991b1b;">TOTAL PASIVOS (calculables)</span>
-          <span style="font-size:24px;font-weight:800;color:#991b1b;" id="pg-total-pasivos">$0</span>
         </div>
       </div>
 
@@ -2716,6 +2721,7 @@ function renderPanelGeneral(){
   el('pg-efectivo').textContent=$p(efectivo);
   el('pg-bancos').textContent=$p(bancos);
   el('pg-mp').textContent=$p(mp);
+  if(el('pg-saldo-liquido'))el('pg-saldo-liquido').textContent=$p(efectivo+bancos+mp);
   el('pg-echeq-act').textContent=$p(echeqActivo);
   el('pg-acobrar').textContent=$p(acobrar);
   if(el('pg-stock-may'))el('pg-stock-may').textContent=$p(stockMay);
