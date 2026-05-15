@@ -412,9 +412,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <!-- ════════════ PANEL GENERAL ════════════ -->
   <div class="section" id="sec-panel">
 
-    <!-- Saldos por caja -->
-    <div id="pan-cajas-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;"></div>
-
     <!-- Período compartido del panel -->
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
       <select id="pan-anio" onchange="renderPanelGeneral()" style="width:90px;"></select>
@@ -430,7 +427,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <!-- Tabs -->
     <div class="tabs" id="pan-tabs">
       <div class="tab active" onclick="setPanTab('resumen',this)">📊 Resumen financiero</div>
-      <div class="tab" onclick="setPanTab('reportes',this)">📈 Reportes de ventas</div>
+      <div class="tab" onclick="setPanTab('objetivos',this)">🎯 Objetivos</div>
     </div>
 
     <!-- Tab: Resumen -->
@@ -519,28 +516,36 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <h4>Ventas por canal</h4>
           <span style="font-size:12px;color:#9ca3af;" id="pan-ventas-lbl"></span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;" id="pan-ventas-cards"></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;" id="pan-ventas-cards"></div>
         <div id="pan-ventas-tabla"></div>
       </div>
 
     </div><!-- /pan-tab-resumen -->
 
-    <!-- Tab: Reportes de ventas -->
-    <div id="pan-tab-reportes" style="display:none;">
-      <div class="panel">
-        <div class="panel-hdr"><h4>Filtros</h4></div>
-        <div class="grid2" style="margin-bottom:14px;">
-          <div class="field"><label>Desde</label><input type="date" id="rep-desde"/></div>
-          <div class="field"><label>Hasta</label><input type="date" id="rep-hasta"/></div>
-          <div class="field"><label>Local</label>
-            <select id="rep-local"><option value="">Ambos</option><option value="llavallol">Llavallol</option><option value="montegrande">Monte Grande</option></select>
-          </div>
-          <div class="field"><label>Tipo</label>
-            <select id="rep-tipo"><option value="">Todos</option><option value="mayorista">Mayorista</option><option value="minorista">Minorista</option></select>
-          </div>
+    <!-- Tab: Objetivos -->
+    <div id="pan-tab-objetivos" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+        <div class="tabs" id="obj-subtabs" style="margin-bottom:0;">
+          <div class="tab active" onclick="setObjTab('mensual',this)">📅 Mensual</div>
+          <div class="tab" onclick="setObjTab('anual',this)">📆 Anual</div>
         </div>
-        <button class="btn" onclick="generarReporte()">Generar</button>
+        <div id="obj-mes-wrap" style="display:contents;">
+          <select id="obj-mes" onchange="renderObjetivos()" style="width:150px;">
+            <option value="">Todo el año</option>
+            <option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option>
+            <option>MAYO</option><option>JUNIO</option><option>JULIO</option><option>AGOSTO</option>
+            <option>SEPTIEMBRE</option><option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option>
+          </select>
+        </div>
+        <select id="obj-anio" onchange="renderObjetivos()" style="width:90px;"></select>
       </div>
+      <div id="obj-content"></div>
+    </div>
+
+    <!-- IDs de reportes (compatibilidad) -->
+    <div style="display:none;">
+      <input id="rep-desde"/><input id="rep-hasta"/>
+      <select id="rep-local"></select><select id="rep-tipo"></select>
       <div id="rep-result"></div>
     </div>
 
@@ -735,6 +740,9 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
   <!-- ════════════ FINANZAS ════════════ -->
   <div class="section" id="sec-finanzas">
+
+    <!-- Saldos por caja -->
+    <div id="pan-cajas-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;"></div>
 
     <!-- Período compartido -->
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
@@ -1325,7 +1333,7 @@ window.addEventListener('DOMContentLoaded', function(){
   document.getElementById('lf-hasta').value=today;
 
   // Años finanzas (movimientos) y panel general
-  [document.getElementById('fin-anio'),document.getElementById('pan-anio')].forEach(function(asel){
+  [document.getElementById('fin-anio'),document.getElementById('pan-anio'),document.getElementById('obj-anio')].forEach(function(asel){
     if(!asel)return;
     for(var y=2024;y<=new Date().getFullYear()+1;y++){
       var o=document.createElement('option');o.value=y;o.textContent=y;
@@ -1361,7 +1369,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 // ── LOAD ──
 async function loadAll(){
   await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal()]);
-  renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
+  renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias();
 }
 async function loadCategorias(){ var {data}=await sb.from('categorias').select('*').order('nombre'); CATEGORIAS=data||[]; }
@@ -1384,8 +1392,8 @@ function nav(sec, el){
   if(el) el.classList.add('active');
   document.getElementById('pg-title').textContent=el?el.textContent.trim():sec;
   document.getElementById('pg-sub').textContent='';
-  if(sec==='panel'){renderFinCajas();renderPanelGeneral();}
-  if(sec==='finanzas'){renderFin();}
+  if(sec==='panel'){renderPanelGeneral();}
+  if(sec==='finanzas'){renderFinCajas();renderFin();}
 }
 
 function navLocal(local, tab, el){
@@ -2736,9 +2744,10 @@ function renderFlujoCajas(anio,mes){
 // ── PANEL TABS ──
 function setPanTab(tab,el){
   document.getElementById('pan-tab-resumen').style.display=tab==='resumen'?'block':'none';
-  document.getElementById('pan-tab-reportes').style.display=tab==='reportes'?'block':'none';
+  document.getElementById('pan-tab-objetivos').style.display=tab==='objetivos'?'block':'none';
   document.querySelectorAll('#pan-tabs .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
+  if(tab==='objetivos')renderObjetivos();
 }
 
 // ── VENTAS POR CANAL ──
@@ -2747,52 +2756,186 @@ function renderVentasPanel(anio,mes){
   var tabla=document.getElementById('pan-ventas-tabla');
   var lbl=document.getElementById('pan-ventas-lbl');
   if(!cards||!tabla)return;
-  var movsFiltrados=MOVS.filter(function(m){
+  var movsF=MOVS.filter(function(m){
     return m.tipo==='ingreso'&&m.anio===anio&&(!mes||m.mes===mes)&&m.concepto!=='TRANSFERENCIA';
   });
+  // Unidades desde VENTAS (registros = tickets de venta)
+  var ventasF=VENTAS.filter(function(v){
+    if(!v.fecha)return false;
+    var y=new Date(v.fecha+'T12:00:00').getFullYear();
+    var m2=MESES_ARR[new Date(v.fecha+'T12:00:00').getMonth()];
+    return y===anio&&(!mes||m2===mes);
+  });
   var canales=[
-    {key:'mayorista',  label:'Mayorista',    icon:'🏭', color:'#6c7ae0',
+    {label:'Mayorista',       icon:'🏭', color:'#6c7ae0',
       filter:function(m){return (m.concepto||'').includes('MAYORISTA')||(m.concepto||'').includes('COBRO CLIENTE');},
-      cajas:['BANCO SRL','BANCO POLY','EFECTIVO ADMINISTRACIÓN','ECHEQ/CHEQUE']},
-    {key:'llavallol',  label:'Local Llavallol', icon:'🏪', color:'#f59e0b',
+      unid:ventasF.filter(function(v){return v.tipo==='mayorista';}).length},
+    {label:'Local Llavallol', icon:'🏪', color:'#f59e0b',
       filter:function(m){return m.caja==='LOCAL LLAVALLOL'||(m.caja==='MERCADO PAGO'&&(m.detalle||'').toLowerCase().includes('llavallol'));},
-      cajas:[]},
-    {key:'montegrande',label:'Local Monte Grande', icon:'🏪', color:'#10b981',
+      unid:ventasF.filter(function(v){return v.tipo==='minorista'&&(!v.local||v.local==='llavallol');}).length},
+    {label:'Local Monte Grande', icon:'🏪', color:'#10b981',
       filter:function(m){return m.caja==='LOCAL MONTE GRANDE'||(m.caja==='MERCADO PAGO'&&(m.detalle||'').toLowerCase().includes('monte grande'));},
-      cajas:[]},
-    {key:'mp',         label:'Mercado Pago',  icon:'📱', color:'#3b82f6',
-      filter:function(m){return m.caja==='MERCADO PAGO'&&!(m.detalle||'').toLowerCase().includes('llavallol')&&!(m.detalle||'').toLowerCase().includes('monte grande');},
-      cajas:[]}
+      unid:ventasF.filter(function(v){return v.tipo==='minorista'&&v.local==='montegrande';}).length}
   ];
   var totales=canales.map(function(c){
-    var monto=movsFiltrados.filter(c.filter).reduce(function(s,m){return s+Number(m.ingreso);},0);
-    return{label:c.label,icon:c.icon,color:c.color,monto:monto};
+    var monto=movsF.filter(c.filter).reduce(function(s,m){return s+Number(m.ingreso);},0);
+    return{label:c.label,icon:c.icon,color:c.color,monto:monto,unid:c.unid};
   });
   var total=totales.reduce(function(s,t){return s+t.monto;},0);
   if(lbl)lbl.textContent=mes?(mes+' '+anio):('Todo '+anio);
   cards.innerHTML=totales.map(function(t){
     var pct=total>0?Math.round(t.monto/total*100):0;
-    return '<div class="stat" style="border-top:3px solid '+t.color+';min-width:140px;flex:1;">'+
+    return '<div class="stat" style="border-top:3px solid '+t.color+';">'+
       '<div class="stat-icon" style="background:#f3f4f6;font-size:20px;">'+t.icon+'</div>'+
       '<h3 style="font-size:17px;color:#1a1f36;">'+$p(t.monto)+'</h3>'+
       '<p>'+t.label+'</p>'+
       '<div style="font-size:11px;color:#9ca3af;margin-top:3px;">'+pct+'% del total</div>'+
-    '</div>';
+      (t.unid?'<div style="font-size:12px;font-weight:700;color:'+t.color+';margin-top:4px;">'+t.unid+' ventas</div>':'')
+    +'</div>';
   }).join('');
   tabla.innerHTML='<div class="tbl"><table>'+
-    '<thead><tr><th>Canal</th><th style="text-align:right">Ingresos</th><th style="text-align:right">% del total</th></tr></thead>'+
+    '<thead><tr><th>Canal</th><th style="text-align:right">Ingresos</th><th style="text-align:right">Ventas</th><th style="text-align:right">% facturación</th></tr></thead>'+
     '<tbody>'+
     totales.map(function(t){
       var pct=total>0?(t.monto/total*100).toFixed(1):0;
-      var bar='<div style="height:6px;background:#f3f4f6;border-radius:3px;margin-top:4px;"><div style="height:6px;background:'+totales.find(function(x){return x.label===t.label;}).color+';border-radius:3px;width:'+pct+'%;"></div></div>';
+      var bar='<div style="height:6px;background:#f3f4f6;border-radius:3px;margin-top:4px;"><div style="height:6px;background:'+t.color+';border-radius:3px;width:'+pct+'%;"></div></div>';
       return '<tr><td style="font-weight:600;">'+t.icon+' '+t.label+bar+'</td>'+
         '<td style="text-align:right;font-weight:700;color:#1a1f36;">'+$p(t.monto)+'</td>'+
+        '<td style="text-align:right;color:#6b7280;">'+(t.unid||'—')+'</td>'+
         '<td style="text-align:right;color:#9ca3af;">'+pct+'%</td></tr>';
     }).join('')+
     '<tr style="border-top:2px solid #e5e7eb;background:#f9fafb;"><td style="font-weight:800;">TOTAL</td>'+
     '<td style="text-align:right;font-weight:800;">'+$p(total)+'</td>'+
+    '<td style="text-align:right;font-weight:700;">'+totales.reduce(function(s,t){return s+t.unid;},0)||'—'+'</td>'+
     '<td style="text-align:right;color:#9ca3af;">100%</td></tr>'+
     '</tbody></table></div>';
+}
+
+// ── OBJETIVOS ──
+var currentObjTab='mensual';
+var objEditMode=false;
+
+function setObjTab(tab,el){
+  currentObjTab=tab;
+  var mw=document.getElementById('obj-mes-wrap');
+  if(mw)mw.style.display=tab==='mensual'?'contents':'none';
+  document.querySelectorAll('#obj-subtabs .tab').forEach(function(t){t.classList.remove('active');});
+  if(el)el.classList.add('active');
+  renderObjetivos();
+}
+
+function toggleObjEdit(){
+  objEditMode=!objEditMode;
+  renderObjetivos();
+}
+
+function saveObjTargets(){
+  var key='primula_obj_'+currentObjTab;
+  var get=function(id){return parseFloat(document.getElementById(id).value)||0;};
+  var data={
+    mayorista_fact:get('obj-may-fact-t'),mayorista_unid:get('obj-may-unid-t'),
+    ll_fact:get('obj-ll-fact-t'),ll_unid:get('obj-ll-unid-t'),
+    mg_fact:get('obj-mg-fact-t'),mg_unid:get('obj-mg-unid-t')
+  };
+  localStorage.setItem(key,JSON.stringify(data));
+  objEditMode=false;
+  renderObjetivos();
+  toast('Objetivos guardados');
+}
+
+function renderObjetivos(){
+  var cont=document.getElementById('obj-content');
+  if(!cont)return;
+  var anio=parseInt(document.getElementById('obj-anio').value)||new Date().getFullYear();
+  var mes=currentObjTab==='mensual'?(document.getElementById('obj-mes').value||null):null;
+
+  var key='primula_obj_'+currentObjTab;
+  var defs={mayorista_fact:500000,mayorista_unid:60,ll_fact:150000,ll_unid:30,mg_fact:100000,mg_unid:20};
+  var stored={}; try{stored=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
+  var tgt=Object.assign({},defs,stored);
+
+  // Actuales de MOVS
+  var movsF=MOVS.filter(function(m){return m.tipo==='ingreso'&&m.anio===anio&&(!mes||m.mes===mes)&&m.concepto!=='TRANSFERENCIA';});
+  var mayFact=movsF.filter(function(m){return (m.concepto||'').includes('MAYORISTA')||(m.concepto||'').includes('COBRO CLIENTE');}).reduce(function(s,m){return s+Number(m.ingreso);},0);
+  var llFact=movsF.filter(function(m){return m.caja==='LOCAL LLAVALLOL'||(m.caja==='MERCADO PAGO'&&(m.detalle||'').toLowerCase().includes('llavallol'));}).reduce(function(s,m){return s+Number(m.ingreso);},0);
+  var mgFact=movsF.filter(function(m){return m.caja==='LOCAL MONTE GRANDE'||(m.caja==='MERCADO PAGO'&&(m.detalle||'').toLowerCase().includes('monte grande'));}).reduce(function(s,m){return s+Number(m.ingreso);},0);
+
+  // Unidades de VENTAS
+  var ventasF=VENTAS.filter(function(v){
+    if(!v.fecha)return false;
+    var y=new Date(v.fecha+'T12:00:00').getFullYear();
+    var m2=MESES_ARR[new Date(v.fecha+'T12:00:00').getMonth()];
+    return y===anio&&(!mes||m2===mes);
+  });
+  var mayUnid=ventasF.filter(function(v){return v.tipo==='mayorista';}).length;
+  var llUnid=ventasF.filter(function(v){return v.tipo==='minorista'&&(!v.local||v.local==='llavallol');}).length;
+  var mgUnid=ventasF.filter(function(v){return v.tipo==='minorista'&&v.local==='montegrande';}).length;
+
+  var periodoLbl=mes?(mes+' '+anio):('Año '+anio);
+  var canales=[
+    {id:'may',icon:'🏭',label:'Mayorista',color:'#6c7ae0',fact:mayFact,factT:tgt.mayorista_fact,unid:mayUnid,unidT:tgt.mayorista_unid},
+    {id:'ll', icon:'🏪',label:'Local Llavallol',color:'#f59e0b',fact:llFact,factT:tgt.ll_fact,unid:llUnid,unidT:tgt.ll_unid},
+    {id:'mg', icon:'🏪',label:'Local Monte Grande',color:'#10b981',fact:mgFact,factT:tgt.mg_fact,unid:mgUnid,unidT:tgt.mg_unid}
+  ];
+
+  function pBar(actual,target,color){
+    var pct=target>0?Math.min(100,Math.round(actual/target*100)):0;
+    var c=pct>=100?'#16a34a':pct>=70?color:'#f59e0b';
+    return {pct:pct,color:c,bar:'<div style="height:10px;background:#f3f4f6;border-radius:5px;overflow:hidden;margin:5px 0 2px;">'+
+      '<div style="height:10px;background:'+c+';border-radius:5px;width:'+pct+'%;transition:width .6s ease;"></div></div>'+
+      '<div style="font-size:11px;color:'+c+';font-weight:700;text-align:right;">'+pct+'%'+(pct>=100?' 🎯':'')+'</div>'};
+  }
+
+  var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'+
+    '<span style="font-size:13px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;">Ventas — '+periodoLbl+'</span>'+
+    (objEditMode?
+      '<div style="display:flex;gap:6px;"><button class="btn btn-green btn-sm" onclick="saveObjTargets()">💾 Guardar</button><button class="btn btn-gray btn-sm" onclick="toggleObjEdit()">Cancelar</button></div>':
+      '<button class="btn btn-outline btn-sm" onclick="toggleObjEdit()">✏️ Editar objetivos</button>'
+    )+'</div>';
+
+  canales.forEach(function(c){
+    var fb=pBar(c.fact,c.factT,c.color);
+    var ub=pBar(c.unid,c.unidT,c.color);
+    var factInput=objEditMode?'<input type="number" id="obj-'+c.id+'-fact-t" value="'+c.factT+'" style="width:110px;padding:2px 6px;font-size:12px;border:1px solid #e5e7eb;border-radius:5px;" />':'<strong>'+$p(c.factT)+'</strong>';
+    var unidInput=objEditMode?'<input type="number" id="obj-'+c.id+'-unid-t" value="'+c.unidT+'" style="width:70px;padding:2px 6px;font-size:12px;border:1px solid #e5e7eb;border-radius:5px;" />':'<strong>'+c.unidT+' ventas</strong>';
+    html+='<div class="panel" style="margin-bottom:14px;">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">'+
+        '<span style="font-size:22px;">'+c.icon+'</span>'+
+        '<div style="font-size:15px;font-weight:800;color:'+c.color+';">'+c.label+'</div>'+
+        (fb.pct>=100?'<span class="badge b-green" style="margin-left:auto;">🎯 Meta alcanzada</span>':'')
+      +'</div>'+
+      '<div style="margin-bottom:14px;">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;">'+
+          '<span style="font-size:13px;font-weight:600;color:#374151;">💰 Facturación</span>'+
+          '<span style="font-size:13px;color:#374151;">'+$p(c.fact)+' / '+factInput+'</span>'+
+        '</div>'+fb.bar+
+      '</div>'+
+      '<div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;">'+
+          '<span style="font-size:13px;font-weight:600;color:#374151;">📦 Unidades vendidas</span>'+
+          '<span style="font-size:13px;color:#374151;">'+c.unid+' ventas / '+unidInput+'</span>'+
+        '</div>'+ub.bar+
+      '</div>'+
+    '</div>';
+  });
+
+  // Producción y Entrega (placeholders)
+  html+='<div class="panel" style="margin-bottom:14px;">'+
+    '<div style="display:flex;align-items:center;gap:10px;">'+
+      '<span style="font-size:22px;">🏗️</span>'+
+      '<div><div style="font-size:15px;font-weight:800;color:#d1d5db;">Producción</div>'+
+      '<div style="font-size:12px;color:#d1d5db;margin-top:4px;">Disponible con el módulo de producción</div></div>'+
+      '<span class="badge b-blue" style="margin-left:auto;">Próximamente</span>'+
+    '</div></div>'+
+  '<div class="panel">'+
+    '<div style="display:flex;align-items:center;gap:10px;">'+
+      '<span style="font-size:22px;">🚚</span>'+
+      '<div><div style="font-size:15px;font-weight:800;color:#d1d5db;">Entrega</div>'+
+      '<div style="font-size:12px;color:#d1d5db;margin-top:4px;">Disponible con el módulo de logística</div></div>'+
+      '<span class="badge b-blue" style="margin-left:auto;">Próximamente</span>'+
+    '</div></div>';
+
+  cont.innerHTML=html;
 }
 
 // ── CHEQUES / ECHEQ ──
