@@ -1727,7 +1727,25 @@ async function loadProductos(){ var {data}=await sb.from('productos').select('*,
 async function loadVentas(){ var {data}=await sb.from('ventas').select('*').order('fecha',{ascending:false}).limit(500); VENTAS=data||[]; }
 async function loadStock(){ var {data}=await sb.from('stock').select('*,productos(nombre,codigo)').order('id'); STOCK=data||[]; }
 async function loadPresupuestos(){ var {data}=await sb.from('presupuestos').select('*').order('fecha',{ascending:false}).limit(200); PRESUPUESTOS=data||[]; }
-async function loadMovs(){ var {data}=await sb.from('movimientos').select('*').order('fecha',{ascending:false}).limit(3000); MOVS=data||[]; }
+async function loadMovs(){
+  var page=0, tam=1000, todos=[];
+  while(true){
+    var {data,error}=await sb.from('movimientos').select('*').order('fecha',{ascending:false}).range(page*tam,(page+1)*tam-1);
+    if(error||!data||!data.length)break;
+    todos=todos.concat(data);
+    if(data.length<tam)break;
+    page++;
+  }
+  // Normalizar anio/mes desde fecha cuando vienen null (trigger no corrió en inserts masivos)
+  MOVS=todos.map(function(m){
+    if(m.fecha&&(!m.anio||!m.mes)){
+      var d=new Date(m.fecha+'T12:00:00');
+      if(!m.anio)m.anio=d.getFullYear();
+      if(!m.mes)m.mes=MESES_ARR[d.getMonth()];
+    }
+    return m;
+  });
+}
 
 // ── NAV ──
 function nav(sec, el){
