@@ -1103,7 +1103,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <span>🔒 Cierre de caja</span>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <label style="font-size:13px;font-weight:600;">Fecha del cierre</label>
-            <input type="date" id="cierre-fecha" style="width:160px;"/>
+            <input type="date" id="cierre-fecha" style="width:160px;" onchange="renderCierreCaja()"/>
           </div>
         </div>
         <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">Ingresá el saldo <strong>real</strong> (contado físicamente o visto en el banco/plataforma) de cada caja. El sistema compara con el saldo <strong>calculado</strong> según los movimientos registrados.</p>
@@ -3352,10 +3352,12 @@ function setFinTab(tab,el){
   document.getElementById('ft-movimientos').style.display=tab==='movimientos'?'block':'none';
   document.getElementById('ft-resumen').style.display=tab==='resumen'?'block':'none';
   document.getElementById('ft-transferencia').style.display=tab==='transferencia'?'block':'none';
+  document.getElementById('ft-cierre').style.display=tab==='cierre'?'block':'none';
   document.querySelectorAll('#sec-finanzas .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
   if(tab==='transferencia')renderTransfHistorial();
   if(tab==='resumen')renderFinResumen();
+  if(tab==='cierre')renderCierreCaja();
 }
 
 function renderFin(){
@@ -4157,6 +4159,130 @@ async function saveChqDepositar(){
 // ── CHEQUES / ECHEQ (legacy, mantenido para compatibilidad) ──
 function renderCheques(){ renderChqCartera(); }
 
+
+// ══════════════════════════════════════════════
+// CIERRE DE CAJA
+// ══════════════════════════════════════════════
+var CAJAS_LIST=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL'];
+
+function saldoCajaCalculado(caja, fechaHasta){
+  return MOVS.filter(function(m){return m.caja===caja&&m.fecha<=fechaHasta;})
+    .reduce(function(s,m){return s+Number(m.ingreso||0)-Number(m.egreso||0);},0);
+}
+
+function renderCierreCaja(){
+  var fechaEl=document.getElementById('cierre-fecha');
+  if(fechaEl&&!fechaEl.value)fechaEl.value=today();
+  var fecha=fechaEl?fechaEl.value:today();
+  var grid=document.getElementById('cierre-cajas-grid');
+  if(!grid)return;
+  grid.innerHTML=CAJAS_LIST.map(function(caja){
+    var calc=saldoCajaCalculado(caja,fecha);
+    var inputId='cierre-real-'+caja.replace(/[\s\/]/g,'_');
+    return '<div style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:12px;padding:14px 16px;">'+
+      '<div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+caja+'</div>'+
+      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">'+
+        '<div style="flex:1;">'+
+          '<div style="font-size:10px;color:#9ca3af;font-weight:600;margin-bottom:2px;">CALCULADO</div>'+
+          '<div style="font-size:17px;font-weight:800;color:#374151;">'+$p(calc)+'</div>'+
+        '</div>'+
+        '<div style="color:#d1d5db;font-size:20px;">→</div>'+
+        '<div style="flex:1;">'+
+          '<div style="font-size:10px;color:#9ca3af;font-weight:600;margin-bottom:2px;">REAL (contado)</div>'+
+          '<input type="number" id="'+inputId+'" placeholder="0" step="0.01" oninput="actualizarDiffCaja(\''+caja+'\')" style="width:100%;font-size:15px;font-weight:700;padding:4px 8px;border:2px solid #e5e7eb;border-radius:6px;"/>'+
+        '</div>'+
+      '</div>'+
+      '<div id="diff-'+inputId+'" style="font-size:13px;font-weight:700;color:#9ca3af;min-height:20px;"></div>'+
+    '</div>';
+  }).join('');
+  renderCierreHistorial();
+}
+
+function actualizarDiffCaja(caja){
+  var fecha=document.getElementById('cierre-fecha').value||today();
+  var calc=saldoCajaCalculado(caja,fecha);
+  var inputId='cierre-real-'+caja.replace(/[\s\/]/g,'_');
+  var real=parseFloat(document.getElementById(inputId).value);
+  var diffEl=document.getElementById('diff-'+inputId);
+  if(!diffEl)return;
+  if(isNaN(real)){diffEl.textContent='';diffEl.style.color='#9ca3af';return;}
+  var diff=real-calc;
+  var ok=Math.abs(diff)<0.01;
+  diffEl.style.color=ok?'#16a34a':(diff>0?'#d97706':'#dc2626');
+  diffEl.textContent=ok?'✓ Cuadra':(diff>0?('↑ Sobrante: +'+$p(diff)):('↓ Faltante: '+$p(diff)));
+}
+
+async function saveCierreCaja(){
+  var fecha=document.getElementById('cierre-fecha').value;
+  if(!fecha){toast('Seleccioná una fecha','err');return;}
+  var nota=document.getElementById('cierre-nota').value||null;
+  var rows=[];
+  CAJAS_LIST.forEach(function(caja){
+    var inputId='cierre-real-'+caja.replace(/[\s\/]/g,'_');
+    var el=document.getElementById(inputId);
+    if(!el||el.value==='')return;
+    var real=parseFloat(el.value);
+    if(isNaN(real))return;
+    var calc=saldoCajaCalculado(caja,fecha);
+    rows.push({fecha,caja,saldo_calculado:calc,saldo_real:real,diferencia:real-calc,nota});
+  });
+  if(!rows.length){toast('Ingresá el saldo real de al menos una caja','err');return;}
+  var r=await sb.from('cierres_caja').insert(rows);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Cierre guardado — '+rows.length+' caja'+(rows.length!==1?'s':''));
+  document.getElementById('cierre-nota').value='';
+  CAJAS_LIST.forEach(function(caja){
+    var inputId='cierre-real-'+caja.replace(/[\s\/]/g,'_');
+    var el=document.getElementById(inputId);
+    if(el)el.value='';
+    var diffEl=document.getElementById('diff-'+inputId);
+    if(diffEl){diffEl.textContent='';diffEl.style.color='#9ca3af';}
+  });
+  await loadCierresCaja();
+  renderCierreHistorial();
+}
+
+function renderCierreHistorial(){
+  var filtCaja=document.getElementById('cierre-hist-caja')?document.getElementById('cierre-hist-caja').value:'';
+  var cont=document.getElementById('cierre-historial');
+  if(!cont)return;
+  var list=CIERRES_CAJA.filter(function(c){return !filtCaja||c.caja===filtCaja;});
+  if(!list.length){cont.innerHTML='<div class="empty"><p>Sin cierres registrados</p></div>';return;}
+  // Agrupar por fecha
+  var porFecha={};
+  list.forEach(function(c){
+    if(!porFecha[c.fecha])porFecha[c.fecha]=[];
+    porFecha[c.fecha].push(c);
+  });
+  var fechas=Object.keys(porFecha).sort(function(a,b){return a<b?1:-1;});
+  var html='';
+  fechas.forEach(function(fecha){
+    var filas=porFecha[fecha];
+    var totalDiff=filas.reduce(function(s,c){return s+Number(c.diferencia);},0);
+    var allOk=filas.every(function(c){return Math.abs(Number(c.diferencia))<0.01;});
+    html+='<div style="margin-bottom:16px;">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'+
+        '<span style="font-weight:800;font-size:14px;color:#374151;">'+fecha+'</span>'+
+        '<span style="font-size:12px;padding:2px 10px;border-radius:20px;font-weight:700;background:'+(allOk?'#dcfce7':'#fee2e2')+';color:'+(allOk?'#166534':'#991b1b')+';">'+(allOk?'✓ Todo cuadra':'Diferencia total: '+$p(totalDiff))+'</span>'+
+        (filas[0].nota?'<span style="font-size:12px;color:#6b7280;">'+filas[0].nota+'</span>':'')+
+      '</div>'+
+      '<div style="overflow-x:auto;"><table class="tbl" style="font-size:12px;">'+
+        '<thead><tr><th>Caja</th><th>Calculado</th><th>Real</th><th>Diferencia</th></tr></thead>'+
+        '<tbody>'+filas.map(function(c){
+          var diff=Number(c.diferencia);
+          var ok=Math.abs(diff)<0.01;
+          var diffColor=ok?'#16a34a':(diff>0?'#d97706':'#dc2626');
+          return '<tr>'+
+            '<td style="font-weight:600;">'+c.caja+'</td>'+
+            '<td style="text-align:right;">'+$p(Number(c.saldo_calculado))+'</td>'+
+            '<td style="text-align:right;font-weight:700;">'+$p(Number(c.saldo_real))+'</td>'+
+            '<td style="text-align:right;font-weight:800;color:'+diffColor+';">'+(ok?'✓':(diff>0?'+':'')+$p(diff))+'</td>'+
+          '</tr>';
+        }).join('')+
+        '</tbody></table></div></div>';
+  });
+  cont.innerHTML=html;
+}
 
 // ══════════════════════════════════════════════
 // TALLERISTAS
