@@ -772,7 +772,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <div class="tbl"><table>
           <thead><tr>
             <th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Detalle</th>
-            <th style="text-align:right">Monto</th><th>Referencia / N° cheque</th><th>Vto.</th><th>Estado</th>
+            <th style="text-align:right">Monto</th><th>N° FAC</th><th>Ref. / N° cheque</th><th>Banco</th><th>Fecha cobro</th><th>Días</th><th>Estado</th>
           </tr></thead>
           <tbody id="chq-tbody"></tbody>
         </table></div>
@@ -1208,6 +1208,29 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <label>Fecha de vencimiento del cheque</label>
         <input type="date" id="mm-fvenc"/>
         <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Fecha en que el cheque puede cobrarse / será debitado</div>
+      </div>
+      <div class="field full" id="mm-cheque-data" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">N° FAC</label>
+            <input id="mm-nro-fac" placeholder="N° de factura asociada"/>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Banco emisor</label>
+            <input id="mm-banco-cheque" placeholder="Ej: Santander, Galicia..."/>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Estado</label>
+            <select id="mm-estado-cheque">
+              <option value="">— Sin especificar —</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="depositado">Depositado</option>
+              <option value="vendido">Vendido</option>
+              <option value="endosado">Endosado</option>
+              <option value="rechazado">Rechazado</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class="field full" id="mm-moratoria-wrap" style="display:none;">
         <label>Moratoria / plan vinculado</label>
@@ -3182,26 +3205,41 @@ function renderChqCartera(){
       '<div style="font-size:20px;font-weight:800;color:'+(enCartera-emitidos>=0?'#16a34a':'#dc2626')+';">'+$p(enCartera-emitidos)+'</div></div>';
   var tb=document.getElementById('chq-tbody');
   if(!tb)return;
-  if(!movs.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><p>Sin movimientos en ECHEQ/CHEQUE para el período</p></div></td></tr>';return;}
+  if(!movs.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><p>Sin movimientos en ECHEQ/CHEQUE para el período</p></div></td></tr>';return;}
   var sorted=movs.slice().sort(function(a,b){return(a.fecha_vencimiento||a.fecha)<(b.fecha_vencimiento||b.fecha)?-1:1;});
+  var estadoColors={pendiente:'b-yellow',depositado:'b-green',vendido:'b-purple',endosado:'b-blue',rechazado:'b-red'};
   tb.innerHTML=sorted.map(function(m){
     var esIng=m.tipo==='ingreso';
     var monto=esIng?Number(m.ingreso):Number(m.egreso);
     var vto=m.fecha_vencimiento||'';
     var vencido=vto&&vto<hoy;
     var pronto=vto&&!vencido&&vto<=new Date(Date.now()+7*86400000).toISOString().split('T')[0];
-    var estadoBadge=vencido?'<span class="badge b-red">Vencido</span>':
-      pronto?'<span class="badge b-yellow">Próximo</span>':
-      esIng?'<span class="badge b-purple">En cartera</span>':
-      '<span class="badge b-blue">Emitido</span>';
+    var dias='';
+    var diasTxt='—';
+    var diasColor='#9ca3af';
+    if(vto){
+      dias=Math.round((new Date(vto+'T12:00:00')-new Date(hoy+'T12:00:00'))/86400000);
+      diasTxt=dias<0?('Venc. '+Math.abs(dias)+'d'):(dias===0?'Hoy':('+'+dias+'d'));
+      diasColor=dias<0?'#dc2626':(dias<=7?'#d97706':'#374151');
+    }
+    var estadoVal=m.estado_cheque;
+    var estadoBadge=estadoVal
+      ?'<span class="badge '+(estadoColors[estadoVal]||'b-gray')+'">'+estadoVal.charAt(0).toUpperCase()+estadoVal.slice(1)+'</span>'
+      :(vencido?'<span class="badge b-red">Vencido</span>'
+        :pronto?'<span class="badge b-yellow">Próximo</span>'
+        :esIng?'<span class="badge b-purple">En cartera</span>'
+        :'<span class="badge b-blue">Emitido</span>');
     return '<tr>'+
       '<td>'+m.fecha+'</td>'+
       '<td><span class="badge '+(esIng?'b-green':'b-red')+'">'+(esIng?'A cobrar':'A pagar')+'</span></td>'+
       '<td>'+(m.concepto||'—')+'</td>'+
       '<td>'+(m.detalle||'—')+'</td>'+
       '<td style="text-align:right;font-weight:700;color:'+(esIng?'#16a34a':'#dc2626')+';">'+$p(monto)+'</td>'+
+      '<td style="font-size:11px;">'+(m.nro_factura||'—')+'</td>'+
       '<td style="font-size:11px;color:#9ca3af;">'+(m.referencia||'—')+'</td>'+
+      '<td style="font-size:12px;">'+(m.banco_cheque||'—')+'</td>'+
       '<td style="font-size:12px;font-weight:600;color:'+(vencido?'#dc2626':pronto?'#d97706':'#374151')+'">'+(vto||'—')+'</td>'+
+      '<td style="font-size:12px;font-weight:600;color:'+diasColor+';">'+diasTxt+'</td>'+
       '<td>'+estadoBadge+'</td>'+
     '</tr>';
   }).join('');
@@ -3870,8 +3908,11 @@ function mm_calcMonto(){
 
 function mm_onCaja(){
   var caja=document.getElementById('mm-caja').value;
+  var esChq=caja==='ECHEQ/CHEQUE';
   var wrap=document.getElementById('mm-fvenc-wrap');
-  if(wrap)wrap.style.display=(caja==='ECHEQ/CHEQUE')?'':'none';
+  if(wrap)wrap.style.display=esChq?'':'none';
+  var wChq=document.getElementById('mm-cheque-data');
+  if(wChq)wChq.style.display=esChq?'':'none';
 }
 
 var editMovId=null;
@@ -3901,6 +3942,9 @@ function openMovModal(id){
     document.getElementById('mm-monto').value=Number(m.ingreso)>0?m.ingreso:m.egreso;
     document.getElementById('mm-ref').value=m.referencia||'';
     document.getElementById('mm-fvenc').value=m.fecha_vencimiento||'';
+    document.getElementById('mm-nro-fac').value=m.nro_factura||'';
+    document.getElementById('mm-banco-cheque').value=m.banco_cheque||'';
+    document.getElementById('mm-estado-cheque').value=m.estado_cheque||'';
     document.getElementById('mm-prendas-qty').value=m.prendas_cantidad||'';
     document.getElementById('mm-precio-prenda').value=m.precio_prenda||'';
     mm_onTipo(); mm_onCaja(); mm_onConcepto();
@@ -3918,6 +3962,9 @@ function openMovModal(id){
     document.getElementById('mm-monto').value='';
     document.getElementById('mm-ref').value='';
     document.getElementById('mm-fvenc').value='';
+    document.getElementById('mm-nro-fac').value='';
+    document.getElementById('mm-banco-cheque').value='';
+    document.getElementById('mm-estado-cheque').value='';
     document.getElementById('mm-prendas-qty').value='';
     document.getElementById('mm-precio-prenda').value='';
     mm_onTipo(); mm_onCaja(); mm_onConcepto();
@@ -3954,6 +4001,9 @@ async function saveMov(){
     proveedor_id:(concepto==='PROVEEDORES'||concepto==='MATERIALES/TELAS')?provId:null,
     prendas_cantidad:concepto==='COSTUREROS'?prendasQty:null,
     precio_prenda:concepto==='COSTUREROS'?precioPrenda:null,
+    nro_factura:document.getElementById('mm-caja').value==='ECHEQ/CHEQUE'?(document.getElementById('mm-nro-fac').value||null):null,
+    banco_cheque:document.getElementById('mm-caja').value==='ECHEQ/CHEQUE'?(document.getElementById('mm-banco-cheque').value||null):null,
+    estado_cheque:document.getElementById('mm-caja').value==='ECHEQ/CHEQUE'?(document.getElementById('mm-estado-cheque').value||null):null,
     updated_at:new Date().toISOString()
   };
   var r=editMovId?await sb.from('movimientos').update(d).eq('id',editMovId):await sb.from('movimientos').insert(d);
