@@ -199,6 +199,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="nav-group">
     <div class="nav-label">Finanzas</div>
     <div class="nav-item" onclick="nav('finanzas',this)"><span class="ni">💹</span> Movimientos</div>
+    <div class="nav-item" onclick="nav('moratorias',this)"><span class="ni">📋</span> Moratorias</div>
   </div>
 
   <div class="nav-group nav-local-ll">
@@ -480,6 +481,40 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div id="vd-body"></div>
   </div>
 
+  <!-- ════════════ MORATORIAS ════════════ -->
+  <div class="section" id="sec-moratorias">
+    <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
+      <div class="stat"><div class="stat-icon" style="background:#ffedd5;">📋</div><h3 id="mor-s-activas">0</h3><p>Moratorias activas</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#fee2e2;">⚠️</div><h3 id="mor-s-mora">0</h3><p>En mora</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#fef3c7;">💳</div><h3 id="mor-s-cuotas">0</h3><p>Cuotas pendientes</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#ede9fe;">💰</div><h3 id="mor-s-total">$0</h3><p>Total a pagar</p></div>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="search-row">
+          <select id="mor-filtro" onchange="renderMoratorias()" style="width:170px;">
+            <option value="">Todas</option>
+            <option value="activa">Activas</option>
+            <option value="en_mora">En mora</option>
+            <option value="finalizada">Finalizadas</option>
+          </select>
+        </div>
+        <button class="btn" onclick="openMorModal()">+ Nueva moratoria</button>
+      </div>
+      <div class="tbl"><table>
+        <thead><tr>
+          <th>Nombre</th><th>Acreedor</th>
+          <th style="text-align:center">Cuotas</th>
+          <th style="text-align:right">Monto cuota</th>
+          <th style="text-align:right">Pendiente</th>
+          <th>Próx. vencimiento</th>
+          <th>Estado</th><th></th>
+        </tr></thead>
+        <tbody id="mor-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
   <!-- ════════════ PRODUCCIÓN (estructura base) ════════════ -->
   <div class="section" id="sec-pedidos">
     <div class="panel">
@@ -601,12 +636,16 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <p style="color:#9ca3af;">Deuda proveedores</p>
             <div style="font-size:11px;color:#d1d5db;margin-top:4px;">Próximamente</div>
           </div>
-          <div class="stat" style="border-top:3px solid #e5e7eb;opacity:.65;">
-            <div class="stat-icon" style="background:#f3f4f6;">📋</div>
-            <h3 style="color:#d1d5db;">—</h3>
-            <p style="color:#9ca3af;">Moratorias / planes de pago</p>
-            <div style="font-size:11px;color:#d1d5db;margin-top:4px;">Próximamente</div>
+          <div class="stat" style="border-top:3px solid #f97316;cursor:pointer;" onclick="nav('moratorias',null)">
+            <div class="stat-icon" style="background:#ffedd5;">📋</div>
+            <h3 id="pg-moratorias">$0</h3>
+            <p>Moratorias / planes de pago</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-moratorias-sub">—</div>
           </div>
+        </div>
+        <div style="background:#fef2f2;border-radius:10px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+          <span style="font-size:14px;font-weight:700;color:#991b1b;">TOTAL PASIVOS (calculables)</span>
+          <span style="font-size:24px;font-weight:800;color:#991b1b;" id="pg-total-pasivos">$0</span>
         </div>
       </div>
 
@@ -912,6 +951,72 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Moratoria (alta / edición) -->
+<div class="modal-bg" id="m-moratoria">
+  <div class="modal">
+    <h3 id="m-mor-title">Nueva moratoria</h3>
+    <div class="grid2">
+      <div class="field full"><label>Nombre / descripción *</label><input id="mm-mor-nombre" placeholder="Ej: Moratoria AFIP plan 60 cuotas"/></div>
+      <div class="field"><label>Acreedor</label><input id="mm-mor-acreedor" placeholder="AFIP, Banco, Proveedor..."/></div>
+      <div class="field"><label>Estado</label>
+        <select id="mm-mor-estado">
+          <option value="activa">Activa</option>
+          <option value="en_mora">En mora</option>
+          <option value="finalizada">Finalizada</option>
+        </select>
+      </div>
+      <div class="field"><label>Monto por cuota $</label><input type="number" id="mm-mor-cuota" min="0" placeholder="0" oninput="mor_calcTotal()"/></div>
+      <div class="field"><label>Total de cuotas</label><input type="number" id="mm-mor-total" min="1" value="1" oninput="mor_calcTotal()"/></div>
+      <div class="field"><label>Cuotas ya pagadas</label><input type="number" id="mm-mor-pagadas" min="0" value="0" oninput="mor_calcTotal()"/></div>
+      <div class="field"><label>Fecha de inicio</label><input type="date" id="mm-mor-inicio"/></div>
+      <div class="field"><label>Próx. vencimiento</label><input type="date" id="mm-mor-venc"/></div>
+      <div class="field full" style="background:#f9fafb;border-radius:8px;padding:12px;">
+        <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">Resumen</div>
+        <div style="display:flex;gap:24px;font-size:13px;">
+          <span>Total deuda: <strong id="mm-mor-res-total" style="color:#6c7ae0;">$0</strong></span>
+          <span>Pendiente: <strong id="mm-mor-res-pend" style="color:#dc2626;">$0</strong></span>
+        </div>
+      </div>
+      <div class="field full"><label>Nota</label><textarea id="mm-mor-nota" style="min-height:52px;" placeholder="Observaciones..."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-moratoria')">Cancelar</button>
+      <button class="btn" onclick="saveMoratoria()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pagar cuota de moratoria -->
+<div class="modal-bg" id="m-mor-pago">
+  <div class="modal">
+    <h3>Pagar cuota</h3>
+    <input type="hidden" id="mpago-mor-id"/>
+    <div style="background:#f9fafb;border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+      <div style="font-size:12px;color:#6b7280;">Moratoria</div>
+      <div style="font-size:15px;font-weight:700;" id="mpago-mor-desc">—</div>
+      <div style="font-size:13px;color:#6b7280;margin-top:4px;" id="mpago-mor-info">—</div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Monto cuota $</label><input type="number" id="mpago-monto" min="0" placeholder="0"/></div>
+      <div class="field"><label>Caja de egreso</label>
+        <select id="mpago-caja">
+          <option>EFECTIVO ADMINISTRACIÓN</option>
+          <option>BANCO SRL</option><option>BANCO POLY</option>
+          <option>MERCADO PAGO</option>
+          <option>LOCAL LLAVALLOL</option><option>LOCAL MONTE GRANDE</option>
+        </select>
+      </div>
+      <div class="field"><label>Fecha de pago</label><input type="date" id="mpago-fecha"/></div>
+      <div class="field"><label>Referencia</label><input id="mpago-ref" placeholder="Nº comprobante AFIP..."/></div>
+    </div>
+    <div style="font-size:12px;color:#9ca3af;margin-top:4px;">Se registrará un egreso automático en la caja seleccionada.</div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-mor-pago')">Cancelar</button>
+      <button class="btn btn-green" onclick="pagarCuota()">Confirmar pago</button>
+    </div>
+  </div>
+</div>
+
 <!-- Producto -->
 <div class="modal-bg" id="m-prod">
   <div class="modal">
@@ -988,7 +1093,7 @@ var SB_URL = 'https://qaaausnrgokkycxucdrp.supabase.co';
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3ODI1NjYsImV4cCI6MjA5NDM1ODU2Nn0.1Rus0piCnrCXnlL5vMsZCr-3_S_GHAqw7MadQ1kJ9ww';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[];
 var editCliId=null, editProvId=null, editPresId=null;
 var mvItems=[], presItems=[];
 var currentLocal='llavallol'; // local activo en el módulo POS
@@ -1043,11 +1148,12 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs()]);
-  renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFin();
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias()]);
+  renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFin(); renderMoratorias();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias();
 }
 async function loadCategorias(){ var {data}=await sb.from('categorias').select('*').order('nombre'); CATEGORIAS=data||[]; }
+async function loadMoratorias(){ var {data}=await sb.from('moratorias').select('*').order('prox_vencimiento'); MORATORIAS=data||[]; }
 async function loadClientes(){ var {data}=await sb.from('clientes').select('*').order('nombre'); CLIENTES=data||[]; }
 async function loadProveedores(){ var {data}=await sb.from('proveedores').select('*').order('nombre'); PROVEEDORES=data||[]; }
 async function loadProductos(){ var {data}=await sb.from('productos').select('*,categorias(nombre)').order('nombre'); PRODUCTOS=data||[]; }
@@ -1764,6 +1870,163 @@ async function generarReporte(){
 }
 
 // ════════════════════════════════════
+// MORATORIAS
+// ════════════════════════════════════
+var editMorId=null;
+
+function morPendiente(m){ return Math.max(m.cuotas_total-m.cuotas_pagadas,0)*Number(m.monto_cuota); }
+
+function renderMoratorias(){
+  var filtro=document.getElementById('mor-filtro')?document.getElementById('mor-filtro').value:'';
+  var activas=MORATORIAS.filter(function(m){return m.estado==='activa';});
+  var enMora=MORATORIAS.filter(function(m){return m.estado==='en_mora';});
+  var cuotasPend=MORATORIAS.filter(function(m){return m.estado!=='finalizada';})
+    .reduce(function(s,m){return s+Math.max(m.cuotas_total-m.cuotas_pagadas,0);},0);
+  var totalPend=MORATORIAS.filter(function(m){return m.estado!=='finalizada';})
+    .reduce(function(s,m){return s+morPendiente(m);},0);
+
+  var sa=document.getElementById('mor-s-activas');if(sa)sa.textContent=activas.length;
+  var sm=document.getElementById('mor-s-mora');if(sm)sm.textContent=enMora.length;
+  var sc=document.getElementById('mor-s-cuotas');if(sc)sc.textContent=cuotasPend;
+  var st=document.getElementById('mor-s-total');if(st)st.textContent=$p(totalPend);
+
+  var list=filtro?MORATORIAS.filter(function(m){return m.estado===filtro;}):MORATORIAS;
+  var tb=document.getElementById('mor-tbody');if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><div class="ei">📋</div><p>Sin moratorias registradas</p></div></td></tr>';return;}
+
+  tb.innerHTML=list.map(function(m){
+    var pend=Math.max(m.cuotas_total-m.cuotas_pagadas,0);
+    var pct=m.cuotas_total>0?Math.round(m.cuotas_pagadas/m.cuotas_total*100):0;
+    var bClass=m.estado==='activa'?'b-green':m.estado==='en_mora'?'b-red':'b-gray';
+    var vencColor='#374151';
+    if(m.prox_vencimiento){
+      var dias=Math.ceil((new Date(m.prox_vencimiento)-new Date())/86400000);
+      vencColor=dias<0?'#dc2626':dias<=7?'#ca8a04':'#374151';
+    }
+    return'<tr>'+
+      '<td><strong>'+esc(m.nombre)+'</strong>'+(m.nota?'<br><span style="font-size:11px;color:#9ca3af;">'+esc(m.nota)+'</span>':'')+'</td>'+
+      '<td style="font-size:12px;">'+(m.acreedor||'—')+'</td>'+
+      '<td>'+
+        '<div style="font-size:12px;text-align:center;margin-bottom:3px;">'+m.cuotas_pagadas+' / '+m.cuotas_total+'</div>'+
+        '<div style="background:#e5e7eb;border-radius:4px;height:6px;overflow:hidden;width:100px;margin:0 auto;">'+
+          '<div style="background:#6c7ae0;height:100%;width:'+pct+'%;"></div>'+
+        '</div>'+
+      '</td>'+
+      '<td style="text-align:right;font-weight:600;">'+$p(m.monto_cuota)+'</td>'+
+      '<td style="text-align:right;font-weight:800;color:'+(pend>0?'#dc2626':'#16a34a')+';">'+$p(morPendiente(m))+'</td>'+
+      '<td style="color:'+vencColor+';font-size:12px;">'+(m.prox_vencimiento||'—')+'</td>'+
+      '<td><span class="badge '+bClass+'">'+m.estado.replace('_',' ')+'</span></td>'+
+      '<td><div class="actions">'+
+        (m.estado!=='finalizada'?'<button class="btn btn-sm btn-green" onclick="abrirPagoCuota('+m.id+')">Pagar cuota</button>':'')+
+        '<button class="btn btn-sm btn-gray btn-icon" onclick="openMorModal('+m.id+')">✏️</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function mor_calcTotal(){
+  var cuota=parseFloat(document.getElementById('mm-mor-cuota').value)||0;
+  var total=parseInt(document.getElementById('mm-mor-total').value)||0;
+  var pag=parseInt(document.getElementById('mm-mor-pagadas').value)||0;
+  var pend=Math.max(total-pag,0);
+  document.getElementById('mm-mor-res-total').textContent=$p(cuota*total);
+  document.getElementById('mm-mor-res-pend').textContent=$p(cuota*pend);
+}
+
+function openMorModal(id){
+  editMorId=id||null;
+  document.getElementById('m-mor-title').textContent=id?'Editar moratoria':'Nueva moratoria';
+  var m=id?MORATORIAS.find(function(x){return x.id===id;})||{}:{};
+  document.getElementById('mm-mor-nombre').value=m.nombre||'';
+  document.getElementById('mm-mor-acreedor').value=m.acreedor||'';
+  document.getElementById('mm-mor-estado').value=m.estado||'activa';
+  document.getElementById('mm-mor-cuota').value=m.monto_cuota||0;
+  document.getElementById('mm-mor-total').value=m.cuotas_total||1;
+  document.getElementById('mm-mor-pagadas').value=m.cuotas_pagadas||0;
+  document.getElementById('mm-mor-inicio').value=m.fecha_inicio||'';
+  document.getElementById('mm-mor-venc').value=m.prox_vencimiento||'';
+  document.getElementById('mm-mor-nota').value=m.nota||'';
+  mor_calcTotal();
+  openM('m-moratoria');
+}
+
+async function saveMoratoria(){
+  var n=document.getElementById('mm-mor-nombre').value.trim();
+  if(!n){toast('El nombre es obligatorio','err');return;}
+  var d={
+    nombre:n,
+    acreedor:document.getElementById('mm-mor-acreedor').value.trim(),
+    estado:document.getElementById('mm-mor-estado').value,
+    monto_cuota:parseFloat(document.getElementById('mm-mor-cuota').value)||0,
+    cuotas_total:parseInt(document.getElementById('mm-mor-total').value)||1,
+    cuotas_pagadas:parseInt(document.getElementById('mm-mor-pagadas').value)||0,
+    fecha_inicio:document.getElementById('mm-mor-inicio').value||null,
+    prox_vencimiento:document.getElementById('mm-mor-venc').value||null,
+    nota:document.getElementById('mm-mor-nota').value.trim()||null,
+    updated_at:new Date().toISOString()
+  };
+  if(d.cuotas_pagadas>=d.cuotas_total)d.estado='finalizada';
+  var r=editMorId?await sb.from('moratorias').update(d).eq('id',editMorId):await sb.from('moratorias').insert(d);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast(editMorId?'Moratoria actualizada':'Moratoria creada');
+  closeM('m-moratoria');await loadMoratorias();renderMoratorias();renderPanelGeneral();
+}
+
+function abrirPagoCuota(id){
+  var m=MORATORIAS.find(function(x){return x.id===id;});if(!m)return;
+  document.getElementById('mpago-mor-id').value=id;
+  document.getElementById('mpago-mor-desc').textContent=m.nombre;
+  var pend=Math.max(m.cuotas_total-m.cuotas_pagadas,0);
+  document.getElementById('mpago-mor-info').textContent=(m.acreedor||'')+' · Cuota '+(m.cuotas_pagadas+1)+' de '+m.cuotas_total+' · '+$p(m.monto_cuota)+' c/u · Pendiente: '+$p(morPendiente(m));
+  document.getElementById('mpago-monto').value=m.monto_cuota||0;
+  document.getElementById('mpago-fecha').value=today();
+  document.getElementById('mpago-ref').value='';
+  openM('m-mor-pago');
+}
+
+async function pagarCuota(){
+  var id=parseInt(document.getElementById('mpago-mor-id').value);
+  var m=MORATORIAS.find(function(x){return x.id===id;});if(!m)return;
+  var monto=parseFloat(document.getElementById('mpago-monto').value)||0;
+  var caja=document.getElementById('mpago-caja').value;
+  var fecha=document.getElementById('mpago-fecha').value;
+  var ref=document.getElementById('mpago-ref').value.trim();
+  if(!monto||!fecha){toast('Completá monto y fecha','err');return;}
+
+  var nuevasPagadas=m.cuotas_pagadas+1;
+  var nuevoEstado=nuevasPagadas>=m.cuotas_total?'finalizada':m.estado;
+
+  // Avanzar prox_vencimiento un mes
+  var proxVenc=null;
+  if(m.prox_vencimiento&&nuevoEstado!=='finalizada'){
+    var d=new Date(m.prox_vencimiento+'T12:00:00');
+    d.setMonth(d.getMonth()+1);
+    proxVenc=d.toISOString().split('T')[0];
+  }
+
+  var rMor=await sb.from('moratorias').update({
+    cuotas_pagadas:nuevasPagadas,estado:nuevoEstado,
+    prox_vencimiento:proxVenc,updated_at:new Date().toISOString()
+  }).eq('id',id);
+  if(rMor.error){toast('Error al actualizar moratoria','err');return;}
+
+  // Crear movimiento automático
+  var dMov={
+    caja,fecha,tipo:'egreso',concepto:'MORATORIAS/PLANES',
+    detalle:m.nombre+(m.acreedor?' – '+m.acreedor:''),
+    ingreso:0,egreso:monto,referencia:ref||null,
+    anio:new Date(fecha+'T12:00:00').getFullYear(),
+    mes:MESES_ARR[new Date(fecha+'T12:00:00').getMonth()],sem:0
+  };
+  await sb.from('movimientos').insert(dMov);
+
+  toast('Cuota registrada'+(nuevoEstado==='finalizada'?' — ¡Moratoria finalizada!':''));
+  closeM('m-mor-pago');
+  await Promise.all([loadMoratorias(),loadMovs()]);
+  renderMoratorias();renderFin();renderPanelGeneral();
+}
+
+// ════════════════════════════════════
 // PRODUCTOS (sección general)
 // ════════════════════════════════════
 var editProdId=null;
@@ -2012,6 +2275,15 @@ function renderPanelGeneral(){
   el('pg-stock-val').textContent=$p(stockVal);
   el('pg-total-activos').textContent=$p(totalActivos);
   el('pg-echeq-pas').textContent=$p(echeqPasivo);
+  // Moratorias
+  var morTotal=MORATORIAS.filter(function(m){return m.estado!=='finalizada';})
+    .reduce(function(s,m){return s+morPendiente(m);},0);
+  var morCuotas=MORATORIAS.filter(function(m){return m.estado!=='finalizada';})
+    .reduce(function(s,m){return s+Math.max(m.cuotas_total-m.cuotas_pagadas,0);},0);
+  var totalPasivos=echeqPasivo+morTotal;
+  if(el('pg-moratorias'))el('pg-moratorias').textContent=$p(morTotal);
+  if(el('pg-moratorias-sub'))el('pg-moratorias-sub').textContent=morCuotas>0?(morCuotas+' cuota'+(morCuotas!==1?'s':'')+' pendiente'+(morCuotas!==1?'s':'')):'Sin cuotas pendientes';
+  if(el('pg-total-pasivos'))el('pg-total-pasivos').textContent=$p(totalPasivos);
   var anio=parseInt(document.getElementById('fin-anio').value);
   var mes=document.getElementById('fin-mes').value;
   var periodoLabel=mes?(mes+' '+anio):('Todo '+anio);
