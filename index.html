@@ -789,13 +789,16 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="panel">
         <div class="panel-hdr">
           <h4>🧾 Cheques y ECHEQ en cartera</h4>
-          <span style="font-size:12px;color:#9ca3af;" id="chq-periodo-lbl"></span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="font-size:12px;color:#9ca3af;" id="chq-periodo-lbl"></span>
+            <button class="btn" onclick="openNuevoChqRecibido()">+ Registrar cheque</button>
+          </div>
         </div>
         <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;" id="chq-stats"></div>
         <div class="tbl"><table>
           <thead><tr>
-            <th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Detalle</th>
-            <th style="text-align:right">Monto</th><th>N° FAC</th><th>Ref. / N° cheque</th><th>Banco</th><th>Fecha cobro</th><th>Días</th><th>Estado</th>
+            <th>Fecha</th><th>Concepto</th><th>Detalle</th>
+            <th style="text-align:right">Monto</th><th>N° FAC</th><th>N° cheque / ref.</th><th>Banco</th><th>Fecha cobro</th><th>Días</th><th>Estado</th><th></th>
           </tr></thead>
           <tbody id="chq-tbody"></tbody>
         </table></div>
@@ -3247,40 +3250,36 @@ function renderChqCartera(){
   if(!tb)return;
   if(!movs.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><p>Sin movimientos en ECHEQ/CHEQUE para el período</p></div></td></tr>';return;}
   var sorted=movs.slice().sort(function(a,b){return(a.fecha_vencimiento||a.fecha)<(b.fecha_vencimiento||b.fecha)?-1:1;});
-  var estadoColors={pendiente:'b-yellow',depositado:'b-green',vendido:'b-purple',endosado:'b-blue',rechazado:'b-red'};
   tb.innerHTML=sorted.map(function(m){
     var esIng=m.tipo==='ingreso';
     var monto=esIng?Number(m.ingreso):Number(m.egreso);
     var vto=m.fecha_vencimiento||'';
     var vencido=vto&&vto<hoy;
     var pronto=vto&&!vencido&&vto<=new Date(Date.now()+7*86400000).toISOString().split('T')[0];
-    var dias='';
-    var diasTxt='—';
-    var diasColor='#9ca3af';
+    var dias='';var diasTxt='—';var diasColor='#9ca3af';
     if(vto){
       dias=Math.round((new Date(vto+'T12:00:00')-new Date(hoy+'T12:00:00'))/86400000);
       diasTxt=dias<0?('Venc. '+Math.abs(dias)+'d'):(dias===0?'Hoy':('+'+dias+'d'));
       diasColor=dias<0?'#dc2626':(dias<=7?'#d97706':'#374151');
     }
-    var estadoVal=m.estado_cheque;
-    var estadoBadge=estadoVal
-      ?'<span class="badge '+(estadoColors[estadoVal]||'b-gray')+'">'+estadoVal.charAt(0).toUpperCase()+estadoVal.slice(1)+'</span>'
-      :(vencido?'<span class="badge b-red">Vencido</span>'
-        :pronto?'<span class="badge b-yellow">Próximo</span>'
-        :esIng?'<span class="badge b-purple">En cartera</span>'
-        :'<span class="badge b-blue">Emitido</span>');
-    return '<tr>'+
-      '<td>'+m.fecha+'</td>'+
-      '<td><span class="badge '+(esIng?'b-green':'b-red')+'">'+(esIng?'A cobrar':'A pagar')+'</span></td>'+
+    var estadoOpts=['pendiente','depositado','vendido','endosado','rechazado'];
+    var estadoSelect='<select onchange="quickEstadoChq('+m.id+',this.value)" style="font-size:11px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;background:#fff;cursor:pointer;max-width:110px;">'+
+      '<option value=""'+((!m.estado_cheque)?' selected':'')+'>Sin estado</option>'+
+      estadoOpts.map(function(s){return '<option value="'+s+'"'+(m.estado_cheque===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')+
+    '</select>';
+    var rowBg=vencido?'background:#fff5f5;':pronto?'background:#fffbeb;':'';
+    return '<tr style="'+rowBg+'">'+
+      '<td style="font-size:12px;">'+m.fecha+'</td>'+
       '<td>'+(m.concepto||'—')+'</td>'+
-      '<td>'+(m.detalle||'—')+'</td>'+
+      '<td style="font-weight:600;">'+(m.detalle||'—')+'</td>'+
       '<td style="text-align:right;font-weight:700;color:'+(esIng?'#16a34a':'#dc2626')+';">'+$p(monto)+'</td>'+
       '<td style="font-size:11px;">'+(m.nro_factura||'—')+'</td>'+
-      '<td style="font-size:11px;color:#9ca3af;">'+(m.referencia||'—')+'</td>'+
+      '<td style="font-size:11px;color:#6b7280;">'+(m.referencia||'—')+'</td>'+
       '<td style="font-size:12px;">'+(m.banco_cheque||'—')+'</td>'+
       '<td style="font-size:12px;font-weight:600;color:'+(vencido?'#dc2626':pronto?'#d97706':'#374151')+'">'+(vto||'—')+'</td>'+
       '<td style="font-size:12px;font-weight:600;color:'+diasColor+';">'+diasTxt+'</td>'+
-      '<td>'+estadoBadge+'</td>'+
+      '<td>'+estadoSelect+'</td>'+
+      '<td><button class="btn btn-gray btn-sm" onclick="openMovModal('+m.id+')">✏️</button></td>'+
     '</tr>';
   }).join('');
 }
@@ -3447,6 +3446,22 @@ async function deleteChqPropio(id){
   toast('Cheque eliminado','info');
   await loadChequesPropios();
   renderChqPropios();
+}
+
+async function quickEstadoChq(id, estado){
+  var r=await sb.from('movimientos').update({estado_cheque:estado||null,updated_at:new Date().toISOString()}).eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  var m=MOVS.find(function(x){return x.id===id;});
+  if(m)m.estado_cheque=estado||null;
+  toast('Estado actualizado');
+}
+
+function openNuevoChqRecibido(){
+  openMovModal(null);
+  document.getElementById('mm-caja').value='ECHEQ/CHEQUE';
+  document.getElementById('mm-tipo').value='ingreso';
+  document.getElementById('mm-concepto').value='VENTA MAYORISTA';
+  mm_onTipo();mm_onCaja();mm_onConcepto();
 }
 
 // ── CHEQUES / ECHEQ (legacy, mantenido para compatibilidad) ──
