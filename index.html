@@ -489,30 +489,56 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="stat"><div class="stat-icon" style="background:#fef3c7;">💳</div><h3 id="mor-s-cuotas">0</h3><p>Cuotas pendientes</p></div>
       <div class="stat"><div class="stat-icon" style="background:#ede9fe;">💰</div><h3 id="mor-s-total">$0</h3><p>Total a pagar</p></div>
     </div>
-    <div class="panel">
-      <div class="panel-hdr">
-        <div class="search-row">
-          <select id="mor-filtro" onchange="renderMoratorias()" style="width:170px;">
-            <option value="">Todas</option>
-            <option value="activa">Activas</option>
-            <option value="en_mora">En mora</option>
-            <option value="finalizada">Finalizadas</option>
-          </select>
-        </div>
-        <button class="btn" onclick="openMorModal()">+ Nueva moratoria</button>
-      </div>
-      <div class="tbl"><table>
-        <thead><tr>
-          <th>Nombre</th><th>Acreedor</th>
-          <th style="text-align:center">Cuotas</th>
-          <th style="text-align:right">Monto cuota</th>
-          <th style="text-align:right">Pendiente</th>
-          <th>Próx. vencimiento</th>
-          <th>Estado</th><th></th>
-        </tr></thead>
-        <tbody id="mor-tbody"></tbody>
-      </table></div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="setMorTab('lista',this)">📋 Lista</div>
+      <div class="tab" onclick="setMorTab('resumen',this)">📅 Resumen anual</div>
     </div>
+
+    <!-- Tab: Lista -->
+    <div id="mor-tab-lista">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="search-row">
+            <select id="mor-filtro" onchange="renderMoratorias()" style="width:170px;">
+              <option value="">Todas</option>
+              <option value="activa">Activas</option>
+              <option value="en_mora">En mora</option>
+              <option value="finalizada">Finalizadas</option>
+            </select>
+          </div>
+          <button class="btn" onclick="openMorModal()">+ Nueva moratoria</button>
+        </div>
+        <div class="tbl"><table>
+          <thead><tr>
+            <th>Nombre</th><th>Acreedor</th>
+            <th style="text-align:center">Cuotas</th>
+            <th style="text-align:right">Monto cuota</th>
+            <th style="text-align:right">Pendiente</th>
+            <th>Próx. vencimiento</th>
+            <th>Estado</th><th></th>
+          </tr></thead>
+          <tbody id="mor-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- Tab: Resumen anual -->
+    <div id="mor-tab-resumen" style="display:none;">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h4>Calendario de pagos</h4>
+            <select id="mor-res-anio" onchange="renderMorResumen()" style="width:90px;"></select>
+          </div>
+          <div id="mor-res-totales" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+        </div>
+        <div class="tbl" style="overflow-x:auto;">
+          <table id="mor-res-table"></table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ════════════ PRODUCCIÓN (estructura base) ════════════ -->
@@ -1883,6 +1909,114 @@ async function generarReporte(){
 var editMorId=null;
 
 function morPendiente(m){ return Math.max(m.cuotas_total-m.cuotas_pagadas,0)*Number(m.monto_cuota); }
+
+function setMorTab(tab,el){
+  document.getElementById('mor-tab-lista').style.display=tab==='lista'?'block':'none';
+  document.getElementById('mor-tab-resumen').style.display=tab==='resumen'?'block':'none';
+  document.querySelectorAll('#sec-moratorias .tabs .tab').forEach(function(t){t.classList.remove('active');});
+  if(el)el.classList.add('active');
+  if(tab==='resumen')renderMorResumen();
+}
+
+function renderMorResumen(){
+  // Poblar selector de años si está vacío
+  var sel=document.getElementById('mor-res-anio');
+  if(sel&&!sel.options.length){
+    var now=new Date().getFullYear();
+    for(var y=now;y<=now+3;y++){
+      var o=document.createElement('option');o.value=y;o.textContent=y;
+      if(y===now)o.selected=true;
+      sel.appendChild(o);
+    }
+  }
+  var anio=parseInt(sel?sel.value:new Date().getFullYear());
+  var MESES_SHORT=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  var activas=MORATORIAS.filter(function(m){return m.estado!=='finalizada';});
+
+  // Armar el calendario de cuotas para el año seleccionado
+  // schedule[morId][mesIndex] = monto acumulado en ese mes
+  var schedule={};
+  var monthTotals=new Array(12).fill(0);
+  var yearTotal=0;
+  var totalCuotas=0;
+
+  activas.forEach(function(m){
+    if(!m.prox_vencimiento)return;
+    schedule[m.id]={};
+    var cuotasRestantes=Math.max(m.cuotas_total-m.cuotas_pagadas,0);
+    var base=new Date(m.prox_vencimiento+'T12:00:00');
+    for(var i=0;i<cuotasRestantes;i++){
+      var d=new Date(base.getFullYear(),base.getMonth()+i,base.getDate());
+      if(d.getFullYear()===anio){
+        var mes=d.getMonth();
+        schedule[m.id][mes]=(schedule[m.id][mes]||0)+Number(m.monto_cuota);
+        monthTotals[mes]+=Number(m.monto_cuota);
+        yearTotal+=Number(m.monto_cuota);
+        totalCuotas++;
+      }
+    }
+  });
+
+  // Totales header
+  var totEl=document.getElementById('mor-res-totales');
+  if(totEl)totEl.innerHTML=
+    '<span style="background:#ffedd5;color:#c2410c;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:700;">'+$p(yearTotal)+' en '+anio+'</span>'+
+    '<span style="background:#fef3c7;color:#92400e;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:700;">'+totalCuotas+' cuota'+(totalCuotas!==1?'s':'')+' a pagar</span>';
+
+  var table=document.getElementById('mor-res-table');
+  if(!table)return;
+
+  // Filtrar solo moratorias que tienen algún pago en el año
+  var morConPago=activas.filter(function(m){return schedule[m.id]&&Object.keys(schedule[m.id]).length>0;});
+
+  if(!morConPago.length){
+    table.innerHTML='<tbody><tr><td><div class="empty"><div class="ei">📅</div><p>No hay pagos programados para '+anio+'</p></div></td></tr></tbody>';
+    return;
+  }
+
+  // Sólo mostrar los meses que tienen algún pago
+  var mesesActivos=MESES_SHORT.map(function(_,i){return monthTotals[i]>0;});
+  var colIdx=MESES_SHORT.map(function(_,i){return i;}).filter(function(i){return mesesActivos[i];});
+
+  // THEAD
+  var thead='<thead><tr>'+
+    '<th style="min-width:160px;">Moratoria</th>'+
+    '<th style="min-width:90px;">Acreedor</th>'+
+    colIdx.map(function(i){return'<th style="text-align:right;min-width:80px;">'+MESES_SHORT[i]+'</th>';}).join('')+
+    '<th style="text-align:right;min-width:100px;">Total año</th>'+
+  '</tr></thead>';
+
+  // TBODY — una fila por moratoria
+  var tbody='<tbody>';
+  morConPago.forEach(function(m){
+    var rowTotal=colIdx.reduce(function(s,i){return s+(schedule[m.id][i]||0);},0);
+    var bClass=m.estado==='activa'?'b-green':m.estado==='en_mora'?'b-red':'b-gray';
+    tbody+='<tr>'+
+      '<td>'+
+        '<div style="font-weight:700;font-size:13px;">'+esc(m.nombre)+'</div>'+
+        '<span class="badge '+bClass+'" style="margin-top:3px;">'+m.estado.replace('_',' ')+'</span>'+
+      '</td>'+
+      '<td style="font-size:12px;color:#6b7280;">'+(m.acreedor||'—')+'</td>'+
+      colIdx.map(function(i){
+        var v=schedule[m.id][i]||0;
+        return'<td style="text-align:right;font-weight:'+(v>0?'700':'400')+';color:'+(v>0?'#dc2626':'#d1d5db')+';">'+(v>0?$p(v):'—')+'</td>';
+      }).join('')+
+      '<td style="text-align:right;font-weight:800;color:#7c3aed;">'+$p(rowTotal)+'</td>'+
+    '</tr>';
+  });
+  tbody+='</tbody>';
+
+  // TFOOT — totales por mes
+  var tfoot='<tfoot><tr style="border-top:2px solid #e5e7eb;background:#fef2f2;">'+
+    '<td colspan="2" style="font-weight:800;font-size:11px;color:#991b1b;text-transform:uppercase;letter-spacing:.5px;">Total mes</td>'+
+    colIdx.map(function(i){
+      return'<td style="text-align:right;font-weight:800;color:#dc2626;">'+$p(monthTotals[i])+'</td>';
+    }).join('')+
+    '<td style="text-align:right;font-weight:800;color:#991b1b;">'+$p(yearTotal)+'</td>'+
+  '</tr></tfoot>';
+
+  table.innerHTML=thead+tbody+tfoot;
+}
 
 function renderMoratorias(){
   var filtro=document.getElementById('mor-filtro')?document.getElementById('mor-filtro').value:'';
