@@ -944,6 +944,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <!-- Tabs -->
     <div class="tabs">
       <div class="tab active" onclick="setFinTab('movimientos',this)">📋 Movimientos</div>
+      <div class="tab" onclick="setFinTab('resumen',this)">📊 Resumen de gastos</div>
       <div class="tab" onclick="setFinTab('transferencia',this)">🔄 Transferencia entre cajas</div>
     </div>
 
@@ -968,7 +969,19 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               <option value="egreso">Solo egresos</option>
               <option value="transferencia">Transferencias</option>
             </select>
-            <input id="fin-q" placeholder="Buscar..." oninput="renderFin()" style="min-width:150px;"/>
+            <select id="fin-concepto" onchange="renderFin()" style="width:170px;">
+              <option value="">Todos los conceptos</option>
+              <option>SUELDOS/JORNALES</option><option>COSTUREROS</option>
+              <option>MATERIALES/TELAS</option><option>PROVEEDORES</option>
+              <option>GASTOS BANCARIOS</option><option>IMPUESTOS/AFIP</option>
+              <option>ALQUILER</option><option>SERVICIOS/EXPENSAS</option>
+              <option>FLETES/ENVÍOS</option><option>MANTENIMIENTO</option>
+              <option>MORATORIAS/PLANES</option><option>GASTOS VARIOS</option>
+              <option>VENTA MAYORISTA</option><option>VENTA MINORISTA</option>
+              <option>COBRO CLIENTE</option><option>CHEQUES COBRADOS</option>
+              <option>OTROS INGRESOS</option><option>OTROS</option>
+            </select>
+            <input id="fin-q" placeholder="Buscar detalle..." oninput="renderFin()" style="min-width:140px;"/>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-outline btn-sm" onclick="exportMovsCSV()" title="Exportar movimientos del período a CSV">↓ Exportar</button>
@@ -985,6 +998,18 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           </tr></thead>
           <tbody id="fin-tbody"></tbody>
         </table></div>
+      </div>
+    </div>
+
+    <!-- Tab: Resumen de gastos -->
+    <div id="ft-resumen" style="display:none;">
+      <div class="panel">
+        <div class="panel-hdr">
+          <h4>📊 Egresos por concepto</h4>
+          <span style="font-size:12px;color:#9ca3af;">Todas las cajas · año seleccionado</span>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;" id="fin-res-stats"></div>
+        <div id="fin-res-cont"></div>
       </div>
     </div>
 
@@ -1019,7 +1044,24 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           </div>
         </div>
         <div class="panel">
-          <div class="panel-hdr"><h4>Últimas transferencias</h4></div>
+          <div class="panel-hdr">
+            <h4>Últimas transferencias</h4>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <select id="tr-fil-caja" onchange="renderTransfHistorial()" style="width:190px;">
+              <option value="">Todas las cajas</option>
+              <option>EFECTIVO ADMINISTRACIÓN</option>
+              <option>BANCO SRL</option><option>BANCO POLY</option>
+              <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
+              <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
+            </select>
+            <select id="tr-fil-mes" onchange="renderTransfHistorial()" style="width:140px;">
+              <option value="">Todos los meses</option>
+              <option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option>
+              <option>MAYO</option><option>JUNIO</option><option>JULIO</option><option>AGOSTO</option>
+              <option>SEPTIEMBRE</option><option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option>
+            </select>
+          </div>
           <div id="tr-historial"></div>
         </div>
       </div>
@@ -2918,10 +2960,12 @@ function filtrarPorCaja(caja){
 
 function setFinTab(tab,el){
   document.getElementById('ft-movimientos').style.display=tab==='movimientos'?'block':'none';
+  document.getElementById('ft-resumen').style.display=tab==='resumen'?'block':'none';
   document.getElementById('ft-transferencia').style.display=tab==='transferencia'?'block':'none';
   document.querySelectorAll('#sec-finanzas .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
   if(tab==='transferencia')renderTransfHistorial();
+  if(tab==='resumen')renderFinResumen();
 }
 
 function renderFin(){
@@ -2930,12 +2974,14 @@ function renderFin(){
   var caja=document.getElementById('fin-caja').value;
   var tipo=document.getElementById('fin-tipo').value;
   var q=(document.getElementById('fin-q').value||'').toLowerCase();
+  var concepto=document.getElementById('fin-concepto')?document.getElementById('fin-concepto').value:'';
   var list=MOVS.filter(function(m){
     return m.anio===anio
       &&(!mes||m.mes===mes)
       &&(!caja||m.caja===caja)
       &&(!tipo||m.tipo===tipo)
-      &&(!q||(m.concepto||'').toLowerCase().includes(q)||(m.detalle||'').toLowerCase().includes(q)||(m.referencia||'').toLowerCase().includes(q));
+      &&(!concepto||m.concepto===concepto)
+      &&(!q||(m.detalle||'').toLowerCase().includes(q)||(m.referencia||'').toLowerCase().includes(q)||(m.concepto||'').toLowerCase().includes(q));
   });
   var ing=list.reduce(function(s,m){return s+Number(m.ingreso);},0);
   var egr=list.reduce(function(s,m){return s+Number(m.egreso);},0);
@@ -4311,9 +4357,17 @@ async function saveTransferencia(){
 }
 
 function renderTransfHistorial(){
-  var transfMovs=MOVS.filter(function(m){return m.tipo==='transferencia'&&Number(m.ingreso)>0;}).slice(0,15);
+  var filCaja=document.getElementById('tr-fil-caja')?document.getElementById('tr-fil-caja').value:'';
+  var filMes=document.getElementById('tr-fil-mes')?document.getElementById('tr-fil-mes').value:'';
+  var anio=parseInt(document.getElementById('fin-anio').value)||new Date().getFullYear();
+  var transfMovs=MOVS.filter(function(m){
+    return m.tipo==='transferencia'&&Number(m.ingreso)>0
+      &&(!filCaja||m.caja===filCaja)
+      &&(!filMes||m.mes===filMes)
+      &&m.anio===anio;
+  }).slice(0,50);
   var el=document.getElementById('tr-historial');
-  if(!transfMovs.length){el.innerHTML='<div class="empty"><p>Sin transferencias registradas</p></div>';return;}
+  if(!transfMovs.length){el.innerHTML='<div class="empty"><p>Sin transferencias para el filtro seleccionado</p></div>';return;}
   el.innerHTML='<div class="tbl"><table><thead><tr><th>Fecha</th><th>Hacia</th><th>Monto</th><th>Detalle</th></tr></thead><tbody>'+
     transfMovs.map(function(m){
       return '<tr><td>'+m.fecha+'</td>'+
@@ -4321,6 +4375,113 @@ function renderTransfHistorial(){
         '<td style="font-weight:700;color:#16a34a;">'+$p(m.ingreso)+'</td>'+
         '<td style="font-size:12px;color:#6b7280;">'+(m.detalle||'—')+'</td></tr>';
     }).join('')+'</tbody></table></div>';
+}
+
+// ── RESUMEN DE GASTOS ──
+function renderFinResumen(){
+  var anio=parseInt(document.getElementById('fin-anio').value)||new Date().getFullYear();
+  var mes=document.getElementById('fin-mes').value;
+  var CONCEPTOS_EGR=['SUELDOS/JORNALES','COSTUREROS','MATERIALES/TELAS','PROVEEDORES',
+    'GASTOS BANCARIOS','IMPUESTOS/AFIP','ALQUILER','SERVICIOS/EXPENSAS',
+    'FLETES/ENVÍOS','MANTENIMIENTO','MORATORIAS/PLANES','GASTOS VARIOS','OTROS'];
+  var MESES_ORD=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  var egrs=MOVS.filter(function(m){return m.tipo==='egreso'&&m.anio===anio&&(!mes||m.mes===mes)&&m.concepto!=='TRANSFERENCIA';});
+  var totalAnio=egrs.reduce(function(s,m){return s+Number(m.egreso);},0);
+  // Stats cards
+  var statsEl=document.getElementById('fin-res-stats');
+  // Concepto que más pesa
+  var byConc={};
+  egrs.forEach(function(m){var k=m.concepto||'OTROS';byConc[k]=(byConc[k]||0)+Number(m.egreso);});
+  var topConc=Object.keys(byConc).sort(function(a,b){return byConc[b]-byConc[a]})[0]||'—';
+  // Mes que más se gastó
+  var byMes={};
+  egrs.forEach(function(m){var k=m.mes||'';byMes[k]=(byMes[k]||0)+Number(m.egreso);});
+  var topMes=Object.keys(byMes).sort(function(a,b){return byMes[b]-byMes[a]})[0]||'—';
+  if(statsEl)statsEl.innerHTML=
+    '<div style="background:#fee2e2;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#991b1b;letter-spacing:.5px;">TOTAL EGRESOS</div>'+
+      '<div style="font-size:22px;font-weight:900;color:#991b1b;margin-top:4px;">'+$p(totalAnio)+'</div>'+
+      '<div style="font-size:11px;color:#b91c1c;margin-top:2px;">'+(mes||'Todo el año')+' '+anio+'</div></div>'+
+    '<div style="background:#ede9fe;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#6d28d9;letter-spacing:.5px;">MAYOR GASTO</div>'+
+      '<div style="font-size:16px;font-weight:800;color:#6d28d9;margin-top:4px;">'+topConc+'</div>'+
+      '<div style="font-size:11px;color:#7c3aed;margin-top:2px;">'+$p(byConc[topConc]||0)+' · '+(totalAnio?((byConc[topConc]/totalAnio*100).toFixed(1)):'0')+'%</div></div>'+
+    '<div style="background:#fef3c7;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#92400e;letter-spacing:.5px;">MES MÁS CARO</div>'+
+      '<div style="font-size:16px;font-weight:800;color:#92400e;margin-top:4px;">'+topMes+'</div>'+
+      '<div style="font-size:11px;color:#b45309;margin-top:2px;">'+$p(byMes[topMes]||0)+'</div></div>';
+  var cont=document.getElementById('fin-res-cont');
+  if(!cont)return;
+  if(!egrs.length){cont.innerHTML='<div class="empty"><p>Sin egresos para el período</p></div>';return;}
+  if(mes){
+    // Vista mensual: tabla concepto → monto + barra de porcentaje
+    var filas=CONCEPTOS_EGR.map(function(c){return{c:c,v:byConc[c]||0};}).filter(function(x){return x.v>0;});
+    filas.sort(function(a,b){return b.v-a.v;});
+    cont.innerHTML='<div class="tbl"><table>'+
+      '<thead><tr><th>Concepto</th><th style="text-align:right">Monto</th><th style="text-align:right">% del total</th><th style="width:200px;">Participación</th></tr></thead>'+
+      '<tbody>'+filas.map(function(r){
+        var pct=totalAnio?+(r.v/totalAnio*100).toFixed(1):0;
+        var color=pct>30?'#dc2626':pct>15?'#d97706':'#6c7ae0';
+        return '<tr>'+
+          '<td style="font-weight:600;">'+r.c+'</td>'+
+          '<td style="text-align:right;font-weight:700;color:#dc2626;">'+$p(r.v)+'</td>'+
+          '<td style="text-align:right;font-weight:700;color:'+color+';">'+pct+'%</td>'+
+          '<td><div style="height:10px;border-radius:5px;background:#f3f4f6;overflow:hidden;">'+
+            '<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:5px;"></div></div></td>'+
+        '</tr>';
+      }).join('')+
+      '<tr style="border-top:2px solid #e5e7eb;background:#f9fafb;font-weight:800;">'+
+        '<td>TOTAL</td><td style="text-align:right;color:#dc2626;">'+$p(totalAnio)+'</td><td style="text-align:right;">100%</td><td></td></tr>'+
+      '</tbody></table></div>';
+  } else {
+    // Vista anual: tabla concepto × mes
+    var mesesActivos=MESES_ORD.filter(function(m2){return byMes[m2];});
+    var concActivos=CONCEPTOS_EGR.filter(function(c){return byConc[c];});
+    // Mapa concepto+mes → monto
+    var mapa={};
+    egrs.forEach(function(m){var k=(m.concepto||'OTROS')+'|'+(m.mes||'');mapa[k]=(mapa[k]||0)+Number(m.egreso);});
+    cont.innerHTML='<div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;font-size:12px;">'+
+      '<thead><tr style="background:#f9fafb;">'+
+        '<th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;position:sticky;left:0;background:#f9fafb;">Concepto</th>'+
+        mesesActivos.map(function(m2){return '<th style="padding:8px 8px;text-align:right;border-bottom:2px solid #e5e7eb;white-space:nowrap;">'+m2.slice(0,3)+'</th>';}).join('')+
+        '<th style="padding:8px 12px;text-align:right;border-bottom:2px solid #e5e7eb;border-left:2px solid #e5e7eb;">TOTAL</th>'+
+        '<th style="padding:8px 12px;text-align:right;border-bottom:2px solid #e5e7eb;">%</th>'+
+      '</tr></thead><tbody>'+
+      concActivos.map(function(c){
+        var tot=byConc[c]||0;
+        var pct=totalAnio?+(tot/totalAnio*100).toFixed(1):0;
+        var color=pct>25?'#dc2626':pct>12?'#d97706':'#374151';
+        return '<tr style="border-bottom:1px solid #f3f4f6;">'+
+          '<td style="padding:7px 12px;font-weight:600;position:sticky;left:0;background:#fff;border-right:1px solid #e5e7eb;">'+c+'</td>'+
+          mesesActivos.map(function(m2){
+            var v=mapa[c+'|'+m2]||0;
+            return '<td style="padding:7px 8px;text-align:right;color:'+(v>0?'#dc2626':'#d1d5db')+';">'+(v>0?$p(v):'—')+'</td>';
+          }).join('')+
+          '<td style="padding:7px 12px;text-align:right;font-weight:800;color:'+color+';border-left:2px solid #e5e7eb;">'+$p(tot)+'</td>'+
+          '<td style="padding:7px 12px;text-align:right;font-weight:700;color:'+color+';">'+pct+'%</td>'+
+        '</tr>';
+      }).join('')+
+      '<tr style="border-top:2px solid #e5e7eb;background:#f9fafb;font-weight:800;">'+
+        '<td style="padding:8px 12px;position:sticky;left:0;background:#f9fafb;">TOTAL</td>'+
+        mesesActivos.map(function(m2){return '<td style="padding:8px;text-align:right;color:#dc2626;">'+$p(byMes[m2]||0)+'</td>';}).join('')+
+        '<td style="padding:8px 12px;text-align:right;color:#dc2626;border-left:2px solid #e5e7eb;">'+$p(totalAnio)+'</td>'+
+        '<td style="padding:8px 12px;text-align:right;">100%</td>'+
+      '</tr>'+
+      '</tbody></table></div>'+
+      // Mini barras de resumen anual por concepto
+      '<div style="margin-top:20px;"><div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px;">Participación anual por concepto</div>'+
+      concActivos.map(function(c){
+        var pct=totalAnio?+(byConc[c]/totalAnio*100).toFixed(1):0;
+        var color=pct>25?'#dc2626':pct>12?'#d97706':'#6c7ae0';
+        return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'+
+          '<div style="width:160px;font-size:11px;font-weight:600;color:#374151;flex-shrink:0;">'+c+'</div>'+
+          '<div style="flex:1;height:8px;border-radius:4px;background:#f3f4f6;overflow:hidden;">'+
+            '<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:4px;"></div></div>'+
+          '<div style="width:50px;font-size:11px;font-weight:700;color:'+color+';text-align:right;">'+pct+'%</div>'+
+          '<div style="width:100px;font-size:11px;color:#6b7280;text-align:right;">'+$p(byConc[c])+'</div>'+
+        '</div>';
+      }).join('')+'</div>';
+  }
 }
 
 // ════════════════════════════════════
