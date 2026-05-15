@@ -947,7 +947,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </select>
       </div>
       <div class="field"><label>Concepto *</label>
-        <select id="mm-concepto">
+        <select id="mm-concepto" onchange="mm_onConcepto()">
           <optgroup label="— Egresos —" id="mm-opt-egr">
             <option>SUELDOS/JORNALES</option>
             <option>COSTUREROS</option>
@@ -959,6 +959,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <option>SERVICIOS/EXPENSAS</option>
             <option>FLETES/ENVÍOS</option>
             <option>MANTENIMIENTO</option>
+            <option>MORATORIAS/PLANES</option>
             <option>GASTOS VARIOS</option>
           </optgroup>
           <optgroup label="— Ingresos —" id="mm-opt-ing" style="display:none">
@@ -979,6 +980,13 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <label>Fecha de vencimiento del cheque</label>
         <input type="date" id="mm-fvenc"/>
         <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Fecha en que el cheque puede cobrarse / será debitado</div>
+      </div>
+      <div class="field full" id="mm-moratoria-wrap" style="display:none;">
+        <label>Moratoria / plan vinculado</label>
+        <select id="mm-moratoria-id">
+          <option value="">— Sin vincular —</option>
+        </select>
+        <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Asocia este pago a una moratoria para el seguimiento del plan</div>
       </div>
     </div>
     <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-mov')">Cancelar</button><button class="btn" onclick="saveMov()">Guardar</button></div>
@@ -1951,6 +1959,18 @@ function renderMorResumen(){
   var MESES=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
   var activas=MORATORIAS.filter(function(m){return m.estado!=='finalizada';});
 
+  // ── Pagos ya registrados en MOVS vinculados a cada moratoria ─────
+  // paid[morId][mesIndex] = monto total ya pagado ese mes/año
+  var paid={};
+  MOVS.forEach(function(mov){
+    if(!mov.moratoria_id||!mov.fecha)return;
+    var d=new Date(mov.fecha+'T12:00:00');
+    if(d.getFullYear()!==anio)return;
+    var mes=d.getMonth();
+    if(!paid[mov.moratoria_id])paid[mov.moratoria_id]={};
+    paid[mov.moratoria_id][mes]=(paid[mov.moratoria_id][mes]||0)+Number(mov.egreso);
+  });
+
   // ── Construir calendario ──────────────────────────────────────────
   // schedule[morId][mesIndex(0-11)] = monto total ese mes en el año seleccionado
   var schedule={};
@@ -2019,12 +2039,15 @@ function renderMorResumen(){
     return;
   }
 
-  // ── Separar las que tienen y no tienen pagos en el año ────────────
-  var morConPago=[], morSinPago=[];
-  activas.forEach(function(m){
-    if(schedule[m.id]&&Object.keys(schedule[m.id]).length>0) morConPago.push(m);
-    else morSinPago.push(m);
+  // ── Solo las que tienen pagos en el año seleccionado ─────────────
+  var morConPago=activas.filter(function(m){
+    return schedule[m.id]&&Object.keys(schedule[m.id]).length>0;
   });
+
+  if(!morConPago.length){
+    table.innerHTML='<tbody><tr><td colspan="99"><div class="empty"><div class="ei">📅</div><p>No hay pagos programados para '+anio+'</p></div></td></tr></tbody>';
+    return;
+  }
 
   // ── THEAD ─────────────────────────────────────────────────────────
   var thead='<thead><tr>'+
@@ -2049,30 +2072,20 @@ function renderMorResumen(){
       '<td style="font-size:12px;color:#6b7280;">'+(m.acreedor||'—')+'</td>'+
       colIdx.map(function(i){
         var v=schedule[m.id][i]||0;
-        if(!v)return'<td style="text-align:right;color:#e5e7eb;font-size:12px;">—</td>';
+        var p=(paid[m.id]&&paid[m.id][i])||0;
+        if(!v&&!p)return'<td style="text-align:right;color:#e5e7eb;font-size:12px;">—</td>';
+        if(p>0){
+          // Mes ya pagado (verde)
+          return'<td style="text-align:right;font-weight:700;color:#16a34a;" title="Pago registrado">'+
+            '<span style="font-size:10px;margin-right:2px;">✓</span>'+$p(p)+'</td>';
+        }
+        // Pendiente (rojo)
         return'<td style="text-align:right;font-weight:700;color:#dc2626;">'+$p(v)+'</td>';
       }).join('')+
       '<td style="text-align:right;font-weight:800;color:#7c3aed;">'+$p(rowTotal)+'</td>'+
     '</tr>';
   });
 
-  // Moratorias sin pagos en el año: fila atenuada al final
-  if(morSinPago.length){
-    morSinPago.forEach(function(m){
-      var cuotasRest=Math.max(m.cuotas_total-m.cuotas_pagadas,0);
-      var base=morBaseDate(m);
-      var nota=!base?'sin fecha definida':cuotasRest===0?'finalizada':'pagos fuera de '+anio;
-      tbody+='<tr style="opacity:.45;">'+
-        '<td>'+
-          '<div style="font-weight:600;font-size:13px;margin-bottom:2px;">'+esc(m.nombre)+'</div>'+
-          '<span style="font-size:11px;color:#9ca3af;">'+nota+'</span>'+
-        '</td>'+
-        '<td style="font-size:12px;color:#9ca3af;">'+(m.acreedor||'—')+'</td>'+
-        colIdx.map(function(){return'<td style="text-align:right;color:#e5e7eb;">—</td>';}).join('')+
-        '<td style="text-align:right;color:#d1d5db;">—</td>'+
-      '</tr>';
-    });
-  }
   tbody+='</tbody>';
 
   // ── TFOOT ─────────────────────────────────────────────────────────
@@ -2221,11 +2234,12 @@ async function pagarCuota(){
   }).eq('id',id);
   if(rMor.error){toast('Error al actualizar moratoria','err');return;}
 
-  // Crear movimiento automático
+  // Crear movimiento automático vinculado a la moratoria
   var dMov={
     caja,fecha,tipo:'egreso',concepto:'MORATORIAS/PLANES',
     detalle:m.nombre+(m.acreedor?' – '+m.acreedor:''),
     ingreso:0,egreso:monto,referencia:ref||null,
+    moratoria_id:id,
     anio:new Date(fecha+'T12:00:00').getFullYear(),
     mes:MESES_ARR[new Date(fecha+'T12:00:00').getMonth()],sem:0
   };
@@ -2549,6 +2563,27 @@ function mm_onTipo(){
   var tipo=document.getElementById('mm-tipo').value;
   document.getElementById('mm-opt-egr').style.display=(tipo==='egreso'||tipo==='transferencia')?'':'none';
   document.getElementById('mm-opt-ing').style.display=tipo==='ingreso'?'':'none';
+  mm_onConcepto();
+}
+
+function mm_onConcepto(){
+  var concepto=document.getElementById('mm-concepto').value;
+  var wrap=document.getElementById('mm-moratoria-wrap');
+  if(!wrap)return;
+  var show=concepto==='MORATORIAS/PLANES';
+  wrap.style.display=show?'':'none';
+  if(show){
+    var sel=document.getElementById('mm-moratoria-id');
+    var prev=sel.value;
+    sel.innerHTML='<option value="">— Sin vincular —</option>';
+    MORATORIAS.filter(function(m){return m.estado!=='finalizada';}).forEach(function(m){
+      var o=document.createElement('option');
+      o.value=m.id;
+      o.textContent=m.nombre+(m.acreedor?' ('+m.acreedor+')':'');
+      sel.appendChild(o);
+    });
+    if(prev)sel.value=prev;
+  }
 }
 
 function mm_onCaja(){
@@ -2584,6 +2619,12 @@ function openMovModal(id){
     document.getElementById('mm-monto').value=Number(m.ingreso)>0?m.ingreso:m.egreso;
     document.getElementById('mm-ref').value=m.referencia||'';
     document.getElementById('mm-fvenc').value=m.fecha_vencimiento||'';
+    mm_onTipo(); mm_onCaja();
+    // pre-seleccionar moratoria si ya tenía vínculo
+    if(m.concepto==='MORATORIAS/PLANES'){
+      mm_onConcepto();
+      document.getElementById('mm-moratoria-id').value=m.moratoria_id||'';
+    }
   } else {
     document.getElementById('mm-tipo').value='egreso';
     document.getElementById('mm-caja').value='EFECTIVO ADMINISTRACIÓN';
@@ -2593,9 +2634,10 @@ function openMovModal(id){
     document.getElementById('mm-monto').value='';
     document.getElementById('mm-ref').value='';
     document.getElementById('mm-fvenc').value='';
+    document.getElementById('mm-moratoria-id').value='';
+    document.getElementById('mm-moratoria-wrap').style.display='none';
+    mm_onTipo(); mm_onCaja();
   }
-  mm_onTipo();
-  mm_onCaja();
   openM('m-mov');
 }
 
@@ -2606,17 +2648,18 @@ async function saveMov(){
   if(!fecha||!monto||!detalle){toast('Completá fecha, monto y detalle','err');return;}
   var tipo=document.getElementById('mm-tipo').value;
   var fvenc=document.getElementById('mm-fvenc').value||null;
+  var concepto=document.getElementById('mm-concepto').value;
+  var morId=parseInt(document.getElementById('mm-moratoria-id').value)||null;
   var d={
     caja:document.getElementById('mm-caja').value,
     anio:new Date(fecha+'T12:00:00').getFullYear(),
     mes:MESES_ARR[new Date(fecha+'T12:00:00').getMonth()],
-    sem:0,fecha,tipo,
-    concepto:document.getElementById('mm-concepto').value,
-    detalle,
+    sem:0,fecha,tipo,concepto,detalle,
     ingreso:tipo==='ingreso'?monto:(tipo==='transferencia'?monto:0),
     egreso:tipo==='egreso'?monto:(tipo==='transferencia'?monto:0),
     referencia:document.getElementById('mm-ref').value||null,
     fecha_vencimiento:fvenc,
+    moratoria_id:concepto==='MORATORIAS/PLANES'?morId:null,
     updated_at:new Date().toISOString()
   };
   var r=editMovId?await sb.from('movimientos').update(d).eq('id',editMovId):await sb.from('movimientos').insert(d);
