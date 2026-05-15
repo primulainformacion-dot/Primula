@@ -346,6 +346,18 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <option value="montegrande">Monte Grande</option>
             <option value="mayorista">Ropa Mayorista</option>
           </select>
+          <select id="pr-colegio" onchange="renderProductos()" style="width:190px;">
+            <option value="">Todos los colegios</option>
+            <option>San Marcos</option>
+            <option>Instituto Vicente Pallotti</option>
+            <option>Instituto Apostolado Católico</option>
+            <option>Santa Inés</option>
+            <option>San Francisco</option>
+            <option>La Milagrosa</option>
+            <option>Casita del Sol</option>
+            <option>Ángeles y Soles</option>
+            <option>Euskal Echea</option>
+          </select>
           <select id="pr-estado-stock" onchange="renderProductos()" style="width:150px;">
             <option value="">Todos los estados</option>
             <option value="FALTANTE">Solo faltantes</option>
@@ -1767,6 +1779,20 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="modal" style="max-width:600px;">
     <h3 id="m-prod-title">Nuevo producto</h3>
     <div class="grid2">
+      <div class="field full"><label>Colegio</label>
+        <select id="mprod-colegio">
+          <option value="">— Sin colegio —</option>
+          <option>San Marcos</option>
+          <option>Instituto Vicente Pallotti</option>
+          <option>Instituto Apostolado Católico</option>
+          <option>Santa Inés</option>
+          <option>San Francisco</option>
+          <option>La Milagrosa</option>
+          <option>Casita del Sol</option>
+          <option>Ángeles y Soles</option>
+          <option>Euskal Echea</option>
+        </select>
+      </div>
       <div class="field"><label>Familia</label><input id="mprod-familia" placeholder="Ej: CHOMBA HOMBRE"/></div>
       <div class="field"><label>Talle</label><input id="mprod-talle" placeholder="Ej: 4N, 8, XL"/></div>
       <div class="field"><label>Código (SKU)</label><input id="mprod-codigo" placeholder="Ej: SAN-CH H-8"/></div>
@@ -3281,12 +3307,14 @@ function renderProductos(){
   var q=(document.getElementById('pr-q').value||'').toLowerCase();
   var catFil=document.getElementById('pr-cat').value;
   var localFil=document.getElementById('pr-local').value;
+  var colegioFil=document.getElementById('pr-colegio')?document.getElementById('pr-colegio').value:'';
   var estadoFil=document.getElementById('pr-estado-stock')?document.getElementById('pr-estado-stock').value:'';
 
   var prodsFiltrados=PRODUCTOS.filter(function(p){
     if(!p.activo)return false;
-    if(q&&!p.nombre.toLowerCase().includes(q)&&!(p.codigo||'').toLowerCase().includes(q)&&!(p.familia||'').toLowerCase().includes(q))return false;
+    if(q&&!p.nombre.toLowerCase().includes(q)&&!(p.codigo||'').toLowerCase().includes(q)&&!(p.familia||'').toLowerCase().includes(q)&&!(p.colegio||'').toLowerCase().includes(q))return false;
     if(catFil&&String(p.categoria_id)!==catFil)return false;
+    if(colegioFil&&(p.colegio||'')!==colegioFil)return false;
     if(localFil){var locs=p.locales_disponibles||['llavallol','montegrande','mayorista'];if(locs.indexOf(localFil)<0)return false;}
     return true;
   });
@@ -3317,7 +3345,7 @@ function renderProductos(){
       ?'<span class="badge" style="background:#fee2e2;color:#dc2626;font-size:10px;">FALTANTE'+(r.faltaUnid>0?' -'+r.faltaUnid:'')+'</span>'
       :'<span class="badge b-green" style="font-size:10px;">OK</span>';
     return '<tr>'+
-      '<td style="padding-left:'+(indent?26:8)+'px;white-space:nowrap;"><span class="badge b-gray" style="font-size:10px;">'+(p.codigo||'—')+'</span></td>'+
+      '<td style="padding-left:'+(indent?34:8)+'px;white-space:nowrap;"><span class="badge b-gray" style="font-size:10px;">'+(p.codigo||'—')+'</span></td>'+
       '<td style="max-width:150px;">'+esc(p.nombre)+'</td>'+
       '<td><span class="badge b-gray" style="font-size:10px;">'+cat+'</span></td>'+
       '<td style="text-align:right;font-size:12px;">'+$p(r.costo)+'</td>'+
@@ -3338,36 +3366,19 @@ function renderProductos(){
     '</tr>';
   }
 
-  // Group by familia
-  var famMap={},noFam=[];
-  prodsFiltrados.forEach(function(p){var f=p.familia||null;if(f){if(!famMap[f])famMap[f]=[];famMap[f].push(p);}else noFam.push(p);});
-
-  // Stats (sobre todos los productos activos, sin filtro)
-  var allRows=PRODUCTOS.filter(function(p){return p.activo;}).map(mkRow);
-  var elN=document.getElementById('pr-total-prod');if(elN)elN.textContent=allRows.length;
-  var elF=document.getElementById('pr-stat-falt');if(elF)elF.textContent=allRows.filter(function(r){return r.estado==='FALTANTE';}).length;
-  var elD=document.getElementById('pr-stat-dep');if(elD)elD.textContent=STOCK.filter(function(s){return s.local==='deposito';}).reduce(function(s,x){return s+x.cantidad;},0);
-  var elV=document.getElementById('pr-valor-total');if(elV)elV.textContent=$p(allRows.reduce(function(s,r){return s+r.valorizado;},0));
-
-  var html='';
-
-  // Render families
-  Object.keys(famMap).sort().forEach(function(fam){
-    var prods=famMap[fam];
-    var rows=prods.map(mkRow);
+  function famHtml(fam,rows,colNombre){
     var vrows=estadoFil?rows.filter(function(r){return r.estado===estadoFil;}):rows;
-    if(!vrows.length)return;
-
-    var isOpen=prodFamiliaOpen[fam]!==false;
+    if(!vrows.length)return'';
+    var famKey=(colNombre+'||'+fam).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    var isOpen=prodFamiliaOpen[famKey]!==false;
     var famTotal=rows.reduce(function(s,r){return s+r.stTotal;},0);
     var famValor=rows.reduce(function(s,r){return s+r.valorizado;},0);
     var famFalt=rows.filter(function(r){return r.estado==='FALTANTE';}).length;
     var famFaltaUnid=rows.reduce(function(s,r){return s+r.faltaUnid;},0);
-    var cat=prods[0].categorias?prods[0].categorias.nombre:'—';
-    var famKey=fam.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-
-    html+='<tr style="background:#f1f5f9;cursor:pointer;" onclick="toggleProdFam(\''+famKey+'\')">'+
-      '<td colspan="2" style="font-weight:700;font-size:12px;white-space:nowrap;">'+(isOpen?'▼':'▶')+' '+esc(fam)+
+    var cat=rows[0].p.categorias?rows[0].p.categorias.nombre:'—';
+    var colEsc=colNombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    var h='<tr style="background:#e8edf5;cursor:pointer;" onclick="toggleProdFam(\''+famKey+'\')">'+
+      '<td colspan="2" style="font-weight:700;font-size:12px;white-space:nowrap;padding-left:20px;">'+(isOpen?'▼':'▶')+' '+esc(fam)+
         ' <span style="font-size:11px;font-weight:400;color:#6b7280;">'+rows.length+' talle'+(rows.length!==1?'s':'')+'</span></td>'+
       '<td><span class="badge b-gray" style="font-size:10px;">'+cat+'</span></td>'+
       '<td colspan="5"></td>'+
@@ -3378,14 +3389,68 @@ function renderProductos(){
         (famFalt>0?famFalt+' faltante'+(famFalt!==1?'s':'')+(famFaltaUnid>0?' ('+famFaltaUnid+' u.)':''):'✅ completo')+
       '</td>'+
       '<td colspan="2"></td>'+
-      '<td><button class="btn btn-sm" style="font-size:11px;background:#e0e7ff;color:#3730a3;border-color:#c7d2fe;padding:2px 10px;" onclick="event.stopPropagation();openProdModal(null,\''+famKey+'\')">+ talle</button></td>'+
+      '<td><button class="btn btn-sm" style="font-size:11px;background:#e0e7ff;color:#3730a3;border-color:#c7d2fe;padding:2px 10px;" onclick="event.stopPropagation();openProdModal(null,\''+fam.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\',\''+colEsc+'\')" title="Agregar talle">+ talle</button></td>'+
     '</tr>';
+    if(isOpen){vrows.forEach(function(r){h+=rowHtml(r,true);});}
+    return h;
+  }
 
-    if(isOpen){vrows.forEach(function(r){html+=rowHtml(r,true);});}
+  // Build: colegio → { familia → [productos] }
+  var colMap={},noCol=[];
+  prodsFiltrados.forEach(function(p){
+    var c=p.colegio||null,f=p.familia||'__nofam__';
+    if(c){if(!colMap[c])colMap[c]={};if(!colMap[c][f])colMap[c][f]=[];colMap[c][f].push(p);}
+    else noCol.push(p);
   });
 
-  // Products without familia
-  noFam.forEach(function(p){
+  // Stats globales (todos los activos)
+  var allRows=PRODUCTOS.filter(function(p){return p.activo;}).map(mkRow);
+  var elN=document.getElementById('pr-total-prod');if(elN)elN.textContent=allRows.length;
+  var elF=document.getElementById('pr-stat-falt');if(elF)elF.textContent=allRows.filter(function(r){return r.estado==='FALTANTE';}).length;
+  var elD=document.getElementById('pr-stat-dep');if(elD)elD.textContent=STOCK.filter(function(s){return s.local==='deposito';}).reduce(function(s,x){return s+x.cantidad;},0);
+  var elV=document.getElementById('pr-valor-total');if(elV)elV.textContent=$p(allRows.reduce(function(s,r){return s+r.valorizado;},0));
+
+  var html='';
+
+  Object.keys(colMap).sort().forEach(function(col){
+    var famMap=colMap[col];
+    var colKey='__col__'+col.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    var isColOpen=prodFamiliaOpen[colKey]!==false;
+    var allColProds=[];
+    Object.keys(famMap).forEach(function(f){allColProds=allColProds.concat(famMap[f]);});
+    var colRows=allColProds.map(mkRow);
+    var colTotal=colRows.reduce(function(s,r){return s+r.stTotal;},0);
+    var colValor=colRows.reduce(function(s,r){return s+r.valorizado;},0);
+    var colFalt=colRows.filter(function(r){return r.estado==='FALTANTE';}).length;
+    var colFams=Object.keys(famMap).filter(function(f){return f!=='__nofam__';}).length;
+
+    html+='<tr style="background:#dde3f0;cursor:pointer;border-top:2px solid #b0bdd8;" onclick="toggleProdFam(\''+colKey+'\')">'+
+      '<td colspan="2" style="font-weight:800;font-size:13px;white-space:nowrap;padding-left:8px;">'+(isColOpen?'▼':'▶')+' 🏫 '+esc(col)+
+        ' <span style="font-size:11px;font-weight:400;color:#475569;">'+colFams+' familia'+(colFams!==1?'s':'')+'</span></td>'+
+      '<td colspan="5"></td>'+
+      '<td style="text-align:right;font-weight:800;color:#1e293b;">'+colTotal+'</td>'+
+      '<td style="text-align:right;font-size:12px;font-weight:800;">'+$p(colValor)+'</td>'+
+      '<td colspan="6"></td>'+
+      '<td colspan="2" style="font-size:11px;font-weight:700;color:'+(colFalt>0?'#dc2626':'#16a34a')+';">'+
+        (colFalt>0?colFalt+' SKU'+(colFalt!==1?'s':'')+' con faltante':'✅ completo')+
+      '</td>'+
+      '<td></td>'+
+    '</tr>';
+
+    if(isColOpen){
+      Object.keys(famMap).sort().forEach(function(fam){
+        var rows=famMap[fam].map(mkRow);
+        if(fam==='__nofam__'){
+          rows.forEach(function(r){if(!estadoFil||r.estado===estadoFil)html+=rowHtml(r,true);});
+        } else {
+          html+=famHtml(fam,rows,col);
+        }
+      });
+    }
+  });
+
+  // Sin colegio
+  noCol.forEach(function(p){
     var r=mkRow(p);
     if(estadoFil&&r.estado!==estadoFil)return;
     html+=rowHtml(r,false);
@@ -3425,10 +3490,11 @@ function renderLocalProductos(){
   }).join('');
 }
 
-function openProdModal(id,famDefault){
+function openProdModal(id,famDefault,colDefault){
   editProdId=id||null;
   document.getElementById('m-prod-title').textContent=id?'Editar producto':'Nuevo producto';
   var p=id?PRODUCTOS.find(function(x){return x.id===id;})||{}:{};
+  document.getElementById('mprod-colegio').value=p.colegio||colDefault||'';
   document.getElementById('mprod-familia').value=p.familia||famDefault||'';
   document.getElementById('mprod-talle').value=p.talle||'';
   document.getElementById('mprod-codigo').value=p.codigo||'';
@@ -3459,6 +3525,7 @@ async function saveProd(){
   if(document.getElementById('mprod-loc-montegrande').checked)locs.push('montegrande');
   if(document.getElementById('mprod-loc-mayorista').checked)locs.push('mayorista');
   var d={
+    colegio:document.getElementById('mprod-colegio').value||null,
     familia:document.getElementById('mprod-familia').value.trim()||null,
     talle:document.getElementById('mprod-talle').value.trim()||null,
     nombre:n,
