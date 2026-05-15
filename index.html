@@ -1943,159 +1943,159 @@ function renderMorResumen(){
   var totEl=document.getElementById('mor-res-totales');
   if(!sel||!table)return;
 
-  // Siempre reconstruir selector (rango: año actual -1 hasta +5)
   var now=new Date().getFullYear();
   var prevVal=parseInt(sel.value)||now;
   sel.innerHTML='';
-  for(var y=now-1;y<=now+5;y++){
-    var o=document.createElement('option');
-    o.value=y;o.textContent=y;
+  for(var y=now;y<=now+5;y++){
+    var o=document.createElement('option');o.value=y;o.textContent=y;
     sel.appendChild(o);
   }
   sel.value=prevVal;
-  if(!sel.value)sel.value=now; // fallback si el valor previo no existe en el rango
-
+  if(!sel.value)sel.value=now;
   var anio=parseInt(sel.value)||now;
+
   var MESES=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
   var activas=MORATORIAS.filter(function(m){return m.estado!=='finalizada';});
 
-  // ── Pagos ya registrados en MOVS vinculados a cada moratoria ─────
-  // paid[morId][mesIndex] = monto total ya pagado ese mes/año
-  var paid={};
-  MOVS.forEach(function(mov){
-    if(!mov.moratoria_id||!mov.fecha)return;
-    var d=new Date(mov.fecha+'T12:00:00');
-    if(d.getFullYear()!==anio)return;
-    var mes=d.getMonth();
-    if(!paid[mov.moratoria_id])paid[mov.moratoria_id]={};
-    paid[mov.moratoria_id][mes]=(paid[mov.moratoria_id][mes]||0)+Number(mov.egreso);
-  });
-
-  // ── Construir calendario ──────────────────────────────────────────
-  // schedule[morId][mesIndex(0-11)] = monto total ese mes en el año seleccionado
-  var schedule={};
-  var monthTotals=new Array(12).fill(0);
-  var yearTotal=0;
-  var totalCuotas=0;
-
-  activas.forEach(function(m){
-    schedule[m.id]={};
-    var cuotasRestantes=Math.max(m.cuotas_total-m.cuotas_pagadas,0);
-    if(!cuotasRestantes)return;
-    var base=morBaseDate(m);
-    if(!base)return; // sin fecha de referencia → no se puede calcular
-    var bY=base.getFullYear(), bM=base.getMonth(), bD=base.getDate();
-    for(var i=0;i<cuotasRestantes;i++){
-      var d=new Date(bY,bM+i,bD); // JS maneja overflow de mes → siguiente año
-      if(d.getFullYear()===anio){
-        var mes=d.getMonth();
-        schedule[m.id][mes]=(schedule[m.id][mes]||0)+Number(m.monto_cuota);
-        monthTotals[mes]+=Number(m.monto_cuota);
-        yearTotal+=Number(m.monto_cuota);
-        totalCuotas++;
-      }
-    }
-  });
-
-  // ── Totales header ────────────────────────────────────────────────
-  if(totEl){
-    if(yearTotal>0){
-      totEl.innerHTML=
-        '<span style="background:#ffedd5;color:#c2410c;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:700;">'+$p(yearTotal)+' en '+anio+'</span>'+
-        '<span style="background:#fef3c7;color:#92400e;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:700;">'+totalCuotas+' cuota'+(totalCuotas!==1?'s':'')+' programada'+(totalCuotas!==1?'s':'')+'</span>';
-    } else {
-      totEl.innerHTML='<span style="color:#9ca3af;font-size:13px;">Sin pagos programados para '+anio+'</span>';
-    }
-  }
-
-  // ── Sin moratorias ────────────────────────────────────────────────
   if(!activas.length){
+    if(totEl)totEl.innerHTML='';
     table.innerHTML='<tbody><tr><td><div class="empty"><div class="ei">📅</div><p>Sin moratorias activas</p></div></td></tr></tbody>';
     return;
   }
 
-  // ── Columnas: meses que tienen algún pago en el año seleccionado ──
-  var colIdx=[];
-  for(var i=0;i<12;i++){if(monthTotals[i]>0)colIdx.push(i);}
+  // ── Calendario completo multi-año: schedule[morId][año][mes] ──────
+  var SHOW_YEARS=[];
+  for(var y2=now;y2<=now+5;y2++)SHOW_YEARS.push(y2);
 
-  // Si ningún mes tiene pagos, mostrar tabla resumen simplificada
-  if(!colIdx.length){
-    var rowsSin=activas.map(function(m){
-      var base=morBaseDate(m);
-      var cuotasRest=Math.max(m.cuotas_total-m.cuotas_pagadas,0);
-      var nota=!base?'Sin fecha de inicio definida':
-               cuotasRest===0?'Sin cuotas pendientes':
-               'Pagos fuera del año '+anio;
-      var bClass=m.estado==='activa'?'b-green':m.estado==='en_mora'?'b-red':'b-gray';
-      return'<tr>'+
-        '<td><strong>'+esc(m.nombre)+'</strong> <span class="badge '+bClass+'">'+m.estado.replace('_',' ')+'</span></td>'+
-        '<td style="font-size:12px;color:#6b7280;">'+(m.acreedor||'—')+'</td>'+
-        '<td style="font-size:12px;font-weight:700;text-align:right;">'+$p(Number(m.monto_cuota))+'</td>'+
-        '<td style="font-size:12px;color:#9ca3af;">'+nota+'</td>'+
-      '</tr>';
-    }).join('');
-    table.innerHTML='<thead><tr><th>Moratoria</th><th>Acreedor</th><th style="text-align:right">Cuota</th><th>Estado en '+anio+'</th></tr></thead>'+
-      '<tbody>'+rowsSin+'</tbody>';
-    return;
-  }
+  var fullSchedule={}; // [morId][anio][mes] = monto
+  var yearTotals={};   // [anio] = total pendiente
+  SHOW_YEARS.forEach(function(y){yearTotals[y]=0;});
 
-  // ── Solo las que tienen pagos en el año seleccionado ─────────────
-  var morConPago=activas.filter(function(m){
-    return schedule[m.id]&&Object.keys(schedule[m.id]).length>0;
+  activas.forEach(function(m){
+    fullSchedule[m.id]={};
+    var rest=Math.max(m.cuotas_total-m.cuotas_pagadas,0);
+    if(!rest)return;
+    var base=morBaseDate(m);
+    if(!base)return;
+    var bY=base.getFullYear(),bM=base.getMonth(),bD=base.getDate();
+    for(var i=0;i<rest;i++){
+      var d=new Date(bY,bM+i,bD);
+      var dy=d.getFullYear(),dm=d.getMonth();
+      if(!fullSchedule[m.id][dy])fullSchedule[m.id][dy]={};
+      fullSchedule[m.id][dy][dm]=(fullSchedule[m.id][dy][dm]||0)+Number(m.monto_cuota);
+      if(yearTotals[dy]!==undefined)yearTotals[dy]+=Number(m.monto_cuota);
+    }
   });
 
-  if(!morConPago.length){
-    table.innerHTML='<tbody><tr><td colspan="99"><div class="empty"><div class="ei">📅</div><p>No hay pagos programados para '+anio+'</p></div></td></tr></tbody>';
-    return;
+  // ── Pagos ya registrados en MOVS (por año y mes) ──────────────────
+  var paid={}; // [morId][año][mes] = monto
+  MOVS.forEach(function(mov){
+    if(!mov.moratoria_id||!mov.fecha)return;
+    var d=new Date(mov.fecha+'T12:00:00');
+    var dy=d.getFullYear(),dm=d.getMonth();
+    if(!paid[mov.moratoria_id])paid[mov.moratoria_id]={};
+    if(!paid[mov.moratoria_id][dy])paid[mov.moratoria_id][dy]={};
+    paid[mov.moratoria_id][dy][dm]=(paid[mov.moratoria_id][dy][dm]||0)+Number(mov.egreso);
+  });
+
+  // ── Chips de totales por año (arriba) ─────────────────────────────
+  if(totEl){
+    var chipsHTML=SHOW_YEARS.filter(function(y){return yearTotals[y]>0;}).map(function(y){
+      var sel2=y===anio;
+      return'<span onclick="document.getElementById(\'mor-res-anio\').value='+y+';renderMorResumen();" '+
+        'style="cursor:pointer;padding:7px 16px;border-radius:8px;font-size:13px;font-weight:700;'+
+        (sel2?'background:#ffedd5;color:#c2410c;border:2px solid #f97316;':'background:#f3f4f6;color:#374151;border:2px solid transparent;')+'">'+
+        y+': '+$p(yearTotals[y])+'</span>';
+    }).join('');
+    totEl.innerHTML=chipsHTML||'<span style="color:#9ca3af;font-size:13px;">Sin pagos calculados</span>';
   }
+
+  // ── Schedule del año seleccionado ─────────────────────────────────
+  var monthTotals=new Array(12).fill(0);
+  activas.forEach(function(m){
+    var morYear=fullSchedule[m.id]&&fullSchedule[m.id][anio]||{};
+    Object.keys(morYear).forEach(function(mes){monthTotals[parseInt(mes)]+=morYear[mes];});
+  });
+  var colIdx=[];
+  for(var i=0;i<12;i++){if(monthTotals[i]>0)colIdx.push(i);}
 
   // ── THEAD ─────────────────────────────────────────────────────────
   var thead='<thead><tr>'+
     '<th style="min-width:170px;">Moratoria</th>'+
-    '<th style="min-width:90px;">Acreedor</th>'+
-    colIdx.map(function(i){
-      return'<th style="text-align:right;min-width:82px;font-weight:700;">'+MESES[i]+'</th>';
-    }).join('')+
-    '<th style="text-align:right;min-width:110px;color:#7c3aed;">Total '+anio+'</th>'+
-  '</tr></thead>';
+    '<th style="min-width:80px;">Acreedor</th>';
+  if(colIdx.length){
+    colIdx.forEach(function(i){thead+='<th style="text-align:right;min-width:80px;">'+MESES[i]+'</th>';});
+    thead+='<th style="text-align:right;min-width:110px;color:#7c3aed;">Total '+anio+'</th>';
+  } else {
+    thead+='<th style="min-width:120px;">Cuota</th><th>Próx. año con pagos</th>';
+  }
+  thead+='</tr></thead>';
 
-  // ── TBODY ─────────────────────────────────────────────────────────
+  // ── TBODY: TODAS las activas ───────────────────────────────────────
+  var yearTotal=0;
   var tbody='<tbody>';
-  morConPago.forEach(function(m){
-    var rowTotal=colIdx.reduce(function(s,i){return s+(schedule[m.id][i]||0);},0);
+  activas.forEach(function(m){
+    var morYear=fullSchedule[m.id]&&fullSchedule[m.id][anio]||{};
+    var paidYear=paid[m.id]&&paid[m.id][anio]||{};
+    var rowTotal=Object.keys(morYear).reduce(function(s,k){return s+morYear[k];},0);
+    yearTotal+=rowTotal;
     var bClass=m.estado==='activa'?'b-green':m.estado==='en_mora'?'b-red':'b-gray';
-    tbody+='<tr>'+
-      '<td>'+
-        '<div style="font-weight:700;font-size:13px;margin-bottom:2px;">'+esc(m.nombre)+'</div>'+
-        '<span class="badge '+bClass+'">'+m.estado.replace('_',' ')+'</span>'+
-      '</td>'+
-      '<td style="font-size:12px;color:#6b7280;">'+(m.acreedor||'—')+'</td>'+
-      colIdx.map(function(i){
-        var v=schedule[m.id][i]||0;
-        var p=(paid[m.id]&&paid[m.id][i])||0;
-        if(!v&&!p)return'<td style="text-align:right;color:#e5e7eb;font-size:12px;">—</td>';
-        if(p>0){
-          // Mes ya pagado (verde)
-          return'<td style="text-align:right;font-weight:700;color:#16a34a;" title="Pago registrado">'+
-            '<span style="font-size:10px;margin-right:2px;">✓</span>'+$p(p)+'</td>';
-        }
-        // Pendiente (rojo)
-        return'<td style="text-align:right;font-weight:700;color:#dc2626;">'+$p(v)+'</td>';
-      }).join('')+
-      '<td style="text-align:right;font-weight:800;color:#7c3aed;">'+$p(rowTotal)+'</td>'+
-    '</tr>';
-  });
+    var hasBase=!!morBaseDate(m);
+    var rest=Math.max(m.cuotas_total-m.cuotas_pagadas,0);
 
+    tbody+='<tr>'+
+      '<td><div style="font-weight:700;font-size:13px;margin-bottom:2px;">'+esc(m.nombre)+'</div>'+
+        '<span class="badge '+bClass+'">'+m.estado.replace('_',' ')+'</span></td>'+
+      '<td style="font-size:12px;color:#6b7280;">'+(m.acreedor||'—')+'</td>';
+
+    if(colIdx.length){
+      colIdx.forEach(function(i){
+        var v=morYear[i]||0;
+        var p=paidYear[i]||0;
+        if(p>0){
+          tbody+='<td style="text-align:right;font-weight:700;color:#16a34a;" title="Pago registrado">✓ '+$p(p)+'</td>';
+        } else if(v>0){
+          tbody+='<td style="text-align:right;font-weight:700;color:#dc2626;">'+$p(v)+'</td>';
+        } else {
+          tbody+='<td style="text-align:right;color:#d1d5db;font-size:12px;">—</td>';
+        }
+      });
+      // Total año
+      if(rowTotal>0){
+        tbody+='<td style="text-align:right;font-weight:800;color:#7c3aed;">'+$p(rowTotal)+'</td>';
+      } else {
+        // Sin pagos en este año → buscar cuándo empieza
+        var proxAnio=null;
+        SHOW_YEARS.forEach(function(y){
+          if(y>anio&&!proxAnio&&fullSchedule[m.id]&&fullSchedule[m.id][y]&&Object.keys(fullSchedule[m.id][y]).length)proxAnio=y;
+        });
+        var nota=!hasBase?'⚠ sin fecha':rest===0?'finalizada':proxAnio?'desde '+proxAnio:'fuera de rango';
+        tbody+='<td style="text-align:right;font-size:11px;color:#9ca3af;">'+nota+'</td>';
+      }
+    } else {
+      // Sin columnas de mes: mostrar cuota y próximo año con pagos
+      var proxAnio2=null;
+      SHOW_YEARS.forEach(function(y){
+        if(y>=now&&!proxAnio2&&fullSchedule[m.id]&&fullSchedule[m.id][y]&&Object.keys(fullSchedule[m.id][y]).length)proxAnio2=y;
+      });
+      tbody+='<td style="font-weight:700;">'+$p(Number(m.monto_cuota))+'</td>';
+      tbody+='<td style="font-size:12px;color:#9ca3af;">'+(proxAnio2?proxAnio2:(!hasBase?'⚠ sin fecha':'fuera de rango'))+'</td>';
+    }
+    tbody+='</tr>';
+  });
   tbody+='</tbody>';
 
   // ── TFOOT ─────────────────────────────────────────────────────────
-  var tfoot='<tfoot><tr style="border-top:2px solid #e5e7eb;background:#fef2f2;">'+
-    '<td colspan="2" style="font-weight:800;font-size:11px;color:#991b1b;text-transform:uppercase;letter-spacing:.5px;">Total mes</td>'+
-    colIdx.map(function(i){
-      return'<td style="text-align:right;font-weight:800;color:#dc2626;font-size:13px;">'+$p(monthTotals[i])+'</td>';
-    }).join('')+
-    '<td style="text-align:right;font-weight:800;color:#991b1b;font-size:14px;">'+$p(yearTotal)+'</td>'+
-  '</tr></tfoot>';
+  var tfoot='';
+  if(colIdx.length){
+    tfoot='<tfoot><tr style="border-top:2px solid #e5e7eb;background:#fef2f2;">'+
+      '<td colspan="2" style="font-weight:800;font-size:11px;color:#991b1b;text-transform:uppercase;letter-spacing:.5px;">Total mes</td>'+
+      colIdx.map(function(i){
+        return'<td style="text-align:right;font-weight:800;color:#dc2626;">'+$p(monthTotals[i])+'</td>';
+      }).join('')+
+      '<td style="text-align:right;font-weight:800;color:#991b1b;font-size:14px;">'+$p(yearTotal)+'</td>'+
+    '</tr></tfoot>';
+  }
 
   table.innerHTML=thead+tbody+tfoot;
 }
