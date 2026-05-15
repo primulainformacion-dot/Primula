@@ -201,6 +201,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="nav-label">Finanzas</div>
     <div class="nav-item" onclick="nav('panel',this)"><span class="ni">📊</span> Panel General</div>
     <div class="nav-item" onclick="nav('finanzas',this)"><span class="ni">💹</span> Movimientos</div>
+    <div class="nav-item" onclick="nav('cheques',this)"><span class="ni">🧾</span> Cheques</div>
     <div class="nav-item" onclick="nav('moratorias',this)"><span class="ni">📋</span> Moratorias</div>
   </div>
 
@@ -743,6 +744,65 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div id="vd-body"></div>
   </div>
 
+  <!-- ════════════ CHEQUES ════════════ -->
+  <div class="section" id="sec-cheques">
+    <div class="tabs" style="margin-bottom:16px;" id="chq-tabs">
+      <button class="tab active" onclick="setChqTab('cartera',this)">🧾 ECHEQ / Cartera</button>
+      <button class="tab" onclick="setChqTab('propios',this)">📋 Cartera propia</button>
+      <button class="tab" onclick="setChqTab('resumen',this)">📊 Resumen</button>
+    </div>
+
+    <!-- Sub-tab 1: ECHEQ / Cartera (cheques de terceros) -->
+    <div id="chq-tab-cartera">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="chq-anio" onchange="renderChqCartera()" style="width:90px;"></select>
+        <select id="chq-mes" onchange="renderChqCartera()" style="width:150px;">
+          <option value="">Todo el año</option>
+          <option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option>
+          <option>MAYO</option><option>JUNIO</option><option>JULIO</option><option>AGOSTO</option>
+          <option>SEPTIEMBRE</option><option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option>
+        </select>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr">
+          <h4>🧾 Cheques y ECHEQ en cartera</h4>
+          <span style="font-size:12px;color:#9ca3af;" id="chq-periodo-lbl"></span>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;" id="chq-stats"></div>
+        <div class="tbl"><table>
+          <thead><tr>
+            <th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Detalle</th>
+            <th style="text-align:right">Monto</th><th>Referencia / N° cheque</th><th>Vto.</th><th>Estado</th>
+          </tr></thead>
+          <tbody id="chq-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- Sub-tab 2: Cartera propia (cheques emitidos por nosotros) -->
+    <div id="chq-tab-propios" style="display:none;">
+      <div class="panel">
+        <div class="panel-hdr">
+          <h4>📋 Cheques propios emitidos</h4>
+          <button class="btn" onclick="openChqPropioModal()">+ Nuevo cheque</button>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;" id="chqp-stats"></div>
+        <div class="tbl"><table>
+          <thead><tr>
+            <th>N° Cheque</th><th>Banco</th><th>Destinatario</th><th>Concepto</th>
+            <th style="text-align:right">Monto</th><th>Emisión</th><th>Fecha pago</th><th>Estado</th><th></th>
+          </tr></thead>
+          <tbody id="chqp-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- Sub-tab 3: Resumen -->
+    <div id="chq-tab-resumen" style="display:none;">
+      <div id="chq-resumen-cont"></div>
+    </div>
+  </div>
+
   <!-- ════════════ MORATORIAS ════════════ -->
   <div class="section" id="sec-moratorias">
     <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
@@ -851,7 +911,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="tabs">
       <div class="tab active" onclick="setFinTab('movimientos',this)">📋 Movimientos</div>
       <div class="tab" onclick="setFinTab('transferencia',this)">🔄 Transferencia entre cajas</div>
-      <div class="tab" onclick="setFinTab('cheques',this)">🧾 Cheques / ECHEQ</div>
     </div>
 
     <!-- Tab: Movimientos -->
@@ -932,23 +991,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
     </div>
 
-    <!-- Tab: Cheques / ECHEQ -->
-    <div id="ft-cheques" style="display:none;">
-      <div class="panel">
-        <div class="panel-hdr">
-          <h4>🧾 Cheques y ECHEQ</h4>
-          <span style="font-size:12px;color:#9ca3af;" id="chq-periodo-lbl"></span>
-        </div>
-        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;" id="chq-stats"></div>
-        <div class="tbl"><table>
-          <thead><tr>
-            <th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Detalle</th>
-            <th style="text-align:right">Monto</th><th>Referencia</th><th>Vto.</th><th>Estado</th>
-          </tr></thead>
-          <tbody id="chq-tbody"></tbody>
-        </table></div>
-      </div>
-    </div>
 
   </div>
 
@@ -1326,6 +1368,48 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Cheque propio -->
+<div class="modal-bg" id="m-chqp">
+  <div class="modal">
+    <h3 id="m-chqp-title">Nuevo cheque emitido</h3>
+    <input type="hidden" id="mchqp-id"/>
+    <div class="grid2">
+      <div class="field"><label>N° Cheque *</label><input id="mchqp-numero" placeholder="Ej: 00012345"/></div>
+      <div class="field"><label>Banco *</label>
+        <select id="mchqp-banco">
+          <option value="BANCO SRL">BANCO SRL</option>
+          <option value="BANCO POLY">BANCO POLY</option>
+        </select>
+      </div>
+      <div class="field full"><label>Destinatario *</label><input id="mchqp-destinatario" placeholder="Nombre de quien recibe el cheque"/></div>
+      <div class="field"><label>Monto $ *</label><input type="number" id="mchqp-monto" min="0" placeholder="0"/></div>
+      <div class="field"><label>Concepto</label><input id="mchqp-concepto" placeholder="Ej: Pago materiales, Sueldo..."/></div>
+      <div class="field"><label>Fecha emisión *</label><input type="date" id="mchqp-emision"/></div>
+      <div class="field"><label>Fecha de pago</label><input type="date" id="mchqp-pago"/>
+        <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Fecha en que puede cobrarse / será debitado</div>
+      </div>
+      <div class="field"><label>Estado</label>
+        <select id="mchqp-estado">
+          <option value="pendiente">Pendiente</option>
+          <option value="depositado">Depositado</option>
+          <option value="rechazado">Rechazado</option>
+          <option value="anulado">Anulado</option>
+        </select>
+      </div>
+      <div class="field full"><label>Proveedor (opcional)</label>
+        <select id="mchqp-proveedor">
+          <option value="">— Sin vincular —</option>
+        </select>
+      </div>
+      <div class="field full"><label>Nota</label><textarea id="mchqp-nota" style="min-height:52px;" placeholder="Observaciones..."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-chqp')">Cancelar</button>
+      <button class="btn" onclick="saveChqPropio()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Producto -->
 <div class="modal-bg" id="m-prod">
   <div class="modal">
@@ -1402,7 +1486,7 @@ var SB_URL = 'https://qaaausnrgokkycxucdrp.supabase.co';
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3ODI1NjYsImV4cCI6MjA5NDM1ODU2Nn0.1Rus0piCnrCXnlL5vMsZCr-3_S_GHAqw7MadQ1kJ9ww';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[];
 var PRENDAS_LIST=[
   'Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal',
   'Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre',
@@ -1430,7 +1514,7 @@ window.addEventListener('DOMContentLoaded', function(){
   document.getElementById('lf-hasta').value=today;
 
   // Años finanzas (movimientos) y panel general
-  [document.getElementById('fin-anio'),document.getElementById('pan-anio'),document.getElementById('obj-anio'),document.getElementById('tal-prod-anio'),document.getElementById('per-pag-anio')].forEach(function(asel){
+  [document.getElementById('fin-anio'),document.getElementById('pan-anio'),document.getElementById('obj-anio'),document.getElementById('tal-prod-anio'),document.getElementById('per-pag-anio'),document.getElementById('chq-anio')].forEach(function(asel){
     if(!asel)return;
     for(var y=2024;y<=new Date().getFullYear()+1;y++){
       var o=document.createElement('option');o.value=y;o.textContent=y;
@@ -1465,7 +1549,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias();
 }
@@ -1474,6 +1558,7 @@ async function loadTalleristas(){ var {data}=await sb.from('talleristas').select
 async function loadTalHistorial(){ var {data}=await sb.from('tallerista_precios_historial').select('*').order('created_at',{ascending:false}); TAL_PRECIOS_HIST=data||[]; }
 async function loadTalPreciosPrenda(){ var {data}=await sb.from('tallerista_precios_prenda').select('*'); TAL_PRECIOS_PRENDA=data||[]; }
 async function loadTalPreciosPrendaHist(){ var {data}=await sb.from('tallerista_precios_prenda_hist').select('*').order('created_at',{ascending:false}).limit(100); TAL_PRECIOS_PRENDA_HIST=data||[]; }
+async function loadChequesPropios(){ var {data}=await sb.from('cheques_propios').select('*').order('fecha_pago',{ascending:true}); CHEQUES_PROPIOS=data||[]; }
 async function loadPersonal(){ var {data}=await sb.from('personal').select('*').order('nombre'); PERSONAL=data||[]; }
 async function loadMoratorias(){ var {data}=await sb.from('moratorias').select('*').order('prox_vencimiento'); MORATORIAS=data||[]; }
 async function loadClientes(){ var {data}=await sb.from('clientes').select('*').order('nombre'); CLIENTES=data||[]; }
@@ -1494,6 +1579,7 @@ function nav(sec, el){
   document.getElementById('pg-sub').textContent='';
   if(sec==='panel'){renderPanelGeneral();}
   if(sec==='finanzas'){renderFinCajas();renderFin();}
+  if(sec==='cheques'){renderChqCartera();}
 }
 
 function navLocal(local, tab, el){
@@ -2707,11 +2793,9 @@ function filtrarPorCaja(caja){
 function setFinTab(tab,el){
   document.getElementById('ft-movimientos').style.display=tab==='movimientos'?'block':'none';
   document.getElementById('ft-transferencia').style.display=tab==='transferencia'?'block':'none';
-  document.getElementById('ft-cheques').style.display=tab==='cheques'?'block':'none';
   document.querySelectorAll('#sec-finanzas .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
   if(tab==='transferencia')renderTransfHistorial();
-  if(tab==='cheques')renderCheques();
 }
 
 function renderFin(){
@@ -3058,12 +3142,29 @@ function renderObjetivos(){
   cont.innerHTML=html;
 }
 
-// ── CHEQUES / ECHEQ ──
-function renderCheques(){
-  var anio=parseInt(document.getElementById('fin-anio').value)||new Date().getFullYear();
-  var mes=document.getElementById('fin-mes').value;
-  var hoy=new Date().toISOString().split('T')[0];
+// ══════════════════════════════════════════════
+// CHEQUES (sección independiente)
+// ══════════════════════════════════════════════
+var editChqPropioId=null;
+
+function setChqTab(tab,el){
+  ['cartera','propios','resumen'].forEach(function(t){
+    document.getElementById('chq-tab-'+t).style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('#chq-tabs .tab').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  if(tab==='cartera')renderChqCartera();
+  if(tab==='propios')renderChqPropios();
+  if(tab==='resumen')renderChqResumen();
+}
+
+function renderChqCartera(){
+  var anio=parseInt(document.getElementById('chq-anio').value)||new Date().getFullYear();
+  var mes=document.getElementById('chq-mes').value;
+  var hoy=today();
   var movs=MOVS.filter(function(m){return m.caja==='ECHEQ/CHEQUE';});
+  if(anio) movs=movs.filter(function(m){return m.anio===anio;});
+  if(mes)  movs=movs.filter(function(m){return m.mes===mes;});
   var enCartera=movs.filter(function(m){return m.tipo==='ingreso';}).reduce(function(s,m){return s+Number(m.ingreso);},0);
   var emitidos=movs.filter(function(m){return m.tipo==='egreso';}).reduce(function(s,m){return s+Number(m.egreso);},0);
   var lbl=document.getElementById('chq-periodo-lbl');
@@ -3071,40 +3172,208 @@ function renderCheques(){
   var stats=document.getElementById('chq-stats');
   if(stats)stats.innerHTML=
     '<div style="background:#ede9fe;border-radius:10px;padding:12px 18px;flex:1;min-width:140px;">'+
-    '<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px;">EN CARTERA (a cobrar)</div>'+
-    '<div style="font-size:20px;font-weight:800;color:#7c3aed;">'+$p(enCartera)+'</div></div>'+
+      '<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px;">EN CARTERA (a cobrar)</div>'+
+      '<div style="font-size:20px;font-weight:800;color:#7c3aed;">'+$p(enCartera)+'</div></div>'+
     '<div style="background:#fee2e2;border-radius:10px;padding:12px 18px;flex:1;min-width:140px;">'+
-    '<div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:4px;">EMITIDOS (a pagar)</div>'+
-    '<div style="font-size:20px;font-weight:800;color:#dc2626;">'+$p(emitidos)+'</div></div>'+
+      '<div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:4px;">EMITIDOS (a pagar)</div>'+
+      '<div style="font-size:20px;font-weight:800;color:#dc2626;">'+$p(emitidos)+'</div></div>'+
     '<div style="background:'+(enCartera-emitidos>=0?'#dcfce7':'#fee2e2')+';border-radius:10px;padding:12px 18px;flex:1;min-width:140px;">'+
-    '<div style="font-size:11px;font-weight:700;color:'+(enCartera-emitidos>=0?'#16a34a':'#dc2626')+';margin-bottom:4px;">POSICIÓN NETA</div>'+
-    '<div style="font-size:20px;font-weight:800;color:'+(enCartera-emitidos>=0?'#16a34a':'#dc2626')+';">'+$p(enCartera-emitidos)+'</div></div>';
+      '<div style="font-size:11px;font-weight:700;color:'+(enCartera-emitidos>=0?'#16a34a':'#dc2626')+';margin-bottom:4px;">POSICIÓN NETA</div>'+
+      '<div style="font-size:20px;font-weight:800;color:'+(enCartera-emitidos>=0?'#16a34a':'#dc2626')+';">'+$p(enCartera-emitidos)+'</div></div>';
   var tb=document.getElementById('chq-tbody');
   if(!tb)return;
-  if(!movs.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><p>Sin movimientos en ECHEQ/CHEQUE</p></div></td></tr>';return;}
+  if(!movs.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><p>Sin movimientos en ECHEQ/CHEQUE para el período</p></div></td></tr>';return;}
   var sorted=movs.slice().sort(function(a,b){return(a.fecha_vencimiento||a.fecha)<(b.fecha_vencimiento||b.fecha)?-1:1;});
   tb.innerHTML=sorted.map(function(m){
-    var esIngreso=m.tipo==='ingreso';
-    var monto=esIngreso?Number(m.ingreso):Number(m.egreso);
+    var esIng=m.tipo==='ingreso';
+    var monto=esIng?Number(m.ingreso):Number(m.egreso);
     var vto=m.fecha_vencimiento||'';
     var vencido=vto&&vto<hoy;
     var pronto=vto&&!vencido&&vto<=new Date(Date.now()+7*86400000).toISOString().split('T')[0];
     var estadoBadge=vencido?'<span class="badge b-red">Vencido</span>':
       pronto?'<span class="badge b-yellow">Próximo</span>':
-      esIngreso?'<span class="badge b-purple">En cartera</span>':
+      esIng?'<span class="badge b-purple">En cartera</span>':
       '<span class="badge b-blue">Emitido</span>';
     return '<tr>'+
       '<td>'+m.fecha+'</td>'+
-      '<td><span class="badge '+(esIngreso?'b-green':'b-red')+'">'+(esIngreso?'A cobrar':'A pagar')+'</span></td>'+
+      '<td><span class="badge '+(esIng?'b-green':'b-red')+'">'+(esIng?'A cobrar':'A pagar')+'</span></td>'+
       '<td>'+(m.concepto||'—')+'</td>'+
       '<td>'+(m.detalle||'—')+'</td>'+
-      '<td style="text-align:right;font-weight:700;color:'+(esIngreso?'#16a34a':'#dc2626')+';">'+$p(monto)+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:'+(esIng?'#16a34a':'#dc2626')+';">'+$p(monto)+'</td>'+
       '<td style="font-size:11px;color:#9ca3af;">'+(m.referencia||'—')+'</td>'+
       '<td style="font-size:12px;font-weight:600;color:'+(vencido?'#dc2626':pronto?'#d97706':'#374151')+'">'+(vto||'—')+'</td>'+
       '<td>'+estadoBadge+'</td>'+
     '</tr>';
   }).join('');
 }
+
+function renderChqPropios(){
+  var hoy=today();
+  var pendientes=CHEQUES_PROPIOS.filter(function(c){return c.estado==='pendiente';});
+  var totPend=pendientes.reduce(function(s,c){return s+Number(c.monto);},0);
+  var stats=document.getElementById('chqp-stats');
+  if(stats)stats.innerHTML=
+    '<div style="background:#fee2e2;border-radius:10px;padding:12px 18px;flex:1;min-width:140px;">'+
+      '<div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:4px;">PENDIENTES DE COBRO</div>'+
+      '<div style="font-size:20px;font-weight:800;color:#dc2626;">'+$p(totPend)+'</div>'+
+      '<div style="font-size:11px;color:#9ca3af;margin-top:3px;">'+pendientes.length+' cheque'+(pendientes.length!==1?'s':'')+'</div></div>'+
+    '<div style="background:#dcfce7;border-radius:10px;padding:12px 18px;flex:1;min-width:140px;">'+
+      '<div style="font-size:11px;font-weight:700;color:#16a34a;margin-bottom:4px;">DEPOSITADOS</div>'+
+      '<div style="font-size:20px;font-weight:800;color:#16a34a;">'+
+        $p(CHEQUES_PROPIOS.filter(function(c){return c.estado==='depositado';}).reduce(function(s,c){return s+Number(c.monto);},0))+'</div></div>'+
+    '<div style="background:#f3f4f6;border-radius:10px;padding:12px 18px;flex:1;min-width:140px;">'+
+      '<div style="font-size:11px;font-weight:700;color:#9ca3af;margin-bottom:4px;">TOTAL EMITIDO (año)</div>'+
+      '<div style="font-size:20px;font-weight:800;color:#374151;">'+$p(CHEQUES_PROPIOS.reduce(function(s,c){return s+Number(c.monto);},0))+'</div></div>';
+  var tb=document.getElementById('chqp-tbody');
+  if(!tb)return;
+  if(!CHEQUES_PROPIOS.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><p>Sin cheques emitidos registrados</p></div></td></tr>';return;}
+  var sorted=CHEQUES_PROPIOS.slice().sort(function(a,b){return(a.fecha_pago||a.fecha_emision)<(b.fecha_pago||b.fecha_emision)?-1:1;});
+  var estadoClass={pendiente:'b-yellow',depositado:'b-green',rechazado:'b-red',anulado:'b-gray'};
+  tb.innerHTML=sorted.map(function(c){
+    var vencido=c.estado==='pendiente'&&c.fecha_pago&&c.fecha_pago<hoy;
+    return '<tr>'+
+      '<td style="font-weight:600;">'+c.numero+'</td>'+
+      '<td style="font-size:12px;">'+c.banco+'</td>'+
+      '<td>'+c.destinatario+'</td>'+
+      '<td style="font-size:12px;color:#9ca3af;">'+(c.concepto||'—')+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:#dc2626;">'+$p(Number(c.monto))+'</td>'+
+      '<td style="font-size:12px;">'+(c.fecha_emision||'—')+'</td>'+
+      '<td style="font-size:12px;font-weight:600;color:'+(vencido?'#dc2626':'#374151')+'">'+(c.fecha_pago||'—')+(vencido?' ⚠️':'')+'</td>'+
+      '<td><span class="badge '+(estadoClass[c.estado]||'b-gray')+'">'+c.estado.charAt(0).toUpperCase()+c.estado.slice(1)+'</span></td>'+
+      '<td><div class="actions">'+
+        '<button class="btn btn-sm btn-gray btn-icon" onclick="openChqPropioModal('+c.id+')">✏️</button>'+
+        '<button class="btn btn-sm btn-red btn-icon" onclick="deleteChqPropio('+c.id+')">🗑️</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function renderChqResumen(){
+  var hoy=today();
+  var hoyDate=new Date();
+  var en60=new Date(Date.now()+60*86400000).toISOString().split('T')[0];
+  // Cheques de terceros (a cobrar) con vencimiento próximo
+  var aCobrar=MOVS.filter(function(m){
+    return m.caja==='ECHEQ/CHEQUE'&&m.tipo==='ingreso'&&m.fecha_vencimiento&&m.fecha_vencimiento>=hoy;
+  }).map(function(m){
+    return {fecha:m.fecha_vencimiento,tipo:'cobrar',desc:m.detalle||m.concepto,monto:Number(m.ingreso),ref:m.referencia};
+  });
+  // Cheques propios pendientes con fecha de pago
+  var aPagar=CHEQUES_PROPIOS.filter(function(c){
+    return c.estado==='pendiente'&&c.fecha_pago;
+  }).map(function(c){
+    return {fecha:c.fecha_pago,tipo:'pagar',desc:c.destinatario+(c.concepto?' — '+c.concepto:''),monto:Number(c.monto),ref:c.numero};
+  });
+  var timeline=[].concat(aCobrar,aPagar).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
+  var totCobrar=aCobrar.reduce(function(s,x){return s+x.monto;},0);
+  var totPagar=aPagar.reduce(function(s,x){return s+x.monto;},0);
+
+  var cont=document.getElementById('chq-resumen-cont');
+  var html='';
+  // Cards resumen
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">';
+  html+='<div class="stat" style="border-top:3px solid #7c3aed;"><h3 style="color:#7c3aed;">'+$p(totCobrar)+'</h3><p>A cobrar (cartera)</p><div style="font-size:11px;color:#9ca3af;">'+aCobrar.length+' cheque'+(aCobrar.length!==1?'s':'')+'</div></div>';
+  html+='<div class="stat" style="border-top:3px solid #dc2626;"><h3 style="color:#dc2626;">'+$p(totPagar)+'</h3><p>A pagar (propios)</p><div style="font-size:11px;color:#9ca3af;">'+aPagar.length+' cheque'+(aPagar.length!==1?'s':'')+'</div></div>';
+  var neta=totCobrar-totPagar;
+  html+='<div class="stat" style="border-top:3px solid '+(neta>=0?'#16a34a':'#dc2626')+'"><h3 style="color:'+(neta>=0?'#16a34a':'#dc2626')+'">'+$p(neta)+'</h3><p>Posición neta</p><div style="font-size:11px;color:#9ca3af;">próximos vencimientos</div></div>';
+  html+='</div>';
+  // Timeline
+  html+='<div class="panel"><div class="panel-hdr"><h4>📅 Próximos vencimientos</h4><span style="font-size:12px;color:#9ca3af;">cheques en cartera + propios pendientes</span></div>';
+  if(!timeline.length){
+    html+='<p style="color:#9ca3af;text-align:center;padding:24px;">Sin vencimientos registrados</p>';
+  } else {
+    html+='<div class="tbl"><table><thead><tr>'+
+      '<th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Referencia</th><th style="text-align:right">Monto</th>'+
+    '</tr></thead><tbody>';
+    var prevFecha='';
+    timeline.forEach(function(x){
+      var vencido=x.fecha<hoy;
+      if(x.fecha!==prevFecha){
+        var d=new Date(x.fecha+'T00:00:00');
+        var dias=Math.round((d-hoyDate)/(86400000));
+        var label=dias===0?'HOY':dias===1?'MAÑANA':(dias<0?Math.abs(dias)+' días VENCIDO':dias+' días');
+        html+='<tr style="background:#f9fafb;"><td colspan="5" style="font-size:11px;font-weight:700;color:#9ca3af;padding:4px 12px;">'+x.fecha+' — '+label+'</td></tr>';
+        prevFecha=x.fecha;
+      }
+      html+='<tr>'+
+        '<td></td>'+
+        '<td><span class="badge '+(x.tipo==='cobrar'?'b-purple':'b-red')+'">'+(x.tipo==='cobrar'?'A cobrar':'A pagar')+'</span></td>'+
+        '<td>'+(x.desc||'—')+'</td>'+
+        '<td style="font-size:11px;color:#9ca3af;">'+(x.ref||'—')+'</td>'+
+        '<td style="text-align:right;font-weight:700;color:'+(x.tipo==='cobrar'?'#7c3aed':'#dc2626')+(vencido?';opacity:.6':'')+'">'+$p(x.monto)+'</td>'+
+      '</tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+  html+='</div>';
+  cont.innerHTML=html;
+}
+
+function openChqPropioModal(id){
+  editChqPropioId=id||null;
+  document.getElementById('m-chqp-title').textContent=id?'Editar cheque':'Nuevo cheque emitido';
+  var c=id?CHEQUES_PROPIOS.find(function(x){return x.id===id;}):null;
+  document.getElementById('mchqp-id').value=id||'';
+  document.getElementById('mchqp-numero').value=c?c.numero:'';
+  document.getElementById('mchqp-banco').value=c?c.banco:'BANCO SRL';
+  document.getElementById('mchqp-destinatario').value=c?c.destinatario:'';
+  document.getElementById('mchqp-monto').value=c?c.monto:'';
+  document.getElementById('mchqp-concepto').value=c?c.concepto||'':'';
+  document.getElementById('mchqp-emision').value=c?c.fecha_emision:today();
+  document.getElementById('mchqp-pago').value=c?c.fecha_pago||'':'';
+  document.getElementById('mchqp-estado').value=c?c.estado:'pendiente';
+  document.getElementById('mchqp-nota').value=c?c.nota||'':'';
+  // Poblar proveedores
+  var sel=document.getElementById('mchqp-proveedor');
+  sel.innerHTML='<option value="">— Sin vincular —</option>';
+  PROVEEDORES.forEach(function(p){
+    var o=document.createElement('option');o.value=p.id;o.textContent=p.nombre;
+    if(c&&c.proveedor_id===p.id)o.selected=true;
+    sel.appendChild(o);
+  });
+  openM('m-chqp');
+}
+
+async function saveChqPropio(){
+  var numero=document.getElementById('mchqp-numero').value.trim();
+  var destinatario=document.getElementById('mchqp-destinatario').value.trim();
+  var monto=parseFloat(document.getElementById('mchqp-monto').value)||0;
+  if(!numero||!destinatario||!monto){toast('Número, destinatario y monto son obligatorios','err');return;}
+  var d={
+    numero,banco:document.getElementById('mchqp-banco').value,
+    destinatario,
+    proveedor_id:parseInt(document.getElementById('mchqp-proveedor').value)||null,
+    monto,
+    concepto:document.getElementById('mchqp-concepto').value.trim()||null,
+    fecha_emision:document.getElementById('mchqp-emision').value,
+    fecha_pago:document.getElementById('mchqp-pago').value||null,
+    estado:document.getElementById('mchqp-estado').value,
+    nota:document.getElementById('mchqp-nota').value.trim()||null,
+    updated_at:new Date().toISOString()
+  };
+  var r=editChqPropioId
+    ?await sb.from('cheques_propios').update(d).eq('id',editChqPropioId)
+    :await sb.from('cheques_propios').insert(d);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast(editChqPropioId?'Cheque actualizado':'Cheque registrado');
+  closeM('m-chqp');
+  await loadChequesPropios();
+  renderChqPropios();
+}
+
+async function deleteChqPropio(id){
+  var c=CHEQUES_PROPIOS.find(function(x){return x.id===id;});
+  if(!confirm('¿Eliminar el cheque N° '+c.numero+' ('+c.destinatario+')?'))return;
+  var r=await sb.from('cheques_propios').delete().eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Cheque eliminado','info');
+  await loadChequesPropios();
+  renderChqPropios();
+}
+
+// ── CHEQUES / ECHEQ (legacy, mantenido para compatibilidad) ──
+function renderCheques(){ renderChqCartera(); }
+
 
 // ══════════════════════════════════════════════
 // TALLERISTAS
