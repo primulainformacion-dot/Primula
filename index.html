@@ -896,12 +896,20 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 <!-- Movimiento Finanzas -->
 <div class="modal-bg" id="m-mov">
   <div class="modal">
-    <h3>Nuevo movimiento</h3>
+    <h3 id="m-mov-title">Nuevo movimiento</h3>
+    <input type="hidden" id="mm-id"/>
+    <div id="mm-auto-warn" style="display:none;background:#fef3c7;border-radius:8px;padding:9px 14px;font-size:12px;color:#92400e;margin-bottom:14px;">
+      ⚠️ Este movimiento fue generado automáticamente desde un cobro. Editarlo no modifica el cobro original.
+    </div>
+    <div id="mm-transf-warn" style="display:none;background:#ede9fe;border-radius:8px;padding:9px 14px;font-size:12px;color:#5b21b6;margin-bottom:14px;">
+      🔄 Este movimiento forma parte de una transferencia entre cajas. Editarlo no modifica la otra punta de la transferencia.
+    </div>
     <div class="grid2">
       <div class="field"><label>Tipo *</label>
         <select id="mm-tipo" onchange="mm_onTipo()">
           <option value="egreso">Egreso (salida de dinero)</option>
           <option value="ingreso">Ingreso (entrada de dinero)</option>
+          <option value="transferencia" style="display:none">Transferencia entre cajas</option>
         </select>
       </div>
       <div class="field"><label>Caja *</label>
@@ -2242,7 +2250,11 @@ function renderFin(){
       '<td style="text-align:right;color:#dc2626;font-weight:600;">'+(Number(m.egreso)>0?$p(m.egreso):'')+'</td>'+
       '<td style="font-size:11px;color:#9ca3af;">'+(m.referencia||'—')+'</td>'+
       '<td style="font-size:11px;color:#8b5cf6;">'+(m.fecha_vencimiento||'')+'</td>'+
-      '<td>'+(m.cobro_id?'<span class="badge b-blue" title="Generado automáticamente desde cobro">Auto</span>':'')+'</td>'+
+      '<td><div class="actions" style="justify-content:flex-end;">'+
+        (m.cobro_id?'<span class="badge b-blue" title="Generado automáticamente desde cobro" style="margin-right:4px;">Auto</span>':'')+
+        '<button class="btn btn-sm btn-gray btn-icon" title="Editar" onclick="openMovModal('+m.id+')">✏️</button>'+
+        '<button class="btn btn-sm btn-red btn-icon" title="Eliminar" onclick="deleteMov('+m.id+')">🗑️</button>'+
+      '</div></td>'+
     '</tr>';
   }).join('');
 }
@@ -2332,7 +2344,7 @@ function renderFlujoCajas(anio,mes){
 
 function mm_onTipo(){
   var tipo=document.getElementById('mm-tipo').value;
-  document.getElementById('mm-opt-egr').style.display=tipo==='egreso'?'':'none';
+  document.getElementById('mm-opt-egr').style.display=(tipo==='egreso'||tipo==='transferencia')?'':'none';
   document.getElementById('mm-opt-ing').style.display=tipo==='ingreso'?'':'none';
 }
 
@@ -2342,14 +2354,43 @@ function mm_onCaja(){
   if(wrap)wrap.style.display=(caja==='ECHEQ/CHEQUE')?'':'none';
 }
 
-function openMovModal(){
-  document.getElementById('mm-tipo').value='egreso';
-  document.getElementById('mm-caja').value='EFECTIVO ADMINISTRACIÓN';
-  document.getElementById('mm-fecha').value=today();
-  document.getElementById('mm-detalle').value='';
-  document.getElementById('mm-monto').value='';
-  document.getElementById('mm-ref').value='';
-  document.getElementById('mm-fvenc').value='';
+var editMovId=null;
+
+function openMovModal(id){
+  editMovId=id||null;
+  document.getElementById('m-mov-title').textContent=id?'Editar movimiento':'Nuevo movimiento';
+  document.getElementById('mm-auto-warn').style.display='none';
+  document.getElementById('mm-transf-warn').style.display='none';
+  // Mostrar/ocultar opción transferencia en el select
+  var optTransf=document.querySelector('#mm-tipo option[value="transferencia"]');
+  if(optTransf)optTransf.style.display='none';
+
+  if(id){
+    var m=MOVS.find(function(x){return x.id===id;});
+    if(!m)return;
+    if(m.cobro_id)document.getElementById('mm-auto-warn').style.display='';
+    if(m.tipo==='transferencia'){
+      document.getElementById('mm-transf-warn').style.display='';
+      if(optTransf)optTransf.style.display='';
+    }
+    document.getElementById('mm-tipo').value=m.tipo||'egreso';
+    document.getElementById('mm-caja').value=m.caja||'EFECTIVO ADMINISTRACIÓN';
+    document.getElementById('mm-fecha').value=m.fecha||today();
+    document.getElementById('mm-concepto').value=m.concepto||'';
+    document.getElementById('mm-detalle').value=m.detalle||'';
+    document.getElementById('mm-monto').value=Number(m.ingreso)>0?m.ingreso:m.egreso;
+    document.getElementById('mm-ref').value=m.referencia||'';
+    document.getElementById('mm-fvenc').value=m.fecha_vencimiento||'';
+  } else {
+    document.getElementById('mm-tipo').value='egreso';
+    document.getElementById('mm-caja').value='EFECTIVO ADMINISTRACIÓN';
+    document.getElementById('mm-fecha').value=today();
+    document.getElementById('mm-concepto').value='SUELDOS/JORNALES';
+    document.getElementById('mm-detalle').value='';
+    document.getElementById('mm-monto').value='';
+    document.getElementById('mm-ref').value='';
+    document.getElementById('mm-fvenc').value='';
+  }
   mm_onTipo();
   mm_onCaja();
   openM('m-mov');
@@ -2364,19 +2405,32 @@ async function saveMov(){
   var fvenc=document.getElementById('mm-fvenc').value||null;
   var d={
     caja:document.getElementById('mm-caja').value,
-    anio:new Date(fecha).getFullYear(),
-    mes:MESES_ARR[new Date(fecha).getMonth()],
+    anio:new Date(fecha+'T12:00:00').getFullYear(),
+    mes:MESES_ARR[new Date(fecha+'T12:00:00').getMonth()],
     sem:0,fecha,tipo,
     concepto:document.getElementById('mm-concepto').value,
     detalle,
-    ingreso:tipo==='ingreso'?monto:0,
-    egreso:tipo==='egreso'?monto:0,
-    referencia:document.getElementById('mm-ref').value,
-    fecha_vencimiento:fvenc
+    ingreso:tipo==='ingreso'?monto:(tipo==='transferencia'?monto:0),
+    egreso:tipo==='egreso'?monto:(tipo==='transferencia'?monto:0),
+    referencia:document.getElementById('mm-ref').value||null,
+    fecha_vencimiento:fvenc,
+    updated_at:new Date().toISOString()
   };
-  var r=await sb.from('movimientos').insert(d);
+  var r=editMovId?await sb.from('movimientos').update(d).eq('id',editMovId):await sb.from('movimientos').insert(d);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
-  toast('Movimiento registrado');closeM('m-mov');
+  toast(editMovId?'Movimiento actualizado':'Movimiento registrado');
+  closeM('m-mov');
+  await loadMovs();renderFin();
+}
+
+async function deleteMov(id){
+  var m=MOVS.find(function(x){return x.id===id;});
+  if(!m)return;
+  var msg='¿Eliminar este movimiento?\n\n'+m.fecha+' · '+m.caja+'\n'+(m.concepto||'')+(m.detalle?' — '+m.detalle:'')+'\n\nEsta acción no se puede deshacer.';
+  if(!confirm(msg))return;
+  var r=await sb.from('movimientos').delete().eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Movimiento eliminado','info');
   await loadMovs();renderFin();
 }
 
