@@ -596,10 +596,11 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <span style="font-size:22px;font-weight:800;color:#991b1b;" id="pg-total-pasivos">$0</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-          <div class="stat" style="border-top:3px solid #8b5cf6;">
-            <div class="stat-icon" style="background:#ede9fe;">🧾</div>
-            <h3 id="pg-echeq-pas">$0</h3><p>Cheques emitidos</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">ECHEQ / Cheques a pagar</div>
+          <span id="pg-echeq-pas" style="display:none;"></span>
+          <div class="stat" style="border-top:3px solid #dc2626;cursor:pointer;" onclick="nav('cheques',document.querySelector('.nav-item[onclick*=\"cheques\"]'));setChqTab('propios',document.querySelector('#chq-tabs .tab:nth-child(2)'))">
+            <div class="stat-icon" style="background:#fee2e2;">📝</div>
+            <h3 id="pg-chqp-pas">$0</h3><p>Cheques propios emitidos</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-chqp-pas-sub">— pendientes</div>
           </div>
           <div class="stat" style="border-top:3px solid #e5e7eb;opacity:.65;">
             <div class="stat-icon" style="background:#f3f4f6;">🤝</div>
@@ -2940,9 +2941,12 @@ function renderPanelGeneral(){
   var morCuotas=MORATORIAS.filter(function(m){return m.estado!=='finalizada';})
     .reduce(function(s,m){return s+Math.max(m.cuotas_total-m.cuotas_pagadas,0);},0);
   var chqpPasivo=CHEQUES_PROPIOS.filter(function(c){return c.estado==='pendiente';}).reduce(function(s,c){return s+Number(c.monto);},0);
+  var chqpCount=CHEQUES_PROPIOS.filter(function(c){return c.estado==='pendiente';}).length;
   var totalPasivos=echeqPasivo+morTotal+chqpPasivo;
   if(el('pg-moratorias'))el('pg-moratorias').textContent=$p(morTotal);
   if(el('pg-moratorias-sub'))el('pg-moratorias-sub').textContent=morCuotas>0?(morCuotas+' cuota'+(morCuotas!==1?'s':'')+' pendiente'+(morCuotas!==1?'s':'')):'Sin cuotas pendientes';
+  if(el('pg-chqp-pas'))el('pg-chqp-pas').textContent=$p(chqpPasivo);
+  if(el('pg-chqp-pas-sub'))el('pg-chqp-pas-sub').textContent=chqpCount+' cheque'+(chqpCount!==1?'s':'')+' pendiente'+(chqpCount!==1?'s':'');
   if(el('pg-total-pasivos'))el('pg-total-pasivos').textContent=$p(totalPasivos);
   // Tarjetas macro resumen
   if(el('pg-resumen-activos'))el('pg-resumen-activos').textContent=$p(totalActivos);
