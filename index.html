@@ -1764,10 +1764,12 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
 <!-- Producto -->
 <div class="modal-bg" id="m-prod">
-  <div class="modal" style="max-width:580px;">
+  <div class="modal" style="max-width:600px;">
     <h3 id="m-prod-title">Nuevo producto</h3>
     <div class="grid2">
-      <div class="field"><label>Código</label><input id="mprod-codigo" placeholder="Ej: REM-001"/></div>
+      <div class="field"><label>Familia</label><input id="mprod-familia" placeholder="Ej: CHOMBA HOMBRE"/></div>
+      <div class="field"><label>Talle</label><input id="mprod-talle" placeholder="Ej: 4N, 8, XL"/></div>
+      <div class="field"><label>Código (SKU)</label><input id="mprod-codigo" placeholder="Ej: SAN-CH H-8"/></div>
       <div class="field"><label>Categoría</label>
         <select id="mprod-cat"><option value="">— Sin categoría —</option></select>
       </div>
@@ -3268,6 +3270,13 @@ function poblarSelectCategorias(){
   });
 }
 
+var prodFamiliaOpen={};
+
+function toggleProdFam(fam){
+  prodFamiliaOpen[fam]=prodFamiliaOpen[fam]===false?true:false;
+  renderProductos();
+}
+
 function renderProductos(){
   var q=(document.getElementById('pr-q').value||'').toLowerCase();
   var catFil=document.getElementById('pr-cat').value;
@@ -3276,58 +3285,40 @@ function renderProductos(){
 
   var prodsFiltrados=PRODUCTOS.filter(function(p){
     if(!p.activo)return false;
-    if(q&&!p.nombre.toLowerCase().includes(q)&&!(p.codigo||'').toLowerCase().includes(q))return false;
+    if(q&&!p.nombre.toLowerCase().includes(q)&&!(p.codigo||'').toLowerCase().includes(q)&&!(p.familia||'').toLowerCase().includes(q))return false;
     if(catFil&&String(p.categoria_id)!==catFil)return false;
-    if(localFil){
-      var locs=p.locales_disponibles||['llavallol','montegrande','mayorista'];
-      if(locs.indexOf(localFil)<0)return false;
-    }
+    if(localFil){var locs=p.locales_disponibles||['llavallol','montegrande','mayorista'];if(locs.indexOf(localFil)<0)return false;}
     return true;
   });
 
-  // Build per-talle rows
-  var rows=[];
-  prodsFiltrados.forEach(function(p){
+  function mkRow(p){
     var stProd=STOCK.filter(function(s){return s.producto_id===p.id;});
-    var talles=[];
-    stProd.forEach(function(s){if(s.talle&&talles.indexOf(s.talle)<0)talles.push(s.talle);});
-    if(!talles.length)talles=['—'];
+    var stDep=stProd.filter(function(s){return s.local==='deposito';}).reduce(function(s,x){return s+x.cantidad;},0);
+    var stLocal=stProd.filter(function(s){return s.local!=='deposito';}).reduce(function(s,x){return s+x.cantidad;},0);
+    var stTotal=stDep+stLocal;
+    var ideal=Number(p.stock_ideal||0);
+    var costo=Number(p.costo||0);
+    var precio=Number(p.precio_minorista||0);
+    var ganancia=precio-costo;
+    var pctGan=costo>0?Math.round((ganancia/costo)*100):0;
+    var valorizado=stTotal*precio;
+    var valLocal=stLocal*precio;
+    var faltaUnid=ideal>0?Math.max(0,ideal-stTotal):0;
+    var estado=(ideal>0?stTotal<ideal:stTotal===0)?'FALTANTE':'STOCK';
+    return {p,stDep,stLocal,stTotal,ideal,faltaUnid,costo,precio,ganancia,pctGan,valorizado,valLocal,estado};
+  }
 
-    talles.forEach(function(talle){
-      var stDep=stProd.filter(function(s){return s.local==='deposito'&&(talle==='—'||s.talle===talle);}).reduce(function(s,x){return s+x.cantidad;},0);
-      var stLocal=stProd.filter(function(s){return s.local!=='deposito'&&(talle==='—'||s.talle===talle);}).reduce(function(s,x){return s+x.cantidad;},0);
-      var stTotal=stDep+stLocal;
-      var costo=Number(p.costo||0);
-      var precio=Number(p.precio_minorista||0);
-      var ganancia=precio-costo;
-      var pctGan=costo>0?Math.round((ganancia/costo)*100):0;
-      var valorizado=stTotal*precio;
-      var valLocal=stLocal*precio;
-      var estado=stTotal===0?'FALTANTE':'STOCK';
-      if(estadoFil&&estado!==estadoFil)return;
-      rows.push({p,talle,stDep,stLocal,stTotal,costo,precio,ganancia,pctGan,valorizado,valLocal,estado});
-    });
-  });
-
-  // Stats
-  var elN=document.getElementById('pr-total-prod');if(elN)elN.textContent=PRODUCTOS.filter(function(p){return p.activo;}).length;
-  var elF=document.getElementById('pr-stat-falt');if(elF)elF.textContent=rows.filter(function(r){return r.estado==='FALTANTE';}).length;
-  var elD=document.getElementById('pr-stat-dep');if(elD)elD.textContent=STOCK.filter(function(s){return s.local==='deposito';}).reduce(function(s,x){return s+x.cantidad;},0);
-  var elV=document.getElementById('pr-valor-total');if(elV)elV.textContent=$p(rows.reduce(function(s,r){return s+r.valorizado;},0));
-
-  var tb=document.getElementById('pr-tbody');
-  if(!rows.length){tb.innerHTML='<tr><td colspan="18"><div class="empty"><div class="ei">👔</div><p>Sin productos</p></div></td></tr>';return;}
-
-  tb.innerHTML=rows.map(function(r){
+  function rowHtml(r,indent){
     var p=r.p;
-    var sku=(p.codigo||'')+(r.talle&&r.talle!=='—'?'-'+r.talle:'');
     var cat=p.categorias?p.categorias.nombre:'—';
     var pctColor=r.pctGan>=40?'#16a34a':r.pctGan>=20?'#ca8a04':'#dc2626';
-    var stColor=r.stTotal===0?'#dc2626':r.stTotal<3?'#ca8a04':'#16a34a';
-    var estadoBadge=r.estado==='FALTANTE'?'<span class="badge" style="background:#fee2e2;color:#dc2626;font-size:10px;">FALTANTE</span>':'<span class="badge b-green" style="font-size:10px;">OK</span>';
+    var stColor=r.estado==='FALTANTE'?'#dc2626':r.stTotal<r.ideal*0.5&&r.ideal>0?'#ca8a04':'#16a34a';
+    var estadoBadge=r.estado==='FALTANTE'
+      ?'<span class="badge" style="background:#fee2e2;color:#dc2626;font-size:10px;">FALTANTE'+(r.faltaUnid>0?' -'+r.faltaUnid:'')+'</span>'
+      :'<span class="badge b-green" style="font-size:10px;">OK</span>';
     return '<tr>'+
-      '<td><span class="badge b-gray" style="font-size:10px;">'+(sku||'—')+'</span></td>'+
-      '<td style="max-width:160px;"><strong>'+esc(p.nombre)+'</strong></td>'+
+      '<td style="padding-left:'+(indent?26:8)+'px;white-space:nowrap;"><span class="badge b-gray" style="font-size:10px;">'+(p.codigo||'—')+'</span></td>'+
+      '<td style="max-width:150px;">'+esc(p.nombre)+'</td>'+
       '<td><span class="badge b-gray" style="font-size:10px;">'+cat+'</span></td>'+
       '<td style="text-align:right;font-size:12px;">'+$p(r.costo)+'</td>'+
       '<td style="text-align:right;font-size:12px;font-weight:700;">'+$p(r.precio)+'</td>'+
@@ -3337,15 +3328,72 @@ function renderProductos(){
       '<td style="text-align:right;font-weight:700;color:'+(r.stLocal===0?'#9ca3af':'#374151')+';">'+r.stLocal+'</td>'+
       '<td style="text-align:right;font-weight:800;color:'+stColor+';">'+r.stTotal+'</td>'+
       '<td style="text-align:right;font-size:12px;">'+$p(r.valorizado)+'</td>'+
-      '<td style="text-align:right;color:#6b7280;">'+(p.stock_ideal||0)+'</td>'+
+      '<td style="text-align:right;color:'+(r.faltaUnid>0?'#dc2626':'#9ca3af')+';">'+r.ideal+'</td>'+
       '<td style="font-size:11px;color:#6b7280;">'+(p.tipo_2||'—')+'</td>'+
       '<td style="text-align:right;font-size:12px;">'+$p(r.valLocal)+'</td>'+
-      '<td><span class="badge b-gray" style="font-size:10px;">'+(r.talle||'—')+'</span></td>'+
+      '<td><span class="badge b-gray" style="font-size:10px;">'+(p.talle||'—')+'</span></td>'+
       '<td>'+estadoBadge+'</td>'+
       '<td style="font-size:11px;color:#6b7280;">'+(p.nivel||'—')+'</td>'+
       '<td><button class="btn btn-sm btn-gray btn-icon" onclick="openProdModal('+p.id+')">✏️</button></td>'+
     '</tr>';
-  }).join('');
+  }
+
+  // Group by familia
+  var famMap={},noFam=[];
+  prodsFiltrados.forEach(function(p){var f=p.familia||null;if(f){if(!famMap[f])famMap[f]=[];famMap[f].push(p);}else noFam.push(p);});
+
+  // Stats (sobre todos los productos activos, sin filtro)
+  var allRows=PRODUCTOS.filter(function(p){return p.activo;}).map(mkRow);
+  var elN=document.getElementById('pr-total-prod');if(elN)elN.textContent=allRows.length;
+  var elF=document.getElementById('pr-stat-falt');if(elF)elF.textContent=allRows.filter(function(r){return r.estado==='FALTANTE';}).length;
+  var elD=document.getElementById('pr-stat-dep');if(elD)elD.textContent=STOCK.filter(function(s){return s.local==='deposito';}).reduce(function(s,x){return s+x.cantidad;},0);
+  var elV=document.getElementById('pr-valor-total');if(elV)elV.textContent=$p(allRows.reduce(function(s,r){return s+r.valorizado;},0));
+
+  var html='';
+
+  // Render families
+  Object.keys(famMap).sort().forEach(function(fam){
+    var prods=famMap[fam];
+    var rows=prods.map(mkRow);
+    var vrows=estadoFil?rows.filter(function(r){return r.estado===estadoFil;}):rows;
+    if(!vrows.length)return;
+
+    var isOpen=prodFamiliaOpen[fam]!==false;
+    var famTotal=rows.reduce(function(s,r){return s+r.stTotal;},0);
+    var famValor=rows.reduce(function(s,r){return s+r.valorizado;},0);
+    var famFalt=rows.filter(function(r){return r.estado==='FALTANTE';}).length;
+    var famFaltaUnid=rows.reduce(function(s,r){return s+r.faltaUnid;},0);
+    var cat=prods[0].categorias?prods[0].categorias.nombre:'—';
+    var famKey=fam.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+
+    html+='<tr style="background:#f1f5f9;cursor:pointer;" onclick="toggleProdFam(\''+famKey+'\')">'+
+      '<td colspan="2" style="font-weight:700;font-size:12px;white-space:nowrap;">'+(isOpen?'▼':'▶')+' '+esc(fam)+
+        ' <span style="font-size:11px;font-weight:400;color:#6b7280;">'+rows.length+' talle'+(rows.length!==1?'s':'')+'</span></td>'+
+      '<td><span class="badge b-gray" style="font-size:10px;">'+cat+'</span></td>'+
+      '<td colspan="5"></td>'+
+      '<td style="text-align:right;font-weight:700;color:#374151;">'+famTotal+'</td>'+
+      '<td style="text-align:right;font-size:12px;font-weight:700;">'+$p(famValor)+'</td>'+
+      '<td colspan="3"></td>'+
+      '<td colspan="2" style="font-size:11px;color:'+(famFalt>0?'#dc2626':'#16a34a')+';">'+
+        (famFalt>0?famFalt+' faltante'+(famFalt!==1?'s':'')+(famFaltaUnid>0?' ('+famFaltaUnid+' u.)':''):'✅ completo')+
+      '</td>'+
+      '<td colspan="2"></td>'+
+      '<td><button class="btn btn-sm" style="font-size:11px;background:#e0e7ff;color:#3730a3;border-color:#c7d2fe;padding:2px 10px;" onclick="event.stopPropagation();openProdModal(null,\''+famKey+'\')">+ talle</button></td>'+
+    '</tr>';
+
+    if(isOpen){vrows.forEach(function(r){html+=rowHtml(r,true);});}
+  });
+
+  // Products without familia
+  noFam.forEach(function(p){
+    var r=mkRow(p);
+    if(estadoFil&&r.estado!==estadoFil)return;
+    html+=rowHtml(r,false);
+  });
+
+  var tb=document.getElementById('pr-tbody');
+  if(!html){tb.innerHTML='<tr><td colspan="18"><div class="empty"><div class="ei">👔</div><p>Sin productos</p></div></td></tr>';return;}
+  tb.innerHTML=html;
 }
 
 // Tab Productos dentro de cada local
@@ -3377,10 +3425,12 @@ function renderLocalProductos(){
   }).join('');
 }
 
-function openProdModal(id){
+function openProdModal(id,famDefault){
   editProdId=id||null;
   document.getElementById('m-prod-title').textContent=id?'Editar producto':'Nuevo producto';
   var p=id?PRODUCTOS.find(function(x){return x.id===id;})||{}:{};
+  document.getElementById('mprod-familia').value=p.familia||famDefault||'';
+  document.getElementById('mprod-talle').value=p.talle||'';
   document.getElementById('mprod-codigo').value=p.codigo||'';
   document.getElementById('mprod-nombre').value=p.nombre||'';
   document.getElementById('mprod-desc').value=p.descripcion||'';
@@ -3409,6 +3459,8 @@ async function saveProd(){
   if(document.getElementById('mprod-loc-montegrande').checked)locs.push('montegrande');
   if(document.getElementById('mprod-loc-mayorista').checked)locs.push('mayorista');
   var d={
+    familia:document.getElementById('mprod-familia').value.trim()||null,
+    talle:document.getElementById('mprod-talle').value.trim()||null,
     nombre:n,
     codigo:document.getElementById('mprod-codigo').value.trim()||null,
     descripcion:document.getElementById('mprod-desc').value.trim()||null,
