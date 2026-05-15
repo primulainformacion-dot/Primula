@@ -3191,60 +3191,113 @@ function renderTalProduccion(){
 
 function renderTalPrecios(){
   var cont=document.getElementById('tal-precios-cont');
-  var activos=TALLERISTAS.filter(function(t){return t.activo;});
-  if(!activos.length){cont.innerHTML='<p style="color:#9ca3af;">Sin talleristas activos</p>';return;}
-  cont.innerHTML=activos.map(function(t){
-    var hist=TAL_PRECIOS_HIST.filter(function(h){return h.tallerista_id===t.id;});
-    var histHtml=hist.length===0
-      ? '<p style="color:#9ca3af;font-size:12px;margin:0;">Sin cambios registrados</p>'
-      : '<div class="tbl" style="margin-top:8px;"><table><thead><tr>'+
-          '<th>Fecha</th><th style="text-align:right">Anterior</th><th style="text-align:right">Nuevo</th><th>Nota</th>'+
-        '</tr></thead><tbody>'+
-        hist.map(function(h){
-          return '<tr>'+
-            '<td style="font-size:12px;">'+h.fecha_cambio+'</td>'+
-            '<td style="text-align:right;font-size:12px;color:#9ca3af;">'+$p(h.precio_anterior)+'</td>'+
-            '<td style="text-align:right;font-size:12px;font-weight:600;">'+$p(h.precio_nuevo)+'</td>'+
-            '<td style="font-size:12px;color:#9ca3af;">'+(h.nota||'—')+'</td>'+
-          '</tr>';
-        }).join('')+
-        '</tbody></table></div>';
-    return '<div class="panel" style="margin-bottom:12px;">'+
-      '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'+
-        '<span style="font-weight:700;font-size:15px;min-width:130px;">'+t.nombre+'</span>'+
-        '<span style="color:#9ca3af;font-size:12px;">Actual: <strong style="color:#1f2937;">'+$p(t.precio_prenda_default)+'</strong></span>'+
-        '<input type="number" id="tal-np-'+t.id+'" value="'+t.precio_prenda_default+'" style="width:130px;" placeholder="Nuevo precio" />'+
-        '<input type="text"   id="tal-nt-'+t.id+'" style="width:180px;" placeholder="Motivo (opcional)" />'+
-        '<button class="btn" onclick="saveTalPrecio('+t.id+')">Guardar precio</button>'+
-      '</div>'+
-      '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #f3f4f6;">'+
-        '<span style="font-size:11px;color:#9ca3af;font-weight:700;letter-spacing:.5px;">HISTORIAL DE PRECIOS</span>'+
-        histHtml+
-      '</div>'+
-    '</div>';
-  }).join('');
+  var talActivos=TALLERISTAS.filter(function(t){return t.activo;})
+    .sort(function(a,b){return a.nombre.localeCompare(b.nombre);});
+  if(!talActivos.length){cont.innerHTML='<p style="color:#9ca3af;">Sin talleristas activos</p>';return;}
+
+  // Lookup: "tallerista_id_prenda" → precio
+  var lookup={};
+  TAL_PRECIOS_PRENDA.forEach(function(p){lookup[p.tallerista_id+'_'+p.prenda]=Number(p.precio);});
+
+  var thStyle='padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;border-right:1px solid #e5e7eb;font-size:11px;white-space:nowrap;background:#f9fafb;';
+  var thFirst='position:sticky;left:0;z-index:2;padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;border-right:2px solid #d1d5db;background:#f9fafb;font-size:11px;min-width:160px;';
+
+  var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'+
+    '<span style="font-size:12px;color:#9ca3af;">Celda vacía = sin precio asignado</span>'+
+    '<button class="btn" onclick="saveTalPrecios()">Guardar todos los precios</button>'+
+  '</div>';
+
+  html+='<div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;"><table style="border-collapse:collapse;font-size:13px;">';
+
+  // Encabezado: col prenda + col por tallerista
+  html+='<thead><tr>';
+  html+='<th style="'+thFirst+'">PRENDA</th>';
+  talActivos.forEach(function(t){
+    html+='<th style="'+thStyle+'min-width:95px;">'+t.nombre+'</th>';
+  });
+  html+='</tr></thead><tbody>';
+
+  // Una fila por prenda
+  PRENDAS_LIST.forEach(function(prenda,idx){
+    var bg=idx%2===0?'#ffffff':'#f9fafb';
+    var tdBorder='border-bottom:1px solid #e5e7eb;border-right:1px solid #e5e7eb;';
+    html+='<tr>';
+    html+='<td style="position:sticky;left:0;z-index:1;background:'+bg+';padding:5px 12px;font-weight:500;'+tdBorder+'border-right:2px solid #d1d5db;">'+prenda+'</td>';
+    talActivos.forEach(function(t){
+      var precio=lookup[t.id+'_'+prenda]||'';
+      html+='<td style="padding:3px 5px;'+tdBorder+'background:'+bg+';">'+
+        '<input type="number" id="pp_'+t.id+'_'+idx+'" value="'+(precio||'')+'" placeholder="—" '+
+        'style="width:84px;text-align:right;border:1px solid #e5e7eb;border-radius:4px;padding:3px 5px;font-size:12px;background:transparent;">'+
+        '</td>';
+    });
+    html+='</tr>';
+  });
+
+  html+='</tbody></table></div>';
+
+  // Historial
+  var hist=TAL_PRECIOS_PRENDA_HIST.slice(0,40);
+  html+='<div style="margin-top:20px;"><span style="font-size:11px;color:#9ca3af;font-weight:700;letter-spacing:.5px;">HISTORIAL DE CAMBIOS</span>';
+  if(!hist.length){
+    html+='<p style="color:#9ca3af;font-size:12px;margin-top:6px;">Sin cambios registrados</p>';
+  } else {
+    html+='<div class="tbl" style="margin-top:8px;"><table><thead><tr>'+
+      '<th>Fecha</th><th>Tallerista</th><th>Prenda</th>'+
+      '<th style="text-align:right">Anterior</th><th style="text-align:right">Nuevo</th>'+
+    '</tr></thead><tbody>';
+    hist.forEach(function(h){
+      var talNombre=(TALLERISTAS.find(function(t){return t.id===h.tallerista_id;})||{}).nombre||'—';
+      html+='<tr>'+
+        '<td style="font-size:12px;">'+h.fecha_cambio+'</td>'+
+        '<td style="font-size:12px;">'+talNombre+'</td>'+
+        '<td style="font-size:12px;">'+h.prenda+'</td>'+
+        '<td style="text-align:right;font-size:12px;color:#9ca3af;">'+$p(h.precio_anterior)+'</td>'+
+        '<td style="text-align:right;font-size:12px;font-weight:600;">'+$p(h.precio_nuevo)+'</td>'+
+      '</tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+  html+='</div>';
+
+  cont.innerHTML=html;
 }
 
-async function saveTalPrecio(talId){
-  var tal=TALLERISTAS.find(function(t){return t.id===talId;});
-  if(!tal)return;
-  var nuevoPrecio=parseFloat(document.getElementById('tal-np-'+talId).value)||0;
-  var nota=(document.getElementById('tal-nt-'+talId).value||'').trim();
-  if(nuevoPrecio===Number(tal.precio_prenda_default)){toast('El precio no cambió','info');return;}
-  if(nuevoPrecio<=0){toast('Ingresá un precio válido','err');return;}
-  var precioAnterior=Number(tal.precio_prenda_default);
-  var {error:e1}=await sb.from('tallerista_precios_historial').insert({
-    tallerista_id:talId,precio_anterior:precioAnterior,precio_nuevo:nuevoPrecio,
-    fecha_cambio:today(),nota:nota||null
+async function saveTalPrecios(){
+  var talActivos=TALLERISTAS.filter(function(t){return t.activo;});
+  var lookup={};
+  TAL_PRECIOS_PRENDA.forEach(function(p){lookup[p.tallerista_id+'_'+p.prenda]=Number(p.precio);});
+
+  var upserts=[], changes=[];
+  PRENDAS_LIST.forEach(function(prenda,idx){
+    talActivos.forEach(function(t){
+      var el=document.getElementById('pp_'+t.id+'_'+idx);
+      if(!el)return;
+      var nuevo=parseFloat(el.value)||0;
+      var anterior=lookup[t.id+'_'+prenda]||0;
+      if(nuevo>0){
+        upserts.push({tallerista_id:t.id,prenda:prenda,precio:nuevo,updated_at:new Date().toISOString()});
+      }
+      if(nuevo!==anterior){
+        changes.push({tallerista_id:t.id,prenda:prenda,precio_anterior:anterior,precio_nuevo:nuevo,fecha_cambio:today()});
+      }
+    });
   });
-  if(e1){toast('Error al guardar historial: '+e1.message,'err');return;}
-  var {error:e2}=await sb.from('talleristas').update({precio_prenda_default:nuevoPrecio}).eq('id',talId);
-  if(e2){toast('Error al actualizar precio: '+e2.message,'err');return;}
-  tal.precio_prenda_default=nuevoPrecio;
-  await loadTalHistorial();
+
+  if(!upserts.length&&!changes.length){toast('Sin cambios','info');return;}
+
+  if(upserts.length){
+    var {error:e1}=await sb.from('tallerista_precios_prenda').upsert(upserts,{onConflict:'tallerista_id,prenda'});
+    if(e1){toast('Error al guardar: '+e1.message,'err');return;}
+  }
+  if(changes.length){
+    var {error:e2}=await sb.from('tallerista_precios_prenda_hist').insert(changes);
+    if(e2){toast('Error al guardar historial: '+e2.message,'err');return;}
+  }
+
+  await loadTalPreciosPrenda();
+  await loadTalPreciosPrendaHist();
   renderTalPrecios();
-  renderTalleristas();
-  toast('Precio actualizado — '+tal.nombre);
+  toast('Precios guardados — '+changes.length+' cambio'+(changes.length!==1?'s':''));
 }
 
 function openTalModal(id){
