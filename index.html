@@ -4360,20 +4360,36 @@ function renderTransfHistorial(){
   var filCaja=document.getElementById('tr-fil-caja')?document.getElementById('tr-fil-caja').value:'';
   var filMes=document.getElementById('tr-fil-mes')?document.getElementById('tr-fil-mes').value:'';
   var anio=parseInt(document.getElementById('fin-anio').value)||new Date().getFullYear();
-  var transfMovs=MOVS.filter(function(m){
-    return m.tipo==='transferencia'&&Number(m.ingreso)>0
-      &&(!filCaja||m.caja===filCaja)
-      &&(!filMes||m.mes===filMes)
-      &&m.anio===anio;
-  }).slice(0,50);
+  // Agrupar por transferencia_ref: cada ref tiene una punta ingreso y una egreso
+  var transfAll=MOVS.filter(function(m){return m.tipo==='transferencia'&&m.anio===anio&&(!filMes||m.mes===filMes);});
+  // Construir pares desde→hacia usando transferencia_ref
+  var refs={};
+  transfAll.forEach(function(m){
+    var r=m.transferencia_ref||('_'+m.id);
+    if(!refs[r])refs[r]={fecha:m.fecha,mes:m.mes,detalle:m.detalle,monto:0,desde:'',hacia:''};
+    if(Number(m.egreso)>0){refs[r].desde=m.caja;refs[r].monto=Number(m.egreso);}
+    if(Number(m.ingreso)>0){refs[r].hacia=m.caja;}
+  });
+  var pares=Object.values(refs).filter(function(p){
+    return (!filCaja||(p.desde===filCaja||p.hacia===filCaja));
+  }).sort(function(a,b){return a.fecha<b.fecha?1:-1;});
   var el=document.getElementById('tr-historial');
-  if(!transfMovs.length){el.innerHTML='<div class="empty"><p>Sin transferencias para el filtro seleccionado</p></div>';return;}
-  el.innerHTML='<div class="tbl"><table><thead><tr><th>Fecha</th><th>Hacia</th><th>Monto</th><th>Detalle</th></tr></thead><tbody>'+
-    transfMovs.map(function(m){
-      return '<tr><td>'+m.fecha+'</td>'+
-        '<td><span style="font-size:11px;font-weight:700;color:'+(CAJA_COLORES[m.caja]||'#6b7280')+'">'+m.caja+'</span></td>'+
-        '<td style="font-weight:700;color:#16a34a;">'+$p(m.ingreso)+'</td>'+
-        '<td style="font-size:12px;color:#6b7280;">'+(m.detalle||'—')+'</td></tr>';
+  if(!pares.length){el.innerHTML='<div class="empty"><p>Sin transferencias para el filtro seleccionado</p></div>';return;}
+  el.innerHTML='<div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">'+pares.length+' transferencia'+(pares.length!==1?'s':'')+' · '+anio+'</div>'+
+    '<div class="tbl"><table><thead><tr>'+
+    '<th>Fecha</th><th>Desde</th><th></th><th>Hacia</th><th style="text-align:right">Monto</th><th>Detalle</th>'+
+    '</tr></thead><tbody>'+
+    pares.map(function(p){
+      var colorD=CAJA_COLORES[p.desde]||'#6b7280';
+      var colorH=CAJA_COLORES[p.hacia]||'#6b7280';
+      return '<tr>'+
+        '<td style="font-size:12px;white-space:nowrap;">'+p.fecha+'</td>'+
+        '<td><span style="font-size:11px;font-weight:700;color:'+colorD+';">'+p.desde+'</span></td>'+
+        '<td style="color:#9ca3af;font-size:14px;">→</td>'+
+        '<td><span style="font-size:11px;font-weight:700;color:'+colorH+';">'+p.hacia+'</span></td>'+
+        '<td style="text-align:right;font-weight:700;color:#374151;">'+$p(p.monto)+'</td>'+
+        '<td style="font-size:11px;color:#6b7280;">'+(p.detalle||'—')+'</td>'+
+      '</tr>';
     }).join('')+'</tbody></table></div>';
 }
 
@@ -4414,8 +4430,9 @@ function renderFinResumen(){
   if(!cont)return;
   if(!egrs.length){cont.innerHTML='<div class="empty"><p>Sin egresos para el período</p></div>';return;}
   if(mes){
-    // Vista mensual: tabla concepto → monto + barra de porcentaje
-    var filas=CONCEPTOS_EGR.map(function(c){return{c:c,v:byConc[c]||0};}).filter(function(x){return x.v>0;});
+    // Vista mensual: incluir todos los conceptos con egresos, no solo los de CONCEPTOS_EGR
+    var todosConcActivos=Object.keys(byConc).filter(function(c){return byConc[c]>0;});
+    var filas=todosConcActivos.map(function(c){return{c:c,v:byConc[c]||0};});
     filas.sort(function(a,b){return b.v-a.v;});
     cont.innerHTML='<div class="tbl"><table>'+
       '<thead><tr><th>Concepto</th><th style="text-align:right">Monto</th><th style="text-align:right">% del total</th><th style="width:200px;">Participación</th></tr></thead>'+
@@ -4434,9 +4451,13 @@ function renderFinResumen(){
         '<td>TOTAL</td><td style="text-align:right;color:#dc2626;">'+$p(totalAnio)+'</td><td style="text-align:right;">100%</td><td></td></tr>'+
       '</tbody></table></div>';
   } else {
-    // Vista anual: tabla concepto × mes
-    var mesesActivos=MESES_ORD.filter(function(m2){return byMes[m2];});
-    var concActivos=CONCEPTOS_EGR.filter(function(c){return byConc[c];});
+    // Vista anual: tabla concepto × mes — siempre mostrar todos los meses hasta el actual
+    var hoyAnio=new Date().getFullYear();
+    var hoyMes=new Date().getMonth(); // 0-indexed
+    var mesesActivos=anio<hoyAnio ? MESES_ORD : MESES_ORD.slice(0,hoyMes+1);
+    // Conceptos en CONCEPTOS_EGR primero, luego los que hay en los datos y no están en la lista
+    var extrasConc=Object.keys(byConc).filter(function(c){return byConc[c]>0&&CONCEPTOS_EGR.indexOf(c)<0;});
+    var concActivos=CONCEPTOS_EGR.concat(extrasConc).filter(function(c){return byConc[c]>0;});
     // Mapa concepto+mes → monto
     var mapa={};
     egrs.forEach(function(m){var k=(m.concepto||'OTROS')+'|'+(m.mes||'');mapa[k]=(mapa[k]||0)+Number(m.egreso);});
