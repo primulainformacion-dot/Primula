@@ -912,12 +912,12 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <!-- ════════════ CHEQUES ════════════ -->
   <div class="section" id="sec-cheques">
     <div class="tabs" style="margin-bottom:16px;" id="chq-tabs">
-      <button class="tab active" onclick="setChqTab('cartera',this)">🧾 ECHEQ / Cartera</button>
+      <button class="tab active" onclick="setChqTab('cartera',this)">🧾 Recibos</button>
       <button class="tab" onclick="setChqTab('propios',this)">📋 Cartera propia</button>
       <button class="tab" onclick="setChqTab('resumen',this)">📊 Resumen</button>
     </div>
 
-    <!-- Sub-tab 1: ECHEQ / Cartera (cheques de terceros) -->
+    <!-- Sub-tab 1: Recibos -->
     <div id="chq-tab-cartera">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
         <select id="chq-anio" onchange="renderChqCartera()" style="width:90px;"></select>
@@ -938,13 +938,16 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
       <div class="panel">
         <div class="panel-hdr">
-          <h4>🧾 Cheques y ECHEQ recibidos</h4>
-          <button class="btn" onclick="openChqCarteraModal()">+ Registrar cheque</button>
+          <h4>🧾 Recibos</h4>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline" onclick="openChqCarteraModal()">+ Individual</button>
+            <button class="btn" onclick="openChqMasivoModal()">📋 Carga masiva</button>
+          </div>
         </div>
         <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;" id="chq-stats"></div>
         <div class="tbl"><table>
           <thead><tr>
-            <th>Día recibido</th><th>Concepto</th><th>Emisor</th>
+            <th>Tipo</th><th>Día recibido</th><th>Concepto</th><th>Emisor</th>
             <th style="text-align:right">Monto</th>
             <th style="text-align:right">Usado</th>
             <th style="text-align:right;color:#16a34a">Saldo</th>
@@ -1642,18 +1645,80 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Modal: carga masiva de recibos -->
+<div class="modal-bg" id="m-chq-masivo">
+  <div class="modal" style="max-width:980px;width:98vw;max-height:92vh;overflow-y:auto;">
+    <h3>📋 Carga masiva de recibos — hasta 10 por vez</h3>
+
+    <!-- Campos comunes -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:18px;">
+      <div class="field">
+        <label>Fecha recibido * (aplica a todas)</label>
+        <input type="date" id="chqm-fecha-global"/>
+      </div>
+      <div class="field">
+        <label>Concepto por defecto</label>
+        <select id="chqm-concepto-global">
+          <option>VENTA MAYORISTA</option><option>VENTA MINORISTA</option>
+          <option>COBRO CLIENTE</option><option>OTROS INGRESOS</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Estado inicial</label>
+        <select id="chqm-estado-global">
+          <option value="en_cartera">En cartera</option>
+          <option value="depositado">Depositado</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Grilla de 10 filas -->
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#1a1f36;color:#fff;">
+            <th style="padding:8px 6px;width:28px;text-align:center;">#</th>
+            <th style="padding:8px 6px;min-width:90px;">Tipo</th>
+            <th style="padding:8px 6px;min-width:160px;">Emisor *</th>
+            <th style="padding:8px 6px;min-width:110px;">Monto $ *</th>
+            <th style="padding:8px 6px;min-width:120px;">N° Cheque</th>
+            <th style="padding:8px 6px;min-width:120px;">Banco</th>
+            <th style="padding:8px 6px;min-width:130px;">Fecha cobro</th>
+            <th style="padding:8px 6px;min-width:90px;">N° FAC</th>
+          </tr>
+        </thead>
+        <tbody id="chqm-rows"></tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;flex-wrap:wrap;gap:8px;">
+      <span style="color:#6b7280;font-size:12px;">Solo se guardan las filas con Emisor y Monto completos.</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-gray" onclick="closeM('m-chq-masivo')">Cancelar</button>
+        <button class="btn" onclick="saveChqMasivo()">Guardar recibos</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: cheque recibido (cartera) -->
 <div class="modal-bg" id="m-chqc">
   <div class="modal">
-    <h3 id="m-chqc-title">Registrar cheque recibido</h3>
+    <h3 id="m-chqc-title">Registrar recibo</h3>
     <div class="grid2">
-      <div class="field"><label>Día recibido *</label><input type="date" id="chqc-fecha-recibido"/></div>
+      <div class="field"><label>Tipo *</label>
+        <select id="chqc-tipo">
+          <option value="cheque">Cheque físico</option>
+          <option value="echeq">ECHEQ</option>
+        </select>
+      </div>
       <div class="field"><label>Concepto *</label>
         <select id="chqc-concepto">
           <option>VENTA MAYORISTA</option><option>VENTA MINORISTA</option>
           <option>COBRO CLIENTE</option><option>OTROS INGRESOS</option>
         </select>
       </div>
+      <div class="field"><label>Día recibido *</label><input type="date" id="chqc-fecha-recibido"/></div>
       <div class="field full"><label>Emisor (de quién viene) *</label><input id="chqc-emisor" placeholder="Nombre del cliente o empresa"/></div>
       <div class="field"><label>Monto $ *</label><input type="number" id="chqc-monto" min="0" placeholder="0"/></div>
       <div class="field"><label>N° FAC</label><input id="chqc-nro-fac" placeholder="N° de factura asociada"/></div>
@@ -4447,7 +4512,7 @@ function renderChqCartera(){
       '<div style="font-size:20px;font-weight:800;color:'+(totalSaldo>0?'#166534':'#6b7280')+';">'+$p(totalSaldo)+'</div></div>';
   var tb=document.getElementById('chq-tbody');
   if(!tb)return;
-  if(!cheques.length){tb.innerHTML='<tr><td colspan="13"><div class="empty"><p>Sin cheques para el período</p></div></td></tr>';return;}
+  if(!cheques.length){tb.innerHTML='<tr><td colspan="14"><div class="empty"><p>Sin recibos para el período</p></div></td></tr>';return;}
   var estadoColors={en_cartera:'b-purple',depositado:'b-green',vendido:'b-blue',endosado:'b-yellow',rechazado:'b-red'};
   var estadoLabels={en_cartera:'En cartera',depositado:'Depositado',vendido:'Vendido',endosado:'Endosado',rechazado:'Rechazado'};
   var sorted=cheques.slice().sort(function(a,b){return(a.fecha_cobro||a.fecha_recibido)<(b.fecha_cobro||b.fecha_recibido)?-1:1;});
@@ -4467,7 +4532,11 @@ function renderChqCartera(){
     var rowBg=vencido?'background:#fff5f5;':pronto?'background:#fffbeb;':'';
     // Tooltip de usos
     var usosHtml=usos.length?('<div style="margin-top:6px;font-size:11px;color:#6b7280;">'+usos.map(function(u){return '→ '+u.fecha+' · '+(u.destinatario||'')+(u.concepto?' ('+u.concepto+')':'')+' · '+$p(Number(u.monto));}).join('<br>')+'</div>'):'';
+    var tipoBadge=c.tipo==='echeq'
+      ?'<span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:10px;">ECHEQ</span>'
+      :'<span class="badge" style="background:#f3f4f6;color:#374151;font-size:10px;">Cheque</span>';
     return '<tr style="'+rowBg+'">'+
+      '<td>'+tipoBadge+'</td>'+
       '<td style="font-size:12px;">'+c.fecha_recibido+'</td>'+
       '<td style="font-size:12px;">'+(c.concepto||'—')+'</td>'+
       '<td style="font-weight:600;">'+(c.emisor||'—')+'</td>'+
@@ -4664,11 +4733,12 @@ async function quickEstadoChq(id, estado){
 var editChqCId=null;
 function openChqCarteraModal(id){
   editChqCId=id||null;
-  document.getElementById('m-chqc-title').textContent=id?'Editar cheque':'Registrar cheque recibido';
+  document.getElementById('m-chqc-title').textContent=id?'Editar recibo':'Registrar recibo';
   document.getElementById('m-chqc-del').style.display=id?'':'none';
   if(id){
     var c=CHEQUES_CARTERA.find(function(x){return x.id===id;});
     if(!c)return;
+    document.getElementById('chqc-tipo').value=c.tipo||'cheque';
     document.getElementById('chqc-fecha-recibido').value=c.fecha_recibido||today();
     document.getElementById('chqc-concepto').value=c.concepto||'VENTA MAYORISTA';
     document.getElementById('chqc-emisor').value=c.emisor||'';
@@ -4680,6 +4750,7 @@ function openChqCarteraModal(id){
     document.getElementById('chqc-estado').value=c.estado||'en_cartera';
     document.getElementById('chqc-nota').value=c.nota||'';
   } else {
+    document.getElementById('chqc-tipo').value='cheque';
     document.getElementById('chqc-fecha-recibido').value=today();
     document.getElementById('chqc-concepto').value='VENTA MAYORISTA';
     document.getElementById('chqc-emisor').value='';
@@ -4700,6 +4771,7 @@ async function saveChqCartera(){
   var fecha=document.getElementById('chqc-fecha-recibido').value;
   if(!emisor||!monto||!fecha){toast('Completá emisor, monto y fecha','err');return;}
   var d={
+    tipo:document.getElementById('chqc-tipo').value||'cheque',
     fecha_recibido:fecha,
     concepto:document.getElementById('chqc-concepto').value,
     emisor,monto,
@@ -4713,8 +4785,70 @@ async function saveChqCartera(){
   };
   var r=editChqCId?await sb.from('cheques_cartera').update(d).eq('id',editChqCId):await sb.from('cheques_cartera').insert(d);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
-  toast(editChqCId?'Cheque actualizado':'Cheque registrado');
+  toast(editChqCId?'Recibo actualizado':'Recibo registrado');
   closeM('m-chqc');
+  await Promise.all([loadChequesCartera(),loadChequeUsos()]);
+  renderChqCartera();
+}
+
+function openChqMasivoModal(){
+  document.getElementById('chqm-fecha-global').value=today();
+  document.getElementById('chqm-concepto-global').value='VENTA MAYORISTA';
+  document.getElementById('chqm-estado-global').value='en_cartera';
+  var inpStyle='padding:5px 7px;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;width:100%;box-sizing:border-box;';
+  var selStyle='padding:5px 4px;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;width:100%;box-sizing:border-box;';
+  var tbody=document.getElementById('chqm-rows');
+  tbody.innerHTML=Array.from({length:10},function(_,i){
+    var n=i+1;
+    var bg=n%2===0?'background:#fafafa;':'';
+    return '<tr style="border-top:1px solid #f1f5f9;'+bg+'">'+
+      '<td style="padding:5px 6px;color:#9ca3af;font-size:11px;text-align:center;width:28px;">'+n+'</td>'+
+      '<td style="padding:5px 4px;">'+
+        '<select id="chqm-tipo-'+n+'" style="'+selStyle+'">'+
+          '<option value="cheque">Cheque</option>'+
+          '<option value="echeq">ECHEQ</option>'+
+        '</select>'+
+      '</td>'+
+      '<td style="padding:5px 4px;"><input id="chqm-emisor-'+n+'" style="'+inpStyle+'" placeholder="Emisor"/></td>'+
+      '<td style="padding:5px 4px;"><input type="number" id="chqm-monto-'+n+'" style="'+inpStyle+'" placeholder="0" min="0"/></td>'+
+      '<td style="padding:5px 4px;"><input id="chqm-numero-'+n+'" style="'+inpStyle+'" placeholder="N° cheque"/></td>'+
+      '<td style="padding:5px 4px;"><input id="chqm-banco-'+n+'" style="'+inpStyle+'" placeholder="Banco"/></td>'+
+      '<td style="padding:5px 4px;"><input type="date" id="chqm-cobro-'+n+'" style="'+inpStyle+'"/></td>'+
+      '<td style="padding:5px 4px;"><input id="chqm-fac-'+n+'" style="'+inpStyle+'" placeholder="FAC"/></td>'+
+    '</tr>';
+  }).join('');
+  openM('m-chq-masivo');
+}
+
+async function saveChqMasivo(){
+  var fechaGlobal=document.getElementById('chqm-fecha-global').value;
+  var conceptoGlobal=document.getElementById('chqm-concepto-global').value;
+  var estadoGlobal=document.getElementById('chqm-estado-global').value;
+  if(!fechaGlobal){toast('La fecha recibido es obligatoria','err');return;}
+  var rows=[];
+  for(var i=1;i<=10;i++){
+    var emisor=(document.getElementById('chqm-emisor-'+i).value||'').trim();
+    var monto=parseFloat(document.getElementById('chqm-monto-'+i).value)||0;
+    if(!emisor||!monto)continue;
+    rows.push({
+      tipo:document.getElementById('chqm-tipo-'+i).value||'cheque',
+      emisor:emisor,
+      monto:monto,
+      numero:document.getElementById('chqm-numero-'+i).value||null,
+      banco:document.getElementById('chqm-banco-'+i).value||null,
+      fecha_cobro:document.getElementById('chqm-cobro-'+i).value||null,
+      nro_factura:document.getElementById('chqm-fac-'+i).value||null,
+      fecha_recibido:fechaGlobal,
+      concepto:conceptoGlobal,
+      estado:estadoGlobal,
+      updated_at:new Date().toISOString()
+    });
+  }
+  if(!rows.length){toast('Completá al menos un Emisor y Monto','err');return;}
+  var r=await sb.from('cheques_cartera').insert(rows);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast(rows.length+' recibo'+(rows.length!==1?'s':'')+' registrado'+(rows.length!==1?'s':''));
+  closeM('m-chq-masivo');
   await Promise.all([loadChequesCartera(),loadChequeUsos()]);
   renderChqCartera();
 }
