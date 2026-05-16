@@ -1647,13 +1647,13 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
 <!-- Modal: carga masiva de recibos -->
 <div class="modal-bg" id="m-chq-masivo">
-  <div class="modal" style="max-width:980px;width:98vw;max-height:92vh;overflow-y:auto;">
-    <h3>📋 Carga masiva de recibos — hasta 10 por vez</h3>
+  <div class="modal" style="max-width:1020px;width:98vw;max-height:94vh;overflow-y:auto;">
+    <h3>📋 Carga masiva de recibos</h3>
 
-    <!-- Campos comunes -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:18px;">
+    <!-- Fila 1: campos globales + tipo global -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:14px;align-items:end;">
       <div class="field">
-        <label>Fecha recibido * (aplica a todas)</label>
+        <label>Fecha recibido * (todas)</label>
         <input type="date" id="chqm-fecha-global"/>
       </div>
       <div class="field">
@@ -1670,29 +1670,59 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option value="depositado">Depositado</option>
         </select>
       </div>
+      <!-- Tipo global -->
+      <div class="field">
+        <label>Tipo para TODAS las filas</label>
+        <div style="display:flex;gap:6px;">
+          <select id="chqm-tipo-global" style="flex:1;">
+            <option value="cheque">Cheque</option>
+            <option value="echeq">ECHEQ</option>
+          </select>
+          <button class="btn btn-sm btn-outline" onclick="applyTipoGlobal()" title="Aplicar a todas las filas" style="white-space:nowrap;">Aplicar ✓</button>
+        </div>
+      </div>
     </div>
 
-    <!-- Grilla de 10 filas -->
+    <!-- Zona de pegado Excel -->
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+        <div>
+          <span style="font-weight:700;font-size:13px;color:#92400e;">📋 Pegado desde Excel</span>
+          <span style="font-size:11px;color:#a16207;margin-left:8px;">Columnas esperadas → Emisor | Monto | N° Cheque | Banco | Fecha cobro (dd/mm/aaaa) | N° FAC</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-sm" style="background:#d97706;color:#fff;border:none;" onclick="parsePasteData()">⚡ Cargar en grilla</button>
+          <button class="btn btn-sm btn-gray" onclick="document.getElementById('chqm-paste').value=''">Limpiar</button>
+        </div>
+      </div>
+      <textarea id="chqm-paste" rows="4"
+        style="width:100%;font-size:12px;font-family:monospace;border:1px solid #fcd34d;border-radius:6px;padding:8px;resize:vertical;background:#fff;"
+        placeholder="Copiá un rango de celdas en Excel (Ctrl+C) y pegalo acá (Ctrl+V)...&#10;Ej:&#9;García Juan&#9;250000&#9;12345678&#9;Santander&#9;30/06/2026&#9;F001"></textarea>
+    </div>
+
+    <!-- Grilla -->
     <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead>
           <tr style="background:#1a1f36;color:#fff;">
-            <th style="padding:8px 6px;width:28px;text-align:center;">#</th>
-            <th style="padding:8px 6px;min-width:90px;">Tipo</th>
-            <th style="padding:8px 6px;min-width:160px;">Emisor *</th>
-            <th style="padding:8px 6px;min-width:110px;">Monto $ *</th>
-            <th style="padding:8px 6px;min-width:120px;">N° Cheque</th>
-            <th style="padding:8px 6px;min-width:120px;">Banco</th>
-            <th style="padding:8px 6px;min-width:130px;">Fecha cobro</th>
-            <th style="padding:8px 6px;min-width:90px;">N° FAC</th>
+            <th style="padding:7px 5px;width:26px;text-align:center;">#</th>
+            <th style="padding:7px 5px;min-width:90px;">Tipo</th>
+            <th style="padding:7px 5px;min-width:155px;">Emisor *</th>
+            <th style="padding:7px 5px;min-width:105px;">Monto $ *</th>
+            <th style="padding:7px 5px;min-width:115px;">N° Cheque</th>
+            <th style="padding:7px 5px;min-width:115px;">Banco</th>
+            <th style="padding:7px 5px;min-width:125px;">Fecha cobro</th>
+            <th style="padding:7px 5px;min-width:85px;">N° FAC</th>
+            <th style="padding:7px 5px;width:30px;"></th>
           </tr>
         </thead>
         <tbody id="chqm-rows"></tbody>
       </table>
     </div>
+    <button class="btn btn-sm btn-gray" style="margin-top:8px;" onclick="addChqmRows(5)">+ 5 filas</button>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;flex-wrap:wrap;gap:8px;">
-      <span style="color:#6b7280;font-size:12px;">Solo se guardan las filas con Emisor y Monto completos.</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;flex-wrap:wrap;gap:8px;">
+      <span style="color:#6b7280;font-size:12px;" id="chqm-info">Solo se guardan las filas con Emisor y Monto completos.</span>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-gray" onclick="closeM('m-chq-masivo')">Cancelar</button>
         <button class="btn" onclick="saveChqMasivo()">Guardar recibos</button>
@@ -4791,33 +4821,126 @@ async function saveChqCartera(){
   renderChqCartera();
 }
 
+var chqmRowCount=10;
+
+function chqmRowHtml(n, tipoVal){
+  var inpStyle='padding:5px 7px;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;width:100%;box-sizing:border-box;';
+  var selStyle='padding:5px 4px;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;width:100%;box-sizing:border-box;';
+  var bg=n%2===0?'background:#fafafa;':'';
+  return '<tr id="chqm-tr-'+n+'" style="border-top:1px solid #f1f5f9;'+bg+'">'+
+    '<td style="padding:5px 5px;color:#9ca3af;font-size:11px;text-align:center;width:26px;">'+n+'</td>'+
+    '<td style="padding:4px 4px;">'+
+      '<select id="chqm-tipo-'+n+'" style="'+selStyle+'">'+
+        '<option value="cheque"'+(tipoVal==='cheque'?' selected':'')+'>Cheque</option>'+
+        '<option value="echeq"'+(tipoVal==='echeq'?' selected':'')+'>ECHEQ</option>'+
+      '</select>'+
+    '</td>'+
+    '<td style="padding:4px 4px;"><input id="chqm-emisor-'+n+'" style="'+inpStyle+'" placeholder="Emisor"/></td>'+
+    '<td style="padding:4px 4px;"><input type="number" id="chqm-monto-'+n+'" style="'+inpStyle+'" placeholder="0" min="0"/></td>'+
+    '<td style="padding:4px 4px;"><input id="chqm-numero-'+n+'" style="'+inpStyle+'" placeholder="N° cheque"/></td>'+
+    '<td style="padding:4px 4px;"><input id="chqm-banco-'+n+'" style="'+inpStyle+'" placeholder="Banco"/></td>'+
+    '<td style="padding:4px 4px;"><input type="date" id="chqm-cobro-'+n+'" style="'+inpStyle+'"/></td>'+
+    '<td style="padding:4px 4px;"><input id="chqm-fac-'+n+'" style="'+inpStyle+'" placeholder="FAC"/></td>'+
+    '<td style="padding:4px 2px;text-align:center;"><button onclick="clearChqmRow('+n+')" title="Limpiar fila" style="background:none;border:none;cursor:pointer;font-size:13px;color:#d1d5db;">✕</button></td>'+
+  '</tr>';
+}
+
 function openChqMasivoModal(){
+  chqmRowCount=10;
   document.getElementById('chqm-fecha-global').value=today();
   document.getElementById('chqm-concepto-global').value='VENTA MAYORISTA';
   document.getElementById('chqm-estado-global').value='en_cartera';
-  var inpStyle='padding:5px 7px;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;width:100%;box-sizing:border-box;';
-  var selStyle='padding:5px 4px;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;width:100%;box-sizing:border-box;';
+  document.getElementById('chqm-tipo-global').value='cheque';
+  document.getElementById('chqm-paste').value='';
   var tbody=document.getElementById('chqm-rows');
-  tbody.innerHTML=Array.from({length:10},function(_,i){
-    var n=i+1;
-    var bg=n%2===0?'background:#fafafa;':'';
-    return '<tr style="border-top:1px solid #f1f5f9;'+bg+'">'+
-      '<td style="padding:5px 6px;color:#9ca3af;font-size:11px;text-align:center;width:28px;">'+n+'</td>'+
-      '<td style="padding:5px 4px;">'+
-        '<select id="chqm-tipo-'+n+'" style="'+selStyle+'">'+
-          '<option value="cheque">Cheque</option>'+
-          '<option value="echeq">ECHEQ</option>'+
-        '</select>'+
-      '</td>'+
-      '<td style="padding:5px 4px;"><input id="chqm-emisor-'+n+'" style="'+inpStyle+'" placeholder="Emisor"/></td>'+
-      '<td style="padding:5px 4px;"><input type="number" id="chqm-monto-'+n+'" style="'+inpStyle+'" placeholder="0" min="0"/></td>'+
-      '<td style="padding:5px 4px;"><input id="chqm-numero-'+n+'" style="'+inpStyle+'" placeholder="N° cheque"/></td>'+
-      '<td style="padding:5px 4px;"><input id="chqm-banco-'+n+'" style="'+inpStyle+'" placeholder="Banco"/></td>'+
-      '<td style="padding:5px 4px;"><input type="date" id="chqm-cobro-'+n+'" style="'+inpStyle+'"/></td>'+
-      '<td style="padding:5px 4px;"><input id="chqm-fac-'+n+'" style="'+inpStyle+'" placeholder="FAC"/></td>'+
-    '</tr>';
-  }).join('');
+  tbody.innerHTML=Array.from({length:10},function(_,i){return chqmRowHtml(i+1,'cheque');}).join('');
   openM('m-chq-masivo');
+}
+
+function applyTipoGlobal(){
+  var tipo=document.getElementById('chqm-tipo-global').value;
+  for(var i=1;i<=chqmRowCount;i++){
+    var el=document.getElementById('chqm-tipo-'+i);
+    if(el) el.value=tipo;
+  }
+  toast('Tipo "'+tipo+'" aplicado a todas las filas');
+}
+
+function addChqmRows(n){
+  var tbody=document.getElementById('chqm-rows');
+  var tipo=document.getElementById('chqm-tipo-global').value||'cheque';
+  var html='';
+  for(var i=0;i<n;i++){
+    chqmRowCount++;
+    html+=chqmRowHtml(chqmRowCount, tipo);
+  }
+  tbody.insertAdjacentHTML('beforeend',html);
+}
+
+function clearChqmRow(n){
+  ['chqm-emisor-','chqm-monto-','chqm-numero-','chqm-banco-','chqm-cobro-','chqm-fac-'].forEach(function(pfx){
+    var el=document.getElementById(pfx+n); if(el)el.value='';
+  });
+  var t=document.getElementById('chqm-tipo-'+n);
+  if(t)t.value=document.getElementById('chqm-tipo-global').value||'cheque';
+}
+
+function parsePasteData(){
+  var raw=document.getElementById('chqm-paste').value.trim();
+  if(!raw){toast('Pegá datos primero','err');return;}
+  // Separar filas (newline) y columnas (tab)
+  var lines=raw.split(/\r?\n/).filter(function(l){return l.trim();});
+  if(!lines.length){toast('No se detectaron filas','err');return;}
+
+  // Asegurar que hay suficientes filas en la grilla
+  var needed=lines.length;
+  if(needed>chqmRowCount){
+    var extra=needed-chqmRowCount;
+    addChqmRows(extra);
+  }
+
+  var tipo=document.getElementById('chqm-tipo-global').value||'cheque';
+  var cargadas=0;
+
+  lines.forEach(function(line, idx){
+    var n=idx+1;
+    var cols=line.split('\t');
+    // Columnas: Emisor | Monto | N° Cheque | Banco | Fecha cobro | N° FAC
+    var emisor=(cols[0]||'').trim();
+    var montoRaw=(cols[1]||'').trim().replace(/\./g,'').replace(',','.');
+    var monto=parseFloat(montoRaw)||'';
+    var numero=(cols[2]||'').trim();
+    var banco=(cols[3]||'').trim();
+    var fechaCobroRaw=(cols[4]||'').trim();
+    var fac=(cols[5]||'').trim();
+
+    // Convertir fecha dd/mm/aaaa → aaaa-mm-dd
+    var fechaCobro='';
+    if(fechaCobroRaw){
+      var partes=fechaCobroRaw.split(/[\/\-\.]/);
+      if(partes.length===3){
+        if(partes[2].length===4){fechaCobro=partes[2]+'-'+partes[1].padStart(2,'0')+'-'+partes[0].padStart(2,'0');}
+        else if(partes[0].length===4){fechaCobro=partes[0]+'-'+partes[1].padStart(2,'0')+'-'+partes[2].padStart(2,'0');}
+      }
+    }
+
+    if(!emisor&&!monto)return;
+    var setVal=function(id,v){var el=document.getElementById(id+n);if(el)el.value=v;};
+    document.getElementById('chqm-tipo-'+n).value=tipo;
+    setVal('chqm-emisor-',emisor);
+    setVal('chqm-monto-',monto);
+    setVal('chqm-numero-',numero);
+    setVal('chqm-banco-',banco);
+    setVal('chqm-cobro-',fechaCobro);
+    setVal('chqm-fac-',fac);
+    cargadas++;
+  });
+
+  var info=document.getElementById('chqm-info');
+  if(info)info.textContent=cargadas+' fila'+(cargadas!==1?'s':'')+' cargada'+(cargadas!==1?'s':'')+' desde Excel. Revisá y guardá.';
+  if(info)info.style.color='#16a34a';
+  document.getElementById('chqm-paste').value='';
+  toast(cargadas+' fila'+(cargadas!==1?'s':'')+' cargada'+(cargadas!==1?'s':''));
 }
 
 async function saveChqMasivo(){
@@ -4826,9 +4949,12 @@ async function saveChqMasivo(){
   var estadoGlobal=document.getElementById('chqm-estado-global').value;
   if(!fechaGlobal){toast('La fecha recibido es obligatoria','err');return;}
   var rows=[];
-  for(var i=1;i<=10;i++){
-    var emisor=(document.getElementById('chqm-emisor-'+i).value||'').trim();
-    var monto=parseFloat(document.getElementById('chqm-monto-'+i).value)||0;
+  for(var i=1;i<=chqmRowCount;i++){
+    var eEl=document.getElementById('chqm-emisor-'+i);
+    var mEl=document.getElementById('chqm-monto-'+i);
+    if(!eEl||!mEl)continue;
+    var emisor=eEl.value.trim();
+    var monto=parseFloat(mEl.value)||0;
     if(!emisor||!monto)continue;
     rows.push({
       tipo:document.getElementById('chqm-tipo-'+i).value||'cheque',
