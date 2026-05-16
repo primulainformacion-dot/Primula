@@ -1808,6 +1808,8 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="field"><label>Nivel</label>
         <select id="mprod-nivel">
           <option value="">— Sin nivel —</option>
+          <option value="PRIMARIA / SECUNDARIA">PRIMARIA / SECUNDARIA</option>
+          <option value="JARDIN">JARDIN</option>
           <option value="PRIMARIA">PRIMARIA</option>
           <option value="SECUNDARIA">SECUNDARIA</option>
           <option value="ADULTOS">ADULTOS</option>
@@ -1837,7 +1839,13 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </select>
       </div>
     </div>
-    <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-prod')">Cancelar</button><button class="btn" onclick="saveProd()">Guardar</button></div>
+    <div class="modal-foot">
+      <button class="btn" id="mprod-btn-del" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5;display:none;" onclick="deleteProd()">Eliminar</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button class="btn btn-gray" onclick="closeM('m-prod')">Cancelar</button>
+        <button class="btn" onclick="saveProd()">Guardar</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3512,9 +3520,22 @@ function openProdModal(id,famDefault,colDefault){
   document.getElementById('mprod-loc-montegrande').checked=locs.indexOf('montegrande')>=0;
   document.getElementById('mprod-loc-mayorista').checked=locs.indexOf('mayorista')>=0;
   document.getElementById('mprod-activo').value=String(p.activo!==false);
+  document.getElementById('mprod-btn-del').style.display=id?'':'none';
   poblarSelectCategorias();
   if(id)document.getElementById('mprod-cat').value=p.categoria_id||'';
   openM('m-prod');
+}
+
+async function deleteProd(){
+  if(!editProdId)return;
+  var p=PRODUCTOS.find(function(x){return x.id===editProdId;})||{};
+  if(!confirm('¿Eliminar "'+( p.nombre||'este producto')+'"? Esta acción no se puede deshacer.'))return;
+  var r=await sb.from('productos').delete().eq('id',editProdId);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Producto eliminado');
+  closeM('m-prod');
+  await loadProductos();await loadStock();
+  renderProductos();poblarSelectProductos();
 }
 
 async function saveProd(){
