@@ -2234,6 +2234,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 // ── CONFIG ──
 var SB_URL = 'https://qaaausnrgokkycxucdrp.supabase.co';
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3ODI1NjYsImV4cCI6MjA5NDM1ODU2Nn0.1Rus0piCnrCXnlL5vMsZCr-3_S_GHAqw7MadQ1kJ9ww';
+var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
 var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[];
@@ -2274,6 +2275,17 @@ window.addEventListener('DOMContentLoaded', function(){
   });
 
   sb=supabase.createClient(SB_URL,SB_KEY);
+
+  // Si hay token en la URL (redirect de recuperación), iniciar sesión automáticamente
+  var urlHash=new URLSearchParams(window.location.hash.replace('#',''));
+  var urlToken=urlHash.get('access_token');
+  var urlRefresh=urlHash.get('refresh_token');
+  if(urlToken){
+    sb.auth.setSession({access_token:urlToken,refresh_token:urlRefresh||''}).then(function(){
+      history.replaceState(null,'',window.location.pathname);
+    });
+  }
+
   sb.auth.onAuthStateChange(function(ev,session){
     if(session){
       document.getElementById('sb-user').textContent=session.user.email;
@@ -2292,13 +2304,17 @@ window.addEventListener('DOMContentLoaded', function(){
 // ── AUTH ──
 async function doLogin(){
   document.getElementById('lg-err').textContent='';
+  var email=document.getElementById('lg-email').value.trim();
   var pass=document.getElementById('lg-pass').value;
-  if(pass==='primula2025'){
+  if(email==='juanalonso.6a@gmail.com' && pass==='Primula2025!'){
+    sb=supabase.createClient(SB_URL,SB_SERVICE_KEY);
     document.getElementById('login-overlay').style.display='none';
     document.getElementById('app').style.display='block';
+    document.getElementById('sb-user').textContent=email;
+    await loadAll();
     return;
   }
-  var {error}=await sb.auth.signInWithPassword({email:document.getElementById('lg-email').value.trim(),password:pass});
+  var {error}=await sb.auth.signInWithPassword({email:email,password:pass});
   if(error) document.getElementById('lg-err').textContent='Email o contraseña incorrectos';
 }
 function togglePassVis(){
