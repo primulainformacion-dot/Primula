@@ -173,8 +173,13 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar</button>
     <div class="login-error" id="lg-err"></div>
-    <div style="margin-top:16px;">
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button onclick="doResetPassword()" style="background:none;border:none;color:#9ca3af;font-size:12px;cursor:pointer;text-decoration:underline;">¿Olvidaste tu contraseña?</button>
+      <button onclick="document.getElementById('lg-link-area').style.display=document.getElementById('lg-link-area').style.display==='none'?'block':'none'" style="background:none;border:none;color:#6c7ae0;font-size:12px;cursor:pointer;text-decoration:underline;">Tengo un link de recuperación</button>
+    </div>
+    <div id="lg-link-area" style="display:none;margin-top:8px;width:100%;">
+      <input id="lg-link-input" type="text" placeholder="Pegá acá el link completo que recibiste" class="login-field" style="font-size:11px;width:100%;box-sizing:border-box;"/>
+      <button onclick="doLoginFromLink()" class="login-btn" style="margin-top:6px;">Ingresar con link</button>
     </div>
     <div id="lg-reset-ok" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:12px;color:#166534;">
       ✓ Te enviamos un email para restablecer tu contraseña. Revisá tu bandeja de entrada.
@@ -2301,6 +2306,17 @@ function togglePassVis(){
   var btn=document.getElementById('lg-eye');
   if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}
   else{inp.type='password';btn.textContent='👁';}
+}
+async function doLoginFromLink(){
+  var url=document.getElementById('lg-link-input').value.trim();
+  var hash=url.includes('#')?url.split('#')[1]:'';
+  var params=new URLSearchParams(hash);
+  var access_token=params.get('access_token');
+  var refresh_token=params.get('refresh_token');
+  if(!access_token){document.getElementById('lg-err').textContent='No encontré el token en el link';return;}
+  document.getElementById('lg-err').textContent='';
+  var {error}=await sb.auth.setSession({access_token,refresh_token});
+  if(error){document.getElementById('lg-err').textContent='Error: '+error.message;}
 }
 async function doResetPassword(){
   var email=document.getElementById('lg-email').value.trim();
