@@ -5432,26 +5432,35 @@ function renderChqCartera(){
   });
   // Stats
   var totalMonto=cheques.reduce(function(s,c){return s+Number(c.monto);},0);
-  var totalUsado=cheques.reduce(function(s,c){
-    return s+CHEQUE_USOS.filter(function(u){return u.cheque_id===c.id;}).reduce(function(ss,u){return ss+Number(u.monto);},0);
+  // Egresado: cheques no en_cartera (full monto ya salió) + usos/imputaciones de en_cartera
+  var totalEgresado=cheques.reduce(function(s,c){
+    if(c.estado!=='en_cartera') return s+Number(c.monto);
+    var usos=CHEQUE_USOS.filter(function(u){return u.cheque_id===c.id;}).reduce(function(ss,u){return ss+Number(u.monto);},0);
+    var imps=CHEQUE_IMPUTACIONES.filter(function(i){return i.cheque_id===c.id;}).reduce(function(ss,i){return ss+Number(i.monto);},0);
+    return s+usos+imps;
   },0);
-  var totalSaldo=totalMonto-totalUsado;
-  var enCartera=cheques.filter(function(c){return c.estado==='en_cartera';}).length;
+  var chqEnCartera=cheques.filter(function(c){return c.estado==='en_cartera';});
+  var enCarteraCnt=chqEnCartera.length;
+  // Saldo real en cartera = monto - usos - imputaciones por cada cheque en_cartera
+  var saldoEnCartera=chqEnCartera.reduce(function(s,c){return s+saldoCheque(c.id);},0);
   var stats=document.getElementById('chq-stats');
   if(stats)stats.innerHTML=
     '<div style="background:#ede9fe;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
       '<div style="font-size:10px;font-weight:800;color:#7c3aed;margin-bottom:4px;letter-spacing:.5px;">EN CARTERA</div>'+
-      '<div style="font-size:20px;font-weight:800;color:#7c3aed;">'+enCartera+' cheque'+(enCartera!==1?'s':'')+'</div>'+
-      '<div style="font-size:11px;color:#8b5cf6;margin-top:2px;">'+$p(cheques.filter(function(c){return c.estado==='en_cartera';}).reduce(function(s,c){return s+Number(c.monto);},0))+'</div></div>'+
+      '<div style="font-size:20px;font-weight:800;color:#7c3aed;">'+$p(saldoEnCartera)+'</div>'+
+      '<div style="font-size:11px;color:#8b5cf6;margin-top:2px;">'+enCarteraCnt+' cheque'+(enCarteraCnt!==1?'s':'')+'</div></div>'+
     '<div style="background:#f0fdf4;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
       '<div style="font-size:10px;font-weight:800;color:#166534;margin-bottom:4px;letter-spacing:.5px;">TOTAL RECIBIDO</div>'+
-      '<div style="font-size:20px;font-weight:800;color:#166534;">'+$p(totalMonto)+'</div></div>'+
+      '<div style="font-size:20px;font-weight:800;color:#166534;">'+$p(totalMonto)+'</div>'+
+      '<div style="font-size:11px;color:#15803d;margin-top:2px;">'+cheques.length+' recibos</div></div>'+
     '<div style="background:#fee2e2;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
-      '<div style="font-size:10px;font-weight:800;color:#991b1b;margin-bottom:4px;letter-spacing:.5px;">USADO / PAGADO</div>'+
-      '<div style="font-size:20px;font-weight:800;color:#991b1b;">'+$p(totalUsado)+'</div></div>'+
-    '<div style="background:'+(totalSaldo>0?'#f0fdf4':'#f9fafb')+';border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
-      '<div style="font-size:10px;font-weight:800;color:'+(totalSaldo>0?'#166534':'#6b7280')+';margin-bottom:4px;letter-spacing:.5px;">SALDO DISPONIBLE</div>'+
-      '<div style="font-size:20px;font-weight:800;color:'+(totalSaldo>0?'#166534':'#6b7280')+';">'+$p(totalSaldo)+'</div></div>';
+      '<div style="font-size:10px;font-weight:800;color:#991b1b;margin-bottom:4px;letter-spacing:.5px;">EGRESADO / USADO</div>'+
+      '<div style="font-size:20px;font-weight:800;color:#991b1b;">'+$p(totalEgresado)+'</div>'+
+      '<div style="font-size:11px;color:#b91c1c;margin-top:2px;">depositados + vendidos + endosados</div></div>'+
+    '<div style="background:'+(saldoEnCartera>0?'#f0fdf4':'#f9fafb')+';border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
+      '<div style="font-size:10px;font-weight:800;color:'+(saldoEnCartera>0?'#166534':'#6b7280')+';margin-bottom:4px;letter-spacing:.5px;">DISPONIBLE HOY</div>'+
+      '<div style="font-size:20px;font-weight:800;color:'+(saldoEnCartera>0?'#166534':'#6b7280')+';">'+$p(saldoEnCartera)+'</div>'+
+      '<div style="font-size:11px;color:'+(saldoEnCartera>0?'#15803d':'#9ca3af')+';margin-top:2px;">sin imputar</div></div>';
   var tb=document.getElementById('chq-tbody');
   if(!tb)return;
   if(!cheques.length){tb.innerHTML='<tr><td colspan="14"><div class="empty"><p>Sin recibos para el período</p></div></td></tr>';return;}
