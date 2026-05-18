@@ -2503,7 +2503,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadOperacionesVenta(),loadTransferenciasStock()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -2576,6 +2576,7 @@ function navLocal(local, tab, el){
 
 // ── UTILS ──
 function $p(n){ return '$'+Number(n||0).toLocaleString('es-AR'); }
+function fmtF(s){ if(!s)return '—'; var p=s.slice(0,10).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
 function toast(msg,type){
   var d=document.createElement('div');d.className='tmsg t-'+(type||'ok');d.textContent=msg;
   document.getElementById('toast').appendChild(d);setTimeout(function(){d.remove();},3500);
@@ -5087,7 +5088,7 @@ function renderChqCartera(){
       :'<span class="badge" style="background:#f3f4f6;color:#374151;font-size:10px;">Cheque</span>';
     return '<tr style="'+rowBg+'">'+
       '<td>'+tipoBadge+'</td>'+
-      '<td style="font-size:12px;">'+c.fecha_recibido+'</td>'+
+      '<td style="font-size:12px;">'+fmtF(c.fecha_recibido)+'</td>'+
       '<td style="font-size:12px;">'+(c.concepto||'—')+'</td>'+
       '<td style="font-weight:600;">'+(c.emisor||'—')+'</td>'+
       '<td style="text-align:right;font-weight:700;color:#166534;">'+$p(Number(c.monto))+'</td>'+
@@ -5096,7 +5097,7 @@ function renderChqCartera(){
       '<td style="font-size:11px;">'+(c.nro_factura||'—')+'</td>'+
       '<td style="font-size:11px;color:#6b7280;">'+(c.numero||'—')+'</td>'+
       '<td style="font-size:12px;">'+(c.banco||'—')+'</td>'+
-      '<td style="font-size:12px;font-weight:600;color:'+(vencido?'#dc2626':pronto?'#d97706':'#374151')+'">'+(vto||'—')+'</td>'+
+      '<td style="font-size:12px;font-weight:600;color:'+(vencido?'#dc2626':pronto?'#d97706':'#374151')+'">'+fmtF(vto)+'</td>'+
       '<td style="font-size:12px;font-weight:600;color:'+diasColor+';">'+diasTxt+'</td>'+
       '<td>'+
         '<span class="badge '+(estadoColors[c.estado]||'b-gray')+'">'+(estadoLabels[c.estado]||c.estado)+'</span>'+
@@ -5746,6 +5747,7 @@ async function saveChqDepositar(){
 // ══════════════════════════════════════════════
 var OPERACIONES_VENTA=[];
 var TRANSFERENCIAS_STOCK=[];
+var FACTURAS_CLIENTES=[], CHEQUE_IMPUTACIONES=[];
 var editVentaCostoId=null;
 
 async function loadOperacionesVenta(){
@@ -5755,6 +5757,14 @@ async function loadOperacionesVenta(){
 async function loadTransferenciasStock(){
   var {data}=await sb.from('transferencias_stock').select('*').order('created_at',{ascending:false}).limit(200);
   TRANSFERENCIAS_STOCK=data||[];
+}
+async function loadFacturasClientes(){
+  var {data}=await sb.from('facturas_clientes').select('*').order('fecha_emision',{ascending:false});
+  FACTURAS_CLIENTES=data||[];
+}
+async function loadChequeImputaciones(){
+  var {data}=await sb.from('cheque_imputaciones').select('*');
+  CHEQUE_IMPUTACIONES=data||[];
 }
 
 function openChqVentaModal(){
