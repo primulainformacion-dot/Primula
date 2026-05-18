@@ -1090,6 +1090,11 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option value="endosado">Endosado</option>
           <option value="rechazado">Rechazado</option>
         </select>
+        <select id="chq-tipo-filter" onchange="renderChqCartera()" style="width:130px;">
+          <option value="">Cheque + ECHEQ</option>
+          <option value="cheque">Solo Cheque</option>
+          <option value="echeq">Solo ECHEQ</option>
+        </select>
       </div>
       <div class="panel">
         <div class="panel-hdr">
@@ -1277,6 +1282,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="tab active" onclick="setFinTab('movimientos',this)">📋 Movimientos</div>
       <div class="tab" onclick="setFinTab('resumen',this)">📊 Resumen de gastos</div>
       <div class="tab" onclick="setFinTab('transferencia',this)">🔄 Transferencias</div>
+      <div class="tab" onclick="setFinTab('gastosfijos',this)">📌 Gastos fijos</div>
       <div class="tab" onclick="setFinTab('cierre',this)">🔒 Cierre de caja</div>
     </div>
 
@@ -1396,6 +1402,54 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           </div>
           <div id="tr-historial"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Tab: Gastos Fijos -->
+    <div id="ft-gastosfijos" style="display:none;">
+      <!-- Resumen de totales -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:16px;" id="gf-totales"></div>
+      <!-- Panel principal -->
+      <div class="panel">
+        <div class="panel-hdr">
+          <span>📌 Gastos fijos y servicios recurrentes</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="gf-fil-cat" onchange="renderGastosFijos()" style="width:190px;">
+              <option value="">Todas las categorías</option>
+              <option>ALQUILER</option><option>SERVICIOS/EXPENSAS</option>
+              <option>SUELDOS/JORNALES</option><option>IMPUESTOS/AFIP</option>
+              <option>GASTOS BANCARIOS</option><option>MORATORIAS/PLANES</option>
+              <option>MANTENIMIENTO</option><option>OTROS</option>
+            </select>
+            <select id="gf-fil-activo" onchange="renderGastosFijos()" style="width:130px;">
+              <option value="1">Solo activos</option>
+              <option value="0">Inactivos</option>
+              <option value="">Todos</option>
+            </select>
+            <button class="btn" onclick="openGastoFijoModal()">+ Nuevo gasto fijo</button>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead><tr>
+            <th>Concepto</th>
+            <th>Categoría</th>
+            <th>Monto</th>
+            <th>Frecuencia</th>
+            <th>Vencimiento</th>
+            <th>Caja</th>
+            <th>Estado</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="gf-tbody"></tbody>
+        </table>
+      </div>
+      <!-- Proyección -->
+      <div class="panel" style="margin-top:16px;">
+        <div class="panel-hdr">
+          <span>📅 Proyección — próximos 6 meses</span>
+          <span style="font-size:12px;color:#6b7280;">Solo gastos activos</span>
+        </div>
+        <div id="gf-proyeccion" style="overflow-x:auto;"></div>
       </div>
     </div>
 
@@ -1827,6 +1881,89 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-per')">Cancelar</button>
       <button class="btn" onclick="savePer()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Gasto fijo -->
+<div class="modal-bg" id="m-gasto-fijo">
+  <div class="modal" style="max-width:520px;">
+    <h3 id="gf-title">Nuevo gasto fijo</h3>
+    <div class="grid2">
+      <div class="field" style="grid-column:1/-1;">
+        <label>Concepto *</label>
+        <input id="gf-concepto" placeholder="Ej: Alquiler depósito, Internet, Luz..."/>
+      </div>
+      <div class="field">
+        <label>Categoría</label>
+        <select id="gf-categoria">
+          <option>ALQUILER</option>
+          <option>SERVICIOS/EXPENSAS</option>
+          <option>SUELDOS/JORNALES</option>
+          <option>IMPUESTOS/AFIP</option>
+          <option>GASTOS BANCARIOS</option>
+          <option>MORATORIAS/PLANES</option>
+          <option>MANTENIMIENTO</option>
+          <option>OTROS</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Monto $ *</label>
+        <input id="gf-monto" type="number" min="0" step="0.01" placeholder="0"/>
+      </div>
+      <div class="field">
+        <label>Frecuencia</label>
+        <select id="gf-frecuencia" onchange="toggleGfMes()">
+          <option value="mensual">Mensual</option>
+          <option value="bimestral">Bimestral</option>
+          <option value="trimestral">Trimestral</option>
+          <option value="semestral">Semestral</option>
+          <option value="anual">Anual</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Día de vencimiento</label>
+        <input id="gf-dia" type="number" min="1" max="31" placeholder="Ej: 10"/>
+      </div>
+      <div class="field" id="gf-mes-row" style="display:none;">
+        <label>Mes del año (para anuales)</label>
+        <select id="gf-mes">
+          <option value="">— Seleccionar —</option>
+          <option value="1">Enero</option><option value="2">Febrero</option>
+          <option value="3">Marzo</option><option value="4">Abril</option>
+          <option value="5">Mayo</option><option value="6">Junio</option>
+          <option value="7">Julio</option><option value="8">Agosto</option>
+          <option value="9">Septiembre</option><option value="10">Octubre</option>
+          <option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Caja de pago</label>
+        <select id="gf-caja">
+          <option>EFECTIVO ADMINISTRACIÓN</option>
+          <option>BANCO SRL</option>
+          <option>BANCO POLY</option>
+          <option>MERCADO PAGO</option>
+          <option>ECHEQ/CHEQUE</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Estado</label>
+        <select id="gf-activo">
+          <option value="1">Activo</option>
+          <option value="0">Inactivo (suspendido)</option>
+        </select>
+      </div>
+      <div class="field" style="grid-column:1/-1;">
+        <label>Nota</label>
+        <input id="gf-nota" placeholder="Observación opcional"/>
+      </div>
+    </div>
+    <div id="gf-err" style="color:#dc2626;font-size:12px;margin-top:8px;display:none;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-red btn-sm" id="gf-del" onclick="deleteGastoFijo()" style="margin-right:auto;">Eliminar</button>
+      <button class="btn btn-gray" onclick="closeM('m-gasto-fijo')">Cancelar</button>
+      <button class="btn" onclick="saveGastoFijo()">💾 Guardar</button>
     </div>
   </div>
 </div>
@@ -2597,7 +2734,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -4617,12 +4754,14 @@ function setFinTab(tab,el){
   document.getElementById('ft-movimientos').style.display=tab==='movimientos'?'block':'none';
   document.getElementById('ft-resumen').style.display=tab==='resumen'?'block':'none';
   document.getElementById('ft-transferencia').style.display=tab==='transferencia'?'block':'none';
+  document.getElementById('ft-gastosfijos').style.display=tab==='gastosfijos'?'block':'none';
   document.getElementById('ft-cierre').style.display=tab==='cierre'?'block':'none';
   document.querySelectorAll('#sec-finanzas .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
   if(tab==='transferencia')renderTransfHistorial();
   if(tab==='resumen')renderFinResumen();
   if(tab==='cierre')renderCierreCaja();
+  if(tab==='gastosfijos')renderGastosFijos();
 }
 
 function renderFin(){
@@ -5276,6 +5415,7 @@ function renderChqCartera(){
   var anio=parseInt(document.getElementById('chq-anio').value)||new Date().getFullYear();
   var mes=document.getElementById('chq-mes').value;
   var estadoFilt=document.getElementById('chq-estado-filter')?document.getElementById('chq-estado-filter').value:'';
+  var tipoFilt=(document.getElementById('chq-tipo-filter')||{}).value||'';
   var fechaPor=(document.getElementById('chq-fecha-por')||{}).value||'cobro';
   var hoy=today();
   var cheques=CHEQUES_CARTERA.filter(function(c){
@@ -5287,6 +5427,7 @@ function renderChqCartera(){
     if(estadoFilt==='disponible') return c.estado==='en_cartera';
     if(estadoFilt==='no_disponible') return c.estado!=='en_cartera';
     if(estadoFilt&&c.estado!==estadoFilt)return false;
+    if(tipoFilt&&(c.tipo||'cheque')!==tipoFilt)return false;
     return true;
   });
   // Stats
@@ -6021,6 +6162,7 @@ async function saveChqDepositar(){
 var OPERACIONES_VENTA=[];
 var TRANSFERENCIAS_STOCK=[];
 var FACTURAS_CLIENTES=[], CHEQUE_IMPUTACIONES=[];
+var GASTOS_FIJOS=[];
 var editVentaCostoId=null;
 
 async function loadOperacionesVenta(){
@@ -6038,6 +6180,188 @@ async function loadFacturasClientes(){
 async function loadChequeImputaciones(){
   var {data}=await sb.from('cheque_imputaciones').select('*');
   CHEQUE_IMPUTACIONES=data||[];
+}
+async function loadGastosFijos(){
+  var {data}=await sb.from('gastos_fijos').select('*').order('categoria').order('concepto');
+  GASTOS_FIJOS=data||[];
+}
+
+// ══ GASTOS FIJOS ══
+var FREC_LABELS={mensual:'Mensual',bimestral:'Bimestral',trimestral:'Trimestral',semestral:'Semestral',anual:'Anual'};
+var FREC_MESES={mensual:1,bimestral:2,trimestral:3,semestral:6,anual:12};
+var MESES_NOMBRES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function renderGastosFijos(){
+  var filCat=document.getElementById('gf-fil-cat').value;
+  var filActivo=document.getElementById('gf-fil-activo').value;
+  var lista=GASTOS_FIJOS.filter(function(g){
+    if(filCat&&g.categoria!==filCat)return false;
+    if(filActivo==='1'&&!g.activo)return false;
+    if(filActivo==='0'&&g.activo)return false;
+    return true;
+  });
+
+  // Totales por frecuencia (solo activos)
+  var activos=GASTOS_FIJOS.filter(function(g){return g.activo;});
+  var totalMensual=0;
+  activos.forEach(function(g){
+    totalMensual+=Number(g.monto)/FREC_MESES[g.frecuencia||'mensual'];
+  });
+  var totDiv=document.getElementById('gf-totales');
+  var catMap={};
+  activos.forEach(function(g){
+    var c=g.categoria||'Otros';
+    catMap[c]=(catMap[c]||0)+Number(g.monto)/FREC_MESES[g.frecuencia||'mensual'];
+  });
+  var totHtml='<div class="stat" style="border-top:3px solid #7c3aed;">'+
+    '<div class="stat-icon" style="background:#ede9fe;">📌</div>'+
+    '<h3>'+$p(totalMensual)+'</h3><p>Total mensual estimado</p>'+
+    '<div style="font-size:11px;color:#9ca3af;">'+(activos.length)+' gastos activos</div>'+
+  '</div>';
+  Object.keys(catMap).sort().forEach(function(c){
+    totHtml+='<div class="stat" style="border-top:3px solid #d97706;">'+
+      '<div class="stat-icon" style="background:#fef3c7;">📂</div>'+
+      '<h3>'+$p(catMap[c])+'</h3><p style="font-size:11px;">'+c+'</p>'+
+      '<div style="font-size:11px;color:#9ca3af;">/mes (prom.)</div>'+
+    '</div>';
+  });
+  totDiv.innerHTML=totHtml;
+
+  // Tabla
+  var tb=document.getElementById('gf-tbody');
+  if(!lista.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><div class="ei">📌</div><p>Sin gastos fijos cargados</p></div></td></tr>';return;}
+  var DIAS=['1ro','2do','3ro'];
+  tb.innerHTML=lista.map(function(g){
+    var venc='—';
+    if(g.dia_vencimiento){
+      venc='Día '+g.dia_vencimiento;
+      if(g.frecuencia==='anual'&&g.mes_vencimiento)venc+=' / '+MESES_NOMBRES[(g.mes_vencimiento-1)];
+    }
+    return '<tr>'+
+      '<td><strong>'+esc(g.concepto)+'</strong>'+(g.nota?'<div style="font-size:11px;color:#9ca3af;">'+esc(g.nota)+'</div>':'')+' </td>'+
+      '<td><span class="badge b-gray">'+esc(g.categoria)+'</span></td>'+
+      '<td style="font-weight:700;">'+$p(g.monto)+'</td>'+
+      '<td>'+( FREC_LABELS[g.frecuencia]||g.frecuencia)+'</td>'+
+      '<td>'+venc+'</td>'+
+      '<td style="font-size:12px;color:#6b7280;">'+(g.caja||'—')+'</td>'+
+      '<td>'+(g.activo?'<span class="badge b-green">Activo</span>':'<span class="badge b-gray">Inactivo</span>')+'</td>'+
+      '<td><button class="btn btn-gray btn-sm" onclick="openGastoFijoModal('+g.id+')">✏️</button></td>'+
+    '</tr>';
+  }).join('');
+
+  // Proyección 6 meses
+  renderGfProyeccion();
+}
+
+function renderGfProyeccion(){
+  var activos=GASTOS_FIJOS.filter(function(g){return g.activo;});
+  var hoy=new Date();
+  var meses=[];
+  for(var i=0;i<6;i++){
+    var d=new Date(hoy.getFullYear(),hoy.getMonth()+i,1);
+    meses.push({anio:d.getFullYear(),mes:d.getMonth()+1,label:MESES_NOMBRES[d.getMonth()]+' '+d.getFullYear()});
+  }
+  // Para cada mes calcular qué gastos aplican
+  var cols=meses.map(function(m){
+    var total=0;
+    var items=[];
+    activos.forEach(function(g){
+      var cada=FREC_MESES[g.frecuencia||'mensual'];
+      var aplica=false;
+      if(cada===1){aplica=true;}
+      else if(g.mes_vencimiento){aplica=(m.mes===g.mes_vencimiento);}
+      else{
+        // distribuir según mes de inicio (created_at) + frecuencia
+        var cAt=new Date(g.created_at);
+        var diff=(m.anio-cAt.getFullYear())*12+(m.mes-cAt.getMonth()-1);
+        aplica=(diff>=0&&diff%cada===0);
+      }
+      if(aplica){total+=Number(g.monto);items.push(g);}
+    });
+    return {label:m.label,total:total,items:items};
+  });
+
+  var div=document.getElementById('gf-proyeccion');
+  var html='<table style="width:100%;border-collapse:collapse;font-size:13px;">'+
+    '<thead><tr style="background:#1a1f36;color:#fff;">';
+  cols.forEach(function(c){html+='<th style="padding:8px 12px;text-align:left;">'+c.label+'</th>';});
+  html+='</tr></thead><tbody><tr>';
+  cols.forEach(function(c){
+    html+='<td style="padding:8px 12px;vertical-align:top;border-right:1px solid #f1f5f9;">'+
+      '<div style="font-weight:700;font-size:15px;margin-bottom:6px;">'+$p(c.total)+'</div>';
+    if(c.items.length){
+      html+=c.items.map(function(g){
+        return '<div style="font-size:11px;color:#374151;border-top:1px solid #f1f5f9;padding-top:3px;margin-top:3px;">'+
+          esc(g.concepto)+': '+$p(g.monto)+'</div>';
+      }).join('');
+    } else {
+      html+='<div style="font-size:11px;color:#9ca3af;">Sin vencimientos</div>';
+    }
+    html+='</td>';
+  });
+  html+='</tr></tbody></table>';
+  div.innerHTML=html;
+}
+
+var editGfId=null;
+function openGastoFijoModal(id){
+  editGfId=id||null;
+  var g=id?GASTOS_FIJOS.find(function(x){return x.id===id;})||{}:{};
+  document.getElementById('gf-title').textContent=id?'Editar gasto fijo':'Nuevo gasto fijo';
+  document.getElementById('gf-del').style.display=id?'':'none';
+  document.getElementById('gf-concepto').value=g.concepto||'';
+  document.getElementById('gf-categoria').value=g.categoria||'SERVICIOS/EXPENSAS';
+  document.getElementById('gf-monto').value=g.monto||'';
+  document.getElementById('gf-frecuencia').value=g.frecuencia||'mensual';
+  document.getElementById('gf-dia').value=g.dia_vencimiento||'';
+  document.getElementById('gf-mes').value=g.mes_vencimiento||'';
+  document.getElementById('gf-caja').value=g.caja||'EFECTIVO ADMINISTRACIÓN';
+  document.getElementById('gf-activo').value=g.activo===false?'0':'1';
+  document.getElementById('gf-nota').value=g.nota||'';
+  document.getElementById('gf-err').style.display='none';
+  toggleGfMes();
+  openM('m-gasto-fijo');
+}
+function toggleGfMes(){
+  var fr=document.getElementById('gf-frecuencia').value;
+  document.getElementById('gf-mes-row').style.display=fr==='anual'?'':'none';
+}
+async function saveGastoFijo(){
+  var concepto=document.getElementById('gf-concepto').value.trim();
+  var monto=parseFloat(document.getElementById('gf-monto').value);
+  var errEl=document.getElementById('gf-err');
+  if(!concepto||!monto){errEl.textContent='Concepto y monto son obligatorios';errEl.style.display='block';return;}
+  var payload={
+    concepto:concepto,
+    categoria:document.getElementById('gf-categoria').value,
+    monto:monto,
+    frecuencia:document.getElementById('gf-frecuencia').value,
+    dia_vencimiento:parseInt(document.getElementById('gf-dia').value)||null,
+    mes_vencimiento:parseInt(document.getElementById('gf-mes').value)||null,
+    caja:document.getElementById('gf-caja').value||null,
+    activo:document.getElementById('gf-activo').value==='1',
+    nota:document.getElementById('gf-nota').value.trim()||null,
+    updated_at:new Date().toISOString()
+  };
+  var r=editGfId
+    ?await sb.from('gastos_fijos').update(payload).eq('id',editGfId)
+    :await sb.from('gastos_fijos').insert(payload);
+  if(r.error){errEl.textContent='Error: '+r.error.message;errEl.style.display='block';return;}
+  toast(editGfId?'Gasto actualizado':'Gasto creado');
+  closeM('m-gasto-fijo');
+  await loadGastosFijos();
+  renderGastosFijos();
+}
+async function deleteGastoFijo(){
+  if(!editGfId)return;
+  var g=GASTOS_FIJOS.find(function(x){return x.id===editGfId;})||{};
+  if(!confirm('¿Eliminar "'+g.concepto+'"?'))return;
+  var r=await sb.from('gastos_fijos').delete().eq('id',editGfId);
+  if(r.error){alert('Error: '+r.error.message);return;}
+  toast('Gasto eliminado');
+  closeM('m-gasto-fijo');
+  await loadGastosFijos();
+  renderGastosFijos();
 }
 
 function openChqVentaModal(){
