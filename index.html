@@ -284,7 +284,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <button class="btn" onclick="openCli()">+ Nuevo</button>
       </div>
       <div class="tbl"><table>
-        <thead><tr><th>Nombre</th><th>Tipo</th><th>Teléfono</th><th>CUIT</th><th>Deuda</th><th>Estado</th><th></th></tr></thead>
+        <thead id="cli-thead"></thead>
         <tbody id="cli-tbody"></tbody>
       </table></div>
     </div>
@@ -311,7 +311,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <button class="btn" onclick="openProv()">+ Nuevo</button>
         </div>
         <div class="tbl"><table>
-          <thead><tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>CUIT</th><th>Nota</th><th></th></tr></thead>
+          <thead id="prov-thead"></thead>
           <tbody id="prov-tbody"></tbody>
         </table></div>
       </div>
@@ -613,7 +613,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <button class="btn" onclick="openPres()">+ Nuevo</button>
       </div>
       <div class="tbl"><table>
-        <thead><tr><th>N°</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+        <thead id="pres-thead"></thead>
         <tbody id="pres-tbody"></tbody>
       </table></div>
     </div>
@@ -642,10 +642,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <button class="btn" onclick="openTalModal()">+ Nuevo tallerista</button>
         </div>
         <div class="tbl"><table>
-          <thead><tr>
-            <th>Nombre</th><th style="text-align:right">Precio/prenda</th>
-            <th>Teléfono</th><th>Nota</th><th>Estado</th><th></th>
-          </tr></thead>
+          <thead id="tal-thead"></thead>
           <tbody id="tal-tbody"></tbody>
         </table></div>
       </div>
@@ -703,12 +700,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <button class="btn" onclick="openPerModal()">+ Nuevo empleado</button>
         </div>
         <div class="tbl"><table>
-          <thead><tr>
-            <th>Nombre</th><th>Cargo</th>
-            <th style="text-align:right">Sueldo semanal</th>
-            <th style="text-align:right">Equiv. mensual</th>
-            <th>Teléfono</th><th>Estado</th><th></th>
-          </tr></thead>
+          <thead id="per-thead"></thead>
           <tbody id="per-tbody"></tbody>
         </table></div>
       </div>
@@ -811,7 +803,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <div class="stat" style="border-top:3px solid #8b5cf6;grid-column:span 2;">
             <div class="stat-icon" style="background:#ede9fe;">🧾</div>
             <h3 id="pg-echeq-act">$0</h3><p>Cheques en cartera</p>
-            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">ECHEQ / Cheques a cobrar</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-chq-cartera-count">ECHEQ / Cheques a cobrar</div>
           </div>
           <div class="stat" style="border-top:3px solid #f59e0b;grid-column:span 2;">
             <div class="stat-icon" style="background:#fef3c7;">👥</div>
@@ -1069,13 +1061,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </div>
         <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;" id="faccli-stats"></div>
         <div class="tbl"><table>
-          <thead><tr>
-            <th>N° FAC</th><th>Tipo</th><th>Fecha</th><th>Cliente</th>
-            <th style="text-align:right">Total</th>
-            <th style="text-align:right">Cobrado</th>
-            <th style="text-align:right">Saldo</th>
-            <th>Estado</th><th></th>
-          </tr></thead>
+          <thead id="faccli-thead"></thead>
           <tbody id="faccli-tbody"></tbody>
         </table></div>
       </div>
@@ -1154,10 +1140,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </div>
         <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;" id="chqp-stats"></div>
         <div class="tbl"><table>
-          <thead><tr>
-            <th>N° Cheque</th><th>Banco</th><th>Destinatario</th><th>Concepto</th>
-            <th style="text-align:right">Monto</th><th>Emisión</th><th>Fecha pago</th><th>Estado</th><th></th>
-          </tr></thead>
+          <thead id="chqp-thead"></thead>
           <tbody id="chqp-tbody"></tbody>
         </table></div>
       </div>
@@ -1203,14 +1186,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <button class="btn" onclick="openMorModal()">+ Nueva moratoria</button>
         </div>
         <div class="tbl"><table>
-          <thead><tr>
-            <th>Nombre</th><th>Acreedor</th>
-            <th style="text-align:center">Cuotas</th>
-            <th style="text-align:right">Monto cuota</th>
-            <th style="text-align:right">Pendiente</th>
-            <th>Próx. vencimiento</th>
-            <th>Estado</th><th></th>
-          </tr></thead>
+          <thead id="mor-thead"></thead>
           <tbody id="mor-tbody"></tbody>
         </table></div>
       </div>
@@ -1331,11 +1307,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </div>
         <div id="fin-period-totals" style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;"></div>
         <div class="tbl"><table>
-          <thead><tr>
-            <th>Fecha</th><th>Caja</th><th>Tipo</th><th>Concepto</th><th>Detalle</th>
-            <th style="text-align:right">Ingreso</th><th style="text-align:right">Egreso</th>
-            <th>Referencia</th><th>Vto.</th><th></th>
-          </tr></thead>
+          <thead id="fin-thead"></thead>
           <tbody id="fin-tbody"></tbody>
         </table></div>
       </div>
@@ -1435,16 +1407,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           </div>
         </div>
         <table class="data-table">
-          <thead><tr>
-            <th>Concepto</th>
-            <th>Categoría</th>
-            <th>Monto</th>
-            <th>Frecuencia</th>
-            <th>Vencimiento</th>
-            <th>Caja</th>
-            <th>Estado</th>
-            <th></th>
-          </tr></thead>
+          <thead id="gf-thead"></thead>
           <tbody id="gf-tbody"></tbody>
         </table>
       </div>
@@ -2919,6 +2882,12 @@ function renderClientes(){
   var q=(document.getElementById('cli-q').value||'').toLowerCase();
   var tipo=document.getElementById('cli-tipo').value;
   var list=CLIENTES.filter(function(c){return(!q||c.nombre.toLowerCase().includes(q)||(c.cuit||'').includes(q))&&(!tipo||c.tipo===tipo);});
+  makeSortThead('cli-thead',CLI_COLS,cliSort,renderClientes);
+  list=sortArr(list,cliSort,function(c,col){
+    if(col==='deuda')return VENTAS.filter(function(v){return v.cliente_id===c.id&&v.estado!=='cobrado';}).reduce(function(s,v){return s+Number(v.saldo);},0);
+    if(col==='estado')return c.activo?'activo':'inactivo';
+    return c[col]!=null?c[col]:'';
+  });
   var tb=document.getElementById('cli-tbody');
   if(!list.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="ei">👥</div><p>Sin clientes</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(c){
@@ -3217,6 +3186,8 @@ function pfact_onProv(){}
 function renderProveedores(){
   var q=(document.getElementById('prov-q').value||'').toLowerCase();
   var list=PROVEEDORES.filter(function(p){return!q||p.nombre.toLowerCase().includes(q);});
+  makeSortThead('prov-thead',PROV_COLS,provSort,renderProveedores);
+  list=sortArr(list,provSort);
   var tb=document.getElementById('prov-tbody');
   if(!list.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><div class="ei">🤝</div><p>Sin proveedores</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(p){
@@ -3252,6 +3223,8 @@ async function saveProv(){
 function renderPres(){
   var estado=document.getElementById('pres-estado').value;
   var list=PRESUPUESTOS.filter(function(p){return!estado||p.estado===estado;});
+  makeSortThead('pres-thead',PRES_COLS,presSort,renderPres);
+  list=sortArr(list,presSort);
   var tb=document.getElementById('pres-tbody');
   if(!list.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><div class="ei">📄</div><p>Sin presupuestos</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(p){
@@ -3960,6 +3933,12 @@ function renderMoratorias(){
   var st=document.getElementById('mor-s-total');if(st)st.textContent=$p(totalPend);
 
   var list=filtro?MORATORIAS.filter(function(m){return m.estado===filtro;}):MORATORIAS;
+  makeSortThead('mor-thead',MOR_COLS,morSort,renderMoratorias);
+  list=sortArr(list,morSort,function(m,col){
+    if(col==='pendiente')return morPendiente(m);
+    if(col==='prox_vto')return m.prox_vencimiento||'';
+    return m[col]!=null?m[col]:'';
+  });
   var tb=document.getElementById('mor-tbody');if(!tb)return;
   if(!list.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><div class="ei">📋</div><p>Sin moratorias registradas</p></div></td></tr>';return;}
 
@@ -4834,6 +4813,12 @@ function renderFin(){
     '<span style="background:#fee2e2;color:#dc2626;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:700;">↓ Egresos: '+$p(egr)+'</span>'+
     '<span style="background:#ede9fe;color:#7c3aed;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:700;">= Neto: '+$p(ing-egr)+'</span>'+
     '<span style="color:#9ca3af;font-size:12px;align-self:center;">'+list.length+' movimientos</span>';
+  makeSortThead('fin-thead',FIN_COLS,finSort,renderFin);
+  list=sortArr(list,finSort,function(m,col){
+    if(col==='ingreso')return Number(m.ingreso)||0;
+    if(col==='egreso')return Number(m.egreso)||0;
+    return m[col]!=null?m[col]:'';
+  });
   var tb=document.getElementById('fin-tbody');
   if(!list.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><p>Sin movimientos en el período</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(m){
@@ -4896,6 +4881,8 @@ function renderPanelGeneral(){
   el('pg-mp').textContent=$p(mp);
   if(el('pg-saldo-liquido'))el('pg-saldo-liquido').textContent=$p(efectivo+bancos+mp);
   el('pg-echeq-act').textContent=$p(echeqActivo);
+  var chqDisp=CHEQUES_CARTERA.filter(function(c){return c.estado==='en_cartera'&&saldoCheque(c.id)>0;});
+  if(el('pg-chq-cartera-count'))el('pg-chq-cartera-count').textContent=chqDisp.length+' cheque'+(chqDisp.length!==1?'s':'')+' disponible'+(chqDisp.length!==1?'s':'')+' · '+$p(chqDisp.reduce(function(s,c){return s+saldoCheque(c.id);},0));
   el('pg-acobrar').textContent=$p(acobrar);
   if(el('pg-stock-may'))el('pg-stock-may').textContent=$p(stockMay);
   if(el('pg-stock-may-u'))el('pg-stock-may-u').textContent=uMay.toLocaleString('es-AR')+' u · precio mayorista';
@@ -5310,6 +5297,13 @@ function renderFacturasClientes(){
     '<div style="background:#f0fdf4;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;"><div style="font-size:10px;font-weight:800;color:#166534;letter-spacing:.5px;">TOTAL FACTURADO</div><div style="font-size:20px;font-weight:800;color:#16a34a;">'+$p(total)+'</div></div>'+
     '<div style="background:#eff6ff;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;"><div style="font-size:10px;font-weight:800;color:#1d4ed8;letter-spacing:.5px;">COBRADO</div><div style="font-size:20px;font-weight:800;color:#2563eb;">'+$p(cobrado)+'</div></div>'+
     '<div style="background:'+(pendiente>0?'#fff7ed':'#f9fafb')+';border-radius:10px;padding:12px 18px;flex:1;min-width:130px;"><div style="font-size:10px;font-weight:800;color:'+(pendiente>0?'#c2410c':'#6b7280')+';letter-spacing:.5px;">SALDO A COBRAR</div><div style="font-size:20px;font-weight:800;color:'+(pendiente>0?'#ea580c':'#9ca3af')+';">'+$p(pendiente)+'</div></div>';
+  makeSortThead('faccli-thead',FACCLI_COLS,faccliSort,renderFacturasClientes);
+  list=sortArr(list,faccliSort,function(f,col){
+    if(col==='cobrado')return Number(f.monto_total)-saldoFactura(f.id);
+    if(col==='saldo')return saldoFactura(f.id);
+    if(col==='monto_total')return Number(f.monto_total);
+    return f[col]!=null?f[col]:'';
+  });
   var tb=document.getElementById('faccli-tbody');
   if(!list.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><div class="ei">📄</div><p>Sin facturas registradas</p></div></td></tr>';return;}
   var estBadge={pendiente:'<span class="badge" style="background:#fef3c7;color:#92400e;">Pendiente</span>',parcial:'<span class="badge" style="background:#dbeafe;color:#1d4ed8;">Parcial</span>',cobrada:'<span class="badge b-green">Cobrada</span>'};
@@ -5616,11 +5610,19 @@ function renderChqPropios(){
     '<div style="background:#f3f4f6;border-radius:10px;padding:12px 18px;flex:1;min-width:140px;">'+
       '<div style="font-size:11px;font-weight:700;color:#9ca3af;margin-bottom:4px;">TOTAL EMITIDO (año)</div>'+
       '<div style="font-size:20px;font-weight:800;color:#374151;">'+$p(CHEQUES_PROPIOS.reduce(function(s,c){return s+Number(c.monto);},0))+'</div></div>';
+  makeSortThead('chqp-thead',CHQP_COLS,chqpSort,renderChqPropios);
+  var sorted=sortArr(CHEQUES_PROPIOS,chqpSort,function(c,col){
+    if(col==='monto')return Number(c.monto);
+    return c[col]!=null?c[col]:'';
+  });
+  if(!sorted.length){
+    var tb2=document.getElementById('chqp-tbody');
+    if(tb2)tb2.innerHTML='<tr><td colspan="9"><div class="empty"><p>Sin cheques emitidos registrados</p></div></td></tr>';
+    return;
+  }
+  var estadoClass={pendiente:'b-yellow',depositado:'b-green',rechazado:'b-red',anulado:'b-gray'};
   var tb=document.getElementById('chqp-tbody');
   if(!tb)return;
-  if(!CHEQUES_PROPIOS.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><p>Sin cheques emitidos registrados</p></div></td></tr>';return;}
-  var sorted=CHEQUES_PROPIOS.slice().sort(function(a,b){return(a.fecha_pago||a.fecha_emision)<(b.fecha_pago||b.fecha_emision)?-1:1;});
-  var estadoClass={pendiente:'b-yellow',depositado:'b-green',rechazado:'b-red',anulado:'b-gray'};
   tb.innerHTML=sorted.map(function(c){
     var vencido=c.estado==='pendiente'&&c.fecha_pago&&c.fecha_pago<hoy;
     return '<tr>'+
@@ -5893,6 +5895,68 @@ async function quickEstadoChq(id, estado){
 
 // ── CHEQUES CARTERA (recibidos de terceros) ──
 var editChqCId=null;
+// ══ SORT UTILITIES (genérico para todas las tablas) ══
+function makeSortThead(theadId,cols,sortState,renderFn){
+  var thead=document.getElementById(theadId);
+  if(!thead)return;
+  thead.innerHTML='<tr>'+cols.map(function(c){
+    if(!c.col)return '<th'+(c.s?' style="'+c.s+'"':'')+'>'+( c.label||'')+'</th>';
+    var active=sortState.col===c.col;
+    var arrow=active?(sortState.dir==='asc'?'↑':'↓'):'↕';
+    var ac=active?'color:#6c7ae0;font-weight:900;':'color:#d1d5db;';
+    return '<th data-col="'+c.col+'" style="cursor:pointer;white-space:nowrap;user-select:none;'+(c.r?'text-align:right;':'')+(c.s||'')+'">'+c.label+' <span style="font-size:10px;'+ac+'">'+arrow+'</span></th>';
+  }).join('')+'</tr>';
+  thead.querySelectorAll('th[data-col]').forEach(function(th){
+    th.addEventListener('click',function(){
+      var col=this.getAttribute('data-col');
+      sortState.dir=(sortState.col===col&&sortState.dir==='asc')?'desc':'asc';
+      sortState.col=col;
+      renderFn();
+    });
+  });
+}
+function sortArr(arr,sortState,valFn){
+  if(!sortState.col)return arr;
+  return arr.slice().sort(function(a,b){
+    var va=valFn?valFn(a,sortState.col):(a[sortState.col]!=null?a[sortState.col]:'');
+    var vb=valFn?valFn(b,sortState.col):(b[sortState.col]!=null?b[sortState.col]:'');
+    if(typeof va==='number'&&typeof vb==='number')return sortState.dir==='asc'?va-vb:vb-va;
+    va=String(va).toLowerCase();vb=String(vb).toLowerCase();
+    return sortState.dir==='asc'?(va<vb?-1:va>vb?1:0):(va>vb?-1:va<vb?1:0);
+  });
+}
+
+// Sort states y columnas por tabla
+var cliSort={col:null,dir:'asc'};
+var CLI_COLS=[{col:'nombre',label:'Nombre'},{col:'tipo',label:'Tipo'},{col:'telefono',label:'Teléfono'},{col:'cuit',label:'CUIT'},{col:'deuda',label:'Deuda',r:true},{col:'estado',label:'Estado'},{col:null,label:''}];
+
+var provSort={col:null,dir:'asc'};
+var PROV_COLS=[{col:'nombre',label:'Nombre'},{col:'telefono',label:'Teléfono'},{col:'email',label:'Email'},{col:'cuit',label:'CUIT'},{col:'nota',label:'Nota'},{col:null,label:''}];
+
+var presSort={col:null,dir:'asc'};
+var PRES_COLS=[{col:'id',label:'N°'},{col:'cliente_nombre',label:'Cliente'},{col:'fecha',label:'Fecha'},{col:'total',label:'Total',r:true},{col:'estado',label:'Estado'},{col:null,label:''}];
+
+var morSort={col:null,dir:'asc'};
+var MOR_COLS=[{col:'nombre',label:'Nombre'},{col:'acreedor',label:'Acreedor'},{col:'cuotas_total',label:'Cuotas'},{col:'monto_cuota',label:'Monto cuota',r:true},{col:'pendiente',label:'Pendiente',r:true},{col:'prox_vto',label:'Próx. vencimiento'},{col:'estado',label:'Estado'},{col:null,label:''}];
+
+var gfSort={col:null,dir:'asc'};
+var GF_COLS=[{col:'concepto',label:'Concepto'},{col:'categoria',label:'Categoría'},{col:'monto',label:'Monto',r:true},{col:'frecuencia',label:'Frecuencia'},{col:'dia_vencimiento',label:'Vencimiento'},{col:'caja',label:'Caja'},{col:'activo',label:'Estado'},{col:null,label:''}];
+
+var faccliSort={col:null,dir:'asc'};
+var FACCLI_COLS=[{col:'nro_factura',label:'N° FAC'},{col:'tipo_comprobante',label:'Tipo'},{col:'fecha_emision',label:'Fecha'},{col:'cliente_nombre',label:'Cliente'},{col:'monto_total',label:'Total',r:true},{col:'cobrado',label:'Cobrado',r:true},{col:'saldo',label:'Saldo',r:true},{col:'estado',label:'Estado'},{col:null,label:''}];
+
+var chqpSort={col:null,dir:'asc'};
+var CHQP_COLS=[{col:'numero',label:'N° Cheque'},{col:'banco',label:'Banco'},{col:'destinatario',label:'Destinatario'},{col:'concepto',label:'Concepto'},{col:'monto',label:'Monto',r:true},{col:'fecha_emision',label:'Emisión'},{col:'fecha_pago',label:'Fecha pago'},{col:'estado',label:'Estado'},{col:null,label:''}];
+
+var perSort={col:null,dir:'asc'};
+var PER_COLS=[{col:'nombre',label:'Nombre'},{col:'cargo',label:'Cargo'},{col:'sueldo_semanal',label:'Sueldo semanal',r:true},{col:null,label:'Equiv. mensual',r:true},{col:'telefono',label:'Teléfono'},{col:'estado',label:'Estado'},{col:null,label:''}];
+
+var talSort={col:null,dir:'asc'};
+var TAL_COLS=[{col:'nombre',label:'Nombre'},{col:'precio_prenda',label:'Precio/prenda',r:true},{col:'telefono',label:'Teléfono'},{col:'nota',label:'Nota'},{col:'estado',label:'Estado'},{col:null,label:''}];
+
+var finSort={col:null,dir:'asc'};
+var FIN_COLS=[{col:'fecha',label:'Fecha'},{col:'caja',label:'Caja'},{col:'tipo',label:'Tipo'},{col:'concepto',label:'Concepto'},{col:'detalle',label:'Detalle'},{col:'ingreso',label:'Ingreso',r:true},{col:'egreso',label:'Egreso',r:true},{col:'referencia',label:'Referencia'},{col:'fecha_vencimiento',label:'Vto.'},{col:null,label:''}];
+
 var chqSort={col:'fecha_recibido',dir:'desc'};
 
 var CHQ_COLS=[
@@ -6433,6 +6497,12 @@ function renderGastosFijos(){
   totDiv.innerHTML=totHtml;
 
   // Tabla
+  makeSortThead('gf-thead',GF_COLS,gfSort,renderGastosFijos);
+  lista=sortArr(lista,gfSort,function(g,col){
+    if(col==='monto')return Number(g.monto);
+    if(col==='activo')return g.activo?'activo':'inactivo';
+    return g[col]!=null?g[col]:'';
+  });
   var tb=document.getElementById('gf-tbody');
   if(!lista.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><div class="ei">📌</div><p>Sin gastos fijos cargados</p></div></td></tr>';return;}
   var DIAS=['1ro','2do','3ro'];
@@ -7353,6 +7423,12 @@ function renderTalleristas(){
   document.getElementById('tal-total').textContent=total;
   document.getElementById('tal-precio-prom').textContent=$p(prom);
   document.getElementById('tal-total-prendas').textContent=totalPrendas.toLocaleString('es-AR');
+  makeSortThead('tal-thead',TAL_COLS,talSort,renderTalleristas);
+  list=sortArr(list,talSort,function(t,col){
+    if(col==='precio_prenda')return Number(t.precio_prenda_default);
+    if(col==='estado')return t.activo?'activo':'inactivo';
+    return t[col]!=null?t[col]:'';
+  });
   var tb=document.getElementById('tal-tbody');
   if(!list.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><p>Sin talleristas registrados</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(t){
@@ -7679,6 +7755,11 @@ function renderPersonal(){
   document.getElementById('per-total').textContent=list.length;
   document.getElementById('per-masa-salarial').textContent=$p(masaSemanal);
   document.getElementById('per-masa-mensual').textContent=$p(Math.round(masaSemanal*4.33));
+  makeSortThead('per-thead',PER_COLS,perSort,renderPersonal);
+  list=sortArr(list,perSort,function(p,col){
+    if(col==='estado')return p.activo?'activo':'inactivo';
+    return p[col]!=null?p[col]:'';
+  });
   var tb=document.getElementById('per-tbody');
   if(!list.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><p>Sin empleados registrados</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(p){
