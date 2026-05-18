@@ -844,7 +844,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
           <span id="pg-echeq-pas" style="display:none;"></span>
-          <div class="stat" style="border-top:3px solid #dc2626;cursor:pointer;" onclick="nav('cheques',document.querySelector('.nav-item[onclick*=\"cheques\"]'));setChqTab('propios',document.querySelector('#chq-tabs .tab:nth-child(2)'))">
+          <div class="stat" style="border-top:3px solid #dc2626;cursor:pointer;" onclick="nav('cheques',document.querySelector('.nav-item[onclick*=\"cheques\"]'));setChqTab('propios',document.querySelector('#chq-tabs .tab:nth-child(3)'))">
             <div class="stat-icon" style="background:#fee2e2;">📝</div>
             <h3 id="pg-chqp-pas">$0</h3><p>Cheques propios emitidos</p>
             <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-chqp-pas-sub">— pendientes</div>
@@ -1077,14 +1077,14 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <!-- ════════════ CHEQUES ════════════ -->
   <div class="section" id="sec-cheques">
     <div class="tabs" style="margin-bottom:16px;" id="chq-tabs">
-      <button class="tab active" onclick="setChqTab('cartera',this)">🧾 Recibos</button>
+      <button class="tab active" onclick="setChqTab('resumen',this)">📊 Resumen</button>
+      <button class="tab" onclick="setChqTab('cartera',this)">🧾 Recibos</button>
       <button class="tab" onclick="setChqTab('propios',this)">📋 Cartera propia</button>
-      <button class="tab" onclick="setChqTab('resumen',this)">📊 Resumen</button>
       <button class="tab" onclick="setChqTab('operaciones',this)">🏦 Operaciones banco</button>
     </div>
 
     <!-- Sub-tab 1: Recibos -->
-    <div id="chq-tab-cartera">
+    <div id="chq-tab-cartera" style="display:none;">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
         <select id="chq-anio" onchange="renderChqCartera()" style="width:90px;"></select>
         <select id="chq-mes" onchange="renderChqCartera()" style="width:150px;">
@@ -1147,7 +1147,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     </div>
 
     <!-- Sub-tab 3: Resumen -->
-    <div id="chq-tab-resumen" style="display:none;">
+    <div id="chq-tab-resumen">
       <div id="chq-resumen-cont"></div>
     </div>
 
@@ -2791,7 +2791,7 @@ function nav(sec, el){
   document.getElementById('pg-sub').textContent='';
   if(sec==='panel'){renderPanelGeneral();}
   if(sec==='finanzas'){renderFinCajas();renderFin();}
-  if(sec==='cheques'){renderChqCartera();renderChqPropios();}
+  if(sec==='cheques'){renderChqResumen();renderChqCartera();renderChqPropios();}
   if(sec==='productos'){renderResumenColegios();}
 }
 
@@ -5530,7 +5530,7 @@ function renderChqCartera(){
         '<div style="font-size:13px;font-weight:800;color:#92400e;">'+cuposALiberar.length+' cheque'+(cuposALiberar.length!==1?'s':'')+' en venta con cupo pendiente de liberar</div>'+
         '<div style="font-size:12px;color:#b45309;margin-top:2px;">La fecha de cobro ya pasó — confirmá la liberación del cupo</div>'+
       '</div>'+
-      '<button class="btn" style="background:#f59e0b;color:#fff;border-color:#d97706;" onclick="setChqTab(\'resumen\',document.querySelector(\'#chq-tabs .tab:nth-child(3)\'))">Ver cupos →</button>'+
+      '<button class="btn" style="background:#f59e0b;color:#fff;border-color:#d97706;" onclick="setChqTab(\'resumen\',document.querySelector(\'#chq-tabs .tab:nth-child(1)\'))">Ver cupos →</button>'+
     '</div>';
     var contenedor=document.getElementById('chq-tab-cartera');
     var existAlert=document.getElementById('chq-cupo-alert');
@@ -5645,19 +5645,32 @@ function renderChqPropios(){
 function renderChqResumen(){
   var hoy=today();
   var hoyDate=new Date();
-  var en60=new Date(Date.now()+60*86400000).toISOString().split('T')[0];
   var MN=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // Buckets: 0-15 / 15-30 / 30-45 / +45
+  function diasHasta(f){return Math.ceil((new Date(f+'T12:00:00')-new Date(hoy+'T00:00:00'))/86400000);}
+  function bkt(f){var d=diasHasta(f);return d<=15?0:d<=30?1:d<=45?2:3;}
+  var BK_LBL=['Próx. 15 días','15 a 30 días','30 a 45 días','+45 días'];
+  var BK_COL=['#16a34a','#0ea5e9','#f59e0b','#9ca3af'];
+  var BK_BG =['#f0fdf4','#e0f2fe','#fef3c7','#f3f4f6'];
 
   // ── Cheques en cartera disponibles ──
   var enCarteraDisp=CHEQUES_CARTERA.filter(function(c){return c.estado==='en_cartera'&&c.fecha_cobro;});
   var totalDisp=enCarteraDisp.reduce(function(s,c){return s+saldoCheque(c.id);},0);
 
-  // ── Cupo ──
-  var vendidos=CHEQUES_CARTERA.filter(function(c){return c.estado==='vendido';});
-  var cupoOcupado=vendidos.filter(function(c){return !c.cupo_liberado;});
-  var cupoLibre=vendidos.filter(function(c){return c.cupo_liberado;});
+  // ── Cupo: vendidos sin liberar agrupados por tiempo ──
+  var cupoOcupado=CHEQUES_CARTERA.filter(function(c){return c.estado==='vendido'&&!c.cupo_liberado&&c.fecha_cobro;});
+  var cupoBk=[{c:0,t:0},{c:0,t:0},{c:0,t:0},{c:0,t:0}];
+  cupoOcupado.forEach(function(c){var b=bkt(c.fecha_cobro);cupoBk[b].c++;cupoBk[b].t+=Number(c.monto);});
   var totalCupoOcupado=cupoOcupado.reduce(function(s,c){return s+Number(c.monto);},0);
-  var totalCupoLibre=cupoLibre.reduce(function(s,c){return s+Number(c.monto);},0);
+
+  // ── Disponibles por período (4 buckets) ──
+  var dispBk=[{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0}];
+  enCarteraDisp.forEach(function(c){
+    var b=bkt(c.fecha_cobro);var sal=saldoCheque(c.id);
+    dispBk[b].c++;dispBk[b].t+=sal;
+    if((c.tipo||'cheque')==='echeq')dispBk[b].ech++;else dispBk[b].fis++;
+  });
 
   // ── Agrupar por MES ──
   var porMes={};
@@ -5671,50 +5684,42 @@ function renderChqResumen(){
   });
   var mesesKeys=Object.keys(porMes).sort();
 
-  // ── Agrupar por SEMANA ──
-  var porSem={};
-  enCarteraDisp.forEach(function(c){
-    var d=new Date(c.fecha_cobro+'T12:00:00');
-    var dow=d.getDay()||7; // lunes=1..dom=7
-    var lunes=new Date(d);lunes.setDate(d.getDate()-dow+1);
-    var domingo=new Date(lunes);domingo.setDate(lunes.getDate()+6);
-    var key=lunes.toISOString().split('T')[0];
-    var labelFrom=lunes.getDate()+'/'+(lunes.getMonth()+1);
-    var labelTo=domingo.getDate()+'/'+(domingo.getMonth()+1);
-    var vencida=key<hoy.slice(0,7+3);// simplificado
-    if(!porSem[key])porSem[key]={label:labelFrom+' – '+labelTo,count:0,total:0,pasada:domingo.toISOString().split('T')[0]<hoy};
-    porSem[key].count++;porSem[key].total+=saldoCheque(c.id);
-  });
-  var semKeys=Object.keys(porSem).sort();
-
   var cont=document.getElementById('chq-resumen-cont');
   var html='';
 
-  // ── Cards de cupo ──
-  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px;">';
+  // ── Fila superior: total en cartera + cupo por período ──
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:20px;">';
+  // Card total
   html+='<div class="stat" style="border-top:3px solid #7c3aed;">'+
     '<div class="stat-icon" style="background:#ede9fe;">🧾</div>'+
     '<h3 style="color:#7c3aed;">'+$p(totalDisp)+'</h3>'+
     '<p>Disponible en cartera</p>'+
     '<div style="font-size:11px;color:#8b5cf6;">'+enCarteraDisp.length+' cheque'+(enCarteraDisp.length!==1?'s':'')+'</div>'+
   '</div>';
-  html+='<div class="stat" style="border-top:3px solid #0ea5e9;">'+
-    '<div class="stat-icon" style="background:#e0f2fe;">🏦</div>'+
-    '<h3 style="color:#0ea5e9;">'+$p(totalCupoOcupado)+'</h3>'+
-    '<p>Cupo ocupado</p>'+
-    '<div style="font-size:11px;color:#0369a1;">'+cupoOcupado.length+' vendido'+(cupoOcupado.length!==1?'s':'')+' sin liberar</div>'+
-  '</div>';
-  html+='<div class="stat" style="border-top:3px solid #16a34a;">'+
-    '<div class="stat-icon" style="background:#dcfce7;">✅</div>'+
-    '<h3 style="color:#16a34a;">'+$p(totalCupoLibre)+'</h3>'+
-    '<p>Cupo liberado</p>'+
-    '<div style="font-size:11px;color:#15803d;">'+cupoLibre.length+' confirmado'+(cupoLibre.length!==1?'s':'')+'</div>'+
-  '</div>';
+  // Cards cupo por período (solo los que tienen cheques, siempre las 4 si hay cupo)
+  if(totalCupoOcupado>0){
+    BK_LBL.forEach(function(lbl,i){
+      var bk=cupoBk[i];
+      if(i===3&&bk.c===0)return;
+      html+='<div class="stat" style="border-top:3px solid '+BK_COL[i]+';background:'+BK_BG[i]+';">'+
+        '<div style="font-size:9px;font-weight:800;color:'+BK_COL[i]+';letter-spacing:.6px;margin-bottom:4px;">CUPO A LIBERAR</div>'+
+        '<div style="font-size:10px;font-weight:700;color:#6b7280;margin-bottom:6px;">'+lbl+'</div>'+
+        '<h3 style="color:'+BK_COL[i]+';margin:0 0 4px;">'+$p(bk.t)+'</h3>'+
+        '<div style="font-size:11px;color:#9ca3af;">'+bk.c+' cheque'+(bk.c!==1?'s':'')+' pendiente'+(bk.c!==1?'s':'')+'</div>'+
+      '</div>';
+    });
+  } else {
+    html+='<div class="stat" style="border-top:3px solid #e5e7eb;opacity:.55;">'+
+      '<div style="font-size:9px;font-weight:800;color:#9ca3af;margin-bottom:4px;">CUPO A LIBERAR</div>'+
+      '<h3 style="color:#d1d5db;">$0</h3>'+
+      '<div style="font-size:11px;color:#d1d5db;">Sin cupo ocupado</div>'+
+    '</div>';
+  }
   html+='</div>';
 
   // ── Vista por MES ──
   html+='<div class="panel" style="margin-bottom:18px;">';
-  html+='<div class="panel-hdr"><h4>📅 Disponibles por mes</h4><span style="font-size:12px;color:#9ca3af;">cheques en_cartera · saldo disponible</span></div>';
+  html+='<div class="panel-hdr"><h4>📅 Disponibles por mes</h4><span style="font-size:12px;color:#9ca3af;">cheques en cartera · saldo disponible</span></div>';
   if(!mesesKeys.length){
     html+='<p style="color:#9ca3af;text-align:center;padding:16px;">Sin cheques en cartera</p>';
   } else {
@@ -5735,36 +5740,23 @@ function renderChqResumen(){
   }
   html+='</div>';
 
-  // ── Vista por SEMANA ──
+  // ── Vista por PERÍODO (4 buckets) ──
   html+='<div class="panel" style="margin-bottom:18px;">';
-  html+='<div class="panel-hdr"><h4>📆 Disponibles por semana</h4><span style="font-size:12px;color:#9ca3af;">lunes a domingo</span></div>';
-  if(!semKeys.length){
+  html+='<div class="panel-hdr"><h4>📆 Disponibles por período</h4><span style="font-size:12px;color:#9ca3af;">agrupado por fecha de cobro</span></div>';
+  if(!enCarteraDisp.length){
     html+='<p style="color:#9ca3af;text-align:center;padding:16px;">Sin cheques en cartera</p>';
   } else {
-    html+='<div class="tbl"><table><thead><tr>'+
-      '<th>Semana</th><th style="text-align:center">Cheques</th>'+
-      '<th style="text-align:center">ECHEQ</th><th style="text-align:center">Físico</th>'+
-      '<th style="text-align:right">Saldo disponible</th>'+
-    '</tr></thead><tbody>';
-    semKeys.forEach(function(k){
-      var s=porSem[k];
-      // contar echeq/cheque por semana
-      var ecsem=enCarteraDisp.filter(function(c){
-        var d=new Date(c.fecha_cobro+'T12:00:00');
-        var dow=d.getDay()||7;var lun=new Date(d);lun.setDate(d.getDate()-dow+1);
-        return lun.toISOString().split('T')[0]===k&&(c.tipo||'cheque')==='echeq';
-      }).length;
-      var chsem=s.count-ecsem;
-      var pasada=s.pasada;
-      html+='<tr style="'+(pasada?'opacity:.55;':'')+'">' +
-        '<td style="font-weight:600;">'+(pasada?'<span style="font-size:10px;color:#9ca3af;">vencida</span> ':'')+s.label+'</td>'+
-        '<td style="text-align:center;font-weight:700;color:#7c3aed;">'+s.count+'</td>'+
-        '<td style="text-align:center;"><span class="badge" style="background:#dbeafe;color:#1d4ed8;">'+ecsem+'</span></td>'+
-        '<td style="text-align:center;"><span class="badge b-gray">'+chsem+'</span></td>'+
-        '<td style="text-align:right;font-weight:700;color:'+(pasada?'#9ca3af':'#16a34a')+';">'+$p(s.total)+'</td>'+
-      '</tr>';
+    html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:4px 0;">';
+    BK_LBL.forEach(function(lbl,i){
+      var bk=dispBk[i];
+      html+='<div style="background:'+BK_BG[i]+';border:1.5px solid '+BK_COL[i]+'44;border-radius:12px;padding:16px 14px;">'+
+        '<div style="font-size:10px;font-weight:800;color:'+BK_COL[i]+';letter-spacing:.5px;margin-bottom:8px;">'+lbl.toUpperCase()+'</div>'+
+        '<div style="font-size:22px;font-weight:800;color:'+BK_COL[i]+';">'+$p(bk.t)+'</div>'+
+        '<div style="font-size:12px;color:#6b7280;margin-top:6px;font-weight:600;">'+bk.c+' cheque'+(bk.c!==1?'s':'')+'</div>'+
+        (bk.ech||bk.fis?'<div style="font-size:11px;color:#9ca3af;margin-top:3px;">'+(bk.ech?bk.ech+' ECH ':'')+(bk.fis?bk.fis+' fís.':'')+'</div>':'')+
+      '</div>';
     });
-    html+='</tbody></table></div>';
+    html+='</div>';
   }
   html+='</div>';
 
