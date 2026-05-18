@@ -167,7 +167,10 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <h1>Prímula ERP</h1>
     <p>Sistema de gestión textil</p>
     <input class="login-field" id="lg-email" type="email" placeholder="Email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('lg-pass').focus()"/>
-    <input class="login-field" id="lg-pass" type="password" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div style="position:relative;width:100%;">
+      <input class="login-field" id="lg-pass" type="password" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;box-sizing:border-box;padding-right:44px;"/>
+      <button onclick="togglePassVis()" id="lg-eye" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:18px;line-height:1;padding:0;" title="Mostrar/ocultar contraseña">👁</button>
+    </div>
     <button class="login-btn" onclick="doLogin()">Ingresar</button>
     <div class="login-error" id="lg-err"></div>
     <div style="margin-top:16px;">
@@ -2286,6 +2289,12 @@ async function doLogin(){
   document.getElementById('lg-err').textContent='';
   var {error}=await sb.auth.signInWithPassword({email:document.getElementById('lg-email').value.trim(),password:document.getElementById('lg-pass').value});
   if(error) document.getElementById('lg-err').textContent='Email o contraseña incorrectos';
+}
+function togglePassVis(){
+  var inp=document.getElementById('lg-pass');
+  var btn=document.getElementById('lg-eye');
+  if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}
+  else{inp.type='password';btn.textContent='👁';}
 }
 async function doResetPassword(){
   var email=document.getElementById('lg-email').value.trim();
