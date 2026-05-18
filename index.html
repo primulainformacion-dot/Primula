@@ -166,10 +166,16 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div style="font-size:42px;margin-bottom:12px;">🌸</div>
     <h1>Prímula ERP</h1>
     <p>Sistema de gestión textil</p>
-    <input class="login-field" id="lg-email" type="email" placeholder="Email" autocomplete="username"/>
-    <input class="login-field" id="lg-pass" type="password" placeholder="Contraseña" autocomplete="current-password"/>
+    <input class="login-field" id="lg-email" type="email" placeholder="Email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('lg-pass').focus()"/>
+    <input class="login-field" id="lg-pass" type="password" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
     <button class="login-btn" onclick="doLogin()">Ingresar</button>
     <div class="login-error" id="lg-err"></div>
+    <div style="margin-top:16px;">
+      <button onclick="doResetPassword()" style="background:none;border:none;color:#9ca3af;font-size:12px;cursor:pointer;text-decoration:underline;">¿Olvidaste tu contraseña?</button>
+    </div>
+    <div id="lg-reset-ok" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:12px;color:#166534;">
+      ✓ Te enviamos un email para restablecer tu contraseña. Revisá tu bandeja de entrada.
+    </div>
   </div>
 </div>
 
@@ -5457,8 +5463,13 @@ var posView='root', posL2Type='', posL2Value='', posL2Label='';
 var posMetodo='';
 
 var POS_BTN_STYLE='padding:14px 10px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:13px;font-weight:600;color:#374151;text-align:center;line-height:1.3;transition:border-color .15s;width:100%;';
-var POS_CAT_STYLE='padding:18px 10px;background:linear-gradient(135deg,#6c7ae0,#8b5cf6);color:#fff;border:none;border-radius:14px;cursor:pointer;font-size:14px;font-weight:700;text-align:center;line-height:1.3;width:100%;box-shadow:0 2px 8px rgba(108,122,224,.3);';
-var POS_COL_STYLE='padding:18px 10px;background:linear-gradient(135deg,#0ea5e9,#14b8a6);color:#fff;border:none;border-radius:14px;cursor:pointer;font-size:14px;font-weight:700;text-align:center;line-height:1.3;width:100%;box-shadow:0 2px 8px rgba(14,165,233,.3);';
+var POS_LOCAL_GRADIENTS={montegrande:'linear-gradient(135deg,#065f46,#10b981)',llavallol:'linear-gradient(135deg,#b45309,#d97706)',mayorista:'linear-gradient(135deg,#3730a3,#6c7ae0)'};
+var POS_LOCAL_SHADOWS={montegrande:'rgba(16,185,129,.35)',llavallol:'rgba(180,83,9,.35)',mayorista:'rgba(108,122,224,.3)'};
+function posNavBtnStyle(){
+  var grad=POS_LOCAL_GRADIENTS[currentLocal]||POS_LOCAL_GRADIENTS.mayorista;
+  var shadow=POS_LOCAL_SHADOWS[currentLocal]||POS_LOCAL_SHADOWS.mayorista;
+  return 'padding:18px 10px;background:'+grad+';color:#fff;border:none;border-radius:14px;cursor:pointer;font-size:14px;font-weight:700;text-align:center;line-height:1.3;width:100%;box-shadow:0 2px 8px '+shadow+';';
+}
 
 function renderPOS(){
   posGoRoot();
@@ -5494,8 +5505,9 @@ function posGoRoot(){
     });
     var cats=Object.values(catMap).sort(function(a,b){return a.nombre<b.nombre?-1:1;});
     if(!cats.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">Sin stock en Monte Grande</div>';return;}
+    var btnSt=posNavBtnStyle();
     grid.innerHTML=cats.map(function(c){
-      return '<button onclick="posGoLevel2(\'cat\',\''+c.id+'\',\''+c.nombre+'\')" style="'+POS_CAT_STYLE+'">'+
+      return '<button onclick="posGoLevel2(\'cat\',\''+c.id+'\',\''+c.nombre+'\')" style="'+btnSt+'">'+
         c.nombre+'<div style="font-size:11px;opacity:.8;margin-top:4px;">'+c.count+' producto'+(c.count!==1?'s':'')+'</div></button>';
     }).join('');
 
@@ -5514,8 +5526,9 @@ function posGoRoot(){
     });
     var cols=Object.values(colMap).sort(function(a,b){return a.label<b.label?-1:1;});
     if(!cols.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">Sin stock en Llavallol</div>';return;}
+    var btnStL=posNavBtnStyle();
     grid.innerHTML=cols.map(function(c){
-      return '<button onclick="posGoLevel2(\'colegio\',\''+c.value+'\',\''+c.label+'\')" style="'+POS_COL_STYLE+'">'+
+      return '<button onclick="posGoLevel2(\'colegio\',\''+c.value+'\',\''+c.label+'\')" style="'+btnStL+'">'+
         c.label+'<div style="font-size:11px;opacity:.8;margin-top:4px;">'+c.count+' producto'+(c.count!==1?'s':'')+'</div></button>';
     }).join('');
   }
@@ -5708,18 +5721,22 @@ function posCobrar(){
 
 async function posSaveVenta(){
   if(!posMetodo){toast('Elegí un método de pago','err');return;}
-  var total=posItems.reduce(function(s,it){return s+it.precio*it.cantidad;},0);
+  var bruto=posGetTotalBruto();
+  var totalFinal=posGetTotalFinal();
+  var conDescuento=posMetodo==='efectivo'&&bruto!==totalFinal;
   var cajaMap={efectivo:currentLocal==='montegrande'?'LOCAL MONTE GRANDE':'LOCAL LLAVALLOL',tarjeta:currentLocal==='montegrande'?'LOCAL MONTE GRANDE':'LOCAL LLAVALLOL',mercadopago:'MERCADO PAGO',transferencia:'BANCO SRL'};
   var caja=cajaMap[posMetodo];
-  var metodoLabel={efectivo:'Efectivo',tarjeta:'Tarjeta',mercadopago:'Mercado Pago',transferencia:'Transferencia'}[posMetodo];
+  var metodoLabel={efectivo:'Efectivo (20% dto.)',tarjeta:'Tarjeta',mercadopago:'Mercado Pago',transferencia:'Transferencia'}[posMetodo];
   var localLabel=currentLocal==='montegrande'?'Monte Grande':'Llavallol';
+  var notaExtra=document.getElementById('mpc-nota').value||null;
+  var notaVenta=conDescuento?('Efectivo 20% dto. — Lista: '+$p(bruto)+(notaExtra?' · '+notaExtra:'')):(notaExtra||null);
 
   // Crear venta
-  var ventaD={cliente_id:posClienteId||null,cliente_nombre:posClienteNombre||null,local:currentLocal,tipo:'minorista',fecha:today(),estado:'cobrado',total:total,saldo:0,nota:document.getElementById('mpc-nota').value||null};
+  var ventaD={cliente_id:posClienteId||null,cliente_nombre:posClienteNombre||null,local:currentLocal,tipo:'minorista',fecha:today(),estado:'cobrado',total:totalFinal,saldo:0,nota:notaVenta};
   var {data:v,error:vErr}=await sb.from('ventas').insert(ventaD).select().single();
   if(vErr){toast('Error al guardar venta: '+vErr.message,'err');return;}
 
-  // Items
+  // Items (precio de lista, el descuento queda en el total de la venta)
   await sb.from('items_venta').insert(posItems.map(function(it){
     return{venta_id:v.id,descripcion:it.nombre+(it.talle?' · '+it.talle:'')+(it.color?' · '+it.color:''),cantidad:it.cantidad,precio_unitario:it.precio,subtotal:it.precio*it.cantidad};
   }));
@@ -5731,11 +5748,11 @@ async function posSaveVenta(){
     if(s) await sb.from('stock').update({cantidad:Math.max(0,s.cantidad-it.cantidad)}).eq('id',s.id);
   }
 
-  // Movimiento en caja
+  // Movimiento en caja (por el monto efectivamente cobrado)
   var detalle=(posClienteNombre||'Mostrador')+' · '+metodoLabel+(caja==='MERCADO PAGO'?' · '+localLabel:'');
-  await sb.from('movimientos').insert({tipo:'ingreso',caja:caja,fecha:today(),ingreso:total,egreso:0,concepto:'VENTA MINORISTA',detalle:detalle,referencia:'Venta #'+v.id});
+  await sb.from('movimientos').insert({tipo:'ingreso',caja:caja,fecha:today(),ingreso:totalFinal,egreso:0,concepto:'VENTA MINORISTA',detalle:detalle,referencia:'Venta #'+v.id});
 
-  toast('✓ Venta registrada — '+$p(total)+' · '+metodoLabel);
+  toast('✓ Venta registrada — '+$p(totalFinal)+(conDescuento?' (20% dto. efectivo)':'')+' · '+metodoLabel);
   closeM('m-pos-cobro');
   posItems=[]; posRenderTicket(); posClearCliente();
   await Promise.all([loadVentas(),loadStock(),loadMovs()]);
