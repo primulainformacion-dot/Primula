@@ -5547,8 +5547,7 @@ function renderChqCartera(){
   } else {
     var ea=document.getElementById('chq-cupo-alert');if(ea)ea.remove();
   }
-  var sorted=cheques.slice().sort(function(a,b){return(a.fecha_cobro||a.fecha_recibido)<(b.fecha_cobro||b.fecha_recibido)?-1:1;});
-  tb.innerHTML=sorted.map(function(c){
+  tb.innerHTML=cheques.map(function(c){
     var usos=CHEQUE_USOS.filter(function(u){return u.cheque_id===c.id;});
     var usado=usos.reduce(function(s,u){return s+Number(u.monto);},0);
     var saldo=Number(c.monto)-usado;
