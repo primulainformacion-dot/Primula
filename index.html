@@ -1039,15 +1039,46 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
     <!-- Tab Facturación -->
     <div id="lt-facturacion" style="display:none">
+      <!-- Ventas del período -->
       <div class="panel" style="margin-bottom:16px;">
-        <div class="panel-hdr"><h4>Período</h4></div>
-        <div class="search-row">
-          <input type="date" id="lf-desde"/>
-          <input type="date" id="lf-hasta"/>
-          <button class="btn" onclick="renderLocalFact()">Ver</button>
+        <div class="panel-hdr">
+          <h4>📊 Ventas del período</h4>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="date" id="lf-desde" style="width:150px;"/>
+            <span style="color:#9ca3af;">→</span>
+            <input type="date" id="lf-hasta" style="width:150px;"/>
+            <button class="btn btn-sm" onclick="renderLocalFact()">Ver</button>
+          </div>
         </div>
+        <div id="lf-result"></div>
       </div>
-      <div id="lf-result"></div>
+      <!-- Facturas AFIP emitidas -->
+      <div class="panel">
+        <div class="panel-hdr">
+          <h4>📄 Facturas AFIP emitidas</h4>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input id="faccli-q" placeholder="Buscar cliente o N° FAC..." oninput="renderFacturasClientes()" style="padding:7px 11px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;width:210px;"/>
+            <select id="faccli-estado" onchange="renderFacturasClientes()" style="padding:7px 11px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;">
+              <option value="">Todos los estados</option>
+              <option value="pendiente">Pendientes</option>
+              <option value="parcial">Cobradas parcialmente</option>
+              <option value="cobrada">Cobradas</option>
+            </select>
+            <button class="btn" onclick="openFacturaClienteModal()">+ Nueva factura</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;" id="faccli-stats"></div>
+        <div class="tbl"><table>
+          <thead><tr>
+            <th>N° FAC</th><th>Tipo</th><th>Fecha</th><th>Cliente</th>
+            <th style="text-align:right">Total</th>
+            <th style="text-align:right">Cobrado</th>
+            <th style="text-align:right">Saldo</th>
+            <th>Estado</th><th></th>
+          </tr></thead>
+          <tbody id="faccli-tbody"></tbody>
+        </table></div>
+      </div>
     </div>
   </div>
 
@@ -1061,7 +1092,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="section" id="sec-cheques">
     <div class="tabs" style="margin-bottom:16px;" id="chq-tabs">
       <button class="tab active" onclick="setChqTab('cartera',this)">🧾 Recibos</button>
-      <button class="tab" onclick="setChqTab('facturas',this)">📄 Facturas</button>
       <button class="tab" onclick="setChqTab('propios',this)">📋 Cartera propia</button>
       <button class="tab" onclick="setChqTab('resumen',this)">📊 Resumen</button>
     </div>
@@ -1115,36 +1145,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <th>N° FAC</th><th>N° cheque</th><th>Banco</th><th>Día cobro</th><th>Días</th><th>Estado</th><th></th>
           </tr></thead>
           <tbody id="chq-tbody"></tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- Sub-tab: Facturas de clientes -->
-    <div id="chq-tab-facturas" style="display:none;">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
-        <input id="faccli-q" placeholder="Buscar cliente o N° FAC..." oninput="renderFacturasClientes()" style="padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;width:230px;"/>
-        <select id="faccli-estado" onchange="renderFacturasClientes()" style="padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;">
-          <option value="">Todos los estados</option>
-          <option value="pendiente">Pendientes</option>
-          <option value="parcial">Cobradas parcialmente</option>
-          <option value="cobrada">Cobradas</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;" id="faccli-stats"></div>
-      <div class="panel">
-        <div class="panel-hdr">
-          <h4>📄 Facturas emitidas a clientes</h4>
-          <button class="btn" onclick="openFacturaClienteModal()">+ Nueva factura</button>
-        </div>
-        <div class="tbl"><table>
-          <thead><tr>
-            <th>N° FAC</th><th>Tipo</th><th>Fecha</th><th>Cliente</th>
-            <th style="text-align:right">Total</th>
-            <th style="text-align:right">Cobrado</th>
-            <th style="text-align:right">Saldo</th>
-            <th>Estado</th><th></th>
-          </tr></thead>
-          <tbody id="faccli-tbody"></tbody>
         </table></div>
       </div>
     </div>
@@ -1300,6 +1300,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               <option>ECHEQ/CHEQUE</option>
               <option>LOCAL MONTE GRANDE</option>
               <option>LOCAL LLAVALLOL</option>
+              <option>CAJA USD</option>
             </select>
             <select id="fin-tipo" onchange="renderFin()" style="width:130px;">
               <option value="">Ing. + Egr.</option>
@@ -1363,6 +1364,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
                 <option>BANCO SRL</option><option>BANCO POLY</option>
                 <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
                 <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
+                <option>CAJA USD</option>
               </select>
             </div>
             <div style="text-align:center;font-size:22px;color:#6c7ae0;">↓</div>
@@ -1372,6 +1374,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
                 <option>EFECTIVO ADMINISTRACIÓN</option>
                 <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
                 <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
+                <option>CAJA USD</option>
               </select>
             </div>
             <div class="field"><label>Monto *</label><input type="number" id="tr-monto" min="0" placeholder="0"/></div>
@@ -1392,6 +1395,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               <option>BANCO SRL</option><option>BANCO POLY</option>
               <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
               <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
+              <option>CAJA USD</option>
             </select>
             <select id="tr-fil-mes" onchange="renderTransfHistorial()" style="width:140px;">
               <option value="">Todos los meses</option>
@@ -1479,6 +1483,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <option>BANCO SRL</option><option>BANCO POLY</option>
             <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
             <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
+            <option>CAJA USD</option>
           </select>
         </div>
         <div id="cierre-historial"></div>
@@ -1666,6 +1671,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option>BANCO SRL</option><option>BANCO POLY</option>
           <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
           <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
+          <option>CAJA USD</option>
         </select>
       </div>
       <div class="field"><label>Concepto *</label>
@@ -1823,6 +1829,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option>BANCO SRL</option><option>BANCO POLY</option>
           <option>MERCADO PAGO</option>
           <option>LOCAL LLAVALLOL</option><option>LOCAL MONTE GRANDE</option>
+          <option>CAJA USD</option>
         </select>
       </div>
       <div class="field"><label>Fecha de pago</label><input type="date" id="mpago-fecha"/></div>
@@ -2383,6 +2390,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option>EFECTIVO ADMINISTRACIÓN</option>
           <option>LOCAL MONTE GRANDE</option>
           <option>LOCAL LLAVALLOL</option>
+          <option>CAJA USD</option>
         </select>
       </div>
       <div class="field"><label>Fecha de depósito *</label><input type="date" id="chqd-fecha"/></div>
@@ -3317,7 +3325,7 @@ function setLocalTab(tab, el){
   else if(tab==='cobros')renderLocalCobros();
   else if(tab==='stock')renderLocalStock();
   else if(tab==='productos')renderLocalProductos();
-  else if(tab==='facturacion')renderLocalFact();
+  else if(tab==='facturacion'){renderLocalFact();renderFacturasClientes();}
 }
 function renderLocalVentas(){
   var q=(document.getElementById('lv-q').value||'').toLowerCase();
@@ -4721,12 +4729,20 @@ async function saveProd(){
 // ════════════════════════════════════
 // FINANZAS
 // ════════════════════════════════════
-var CAJAS_SISTEMA=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL'];
-var CAJA_COLORES={'EFECTIVO ADMINISTRACIÓN':'#6c7ae0','BANCO SRL':'#0ea5e9','BANCO POLY':'#14b8a6','MERCADO PAGO':'#3b82f6','ECHEQ/CHEQUE':'#8b5cf6','LOCAL MONTE GRANDE':'#10b981','LOCAL LLAVALLOL':'#f59e0b'};
+var CAJAS_SISTEMA=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL','CAJA USD'];
+var CAJA_COLORES={'EFECTIVO ADMINISTRACIÓN':'#6c7ae0','BANCO SRL':'#0ea5e9','BANCO POLY':'#14b8a6','MERCADO PAGO':'#3b82f6','ECHEQ/CHEQUE':'#8b5cf6','LOCAL MONTE GRANDE':'#10b981','LOCAL LLAVALLOL':'#f59e0b','CAJA USD':'#16a34a'};
 var MESES_ARR=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
 
 function saldoCaja(caja){
-  return MOVS.filter(function(m){return m.caja===caja;}).reduce(function(s,m){return s+Number(m.ingreso)-Number(m.egreso);},0);
+  var cierre=ultimoCierreCaja(caja, null);
+  if(cierre){
+    var base=Number(cierre.saldo_real||0);
+    var delta=MOVS.filter(function(m){return m.caja===caja&&m.fecha>cierre.fecha;})
+      .reduce(function(s,m){return s+Number(m.ingreso||0)-Number(m.egreso||0);},0);
+    return base+delta;
+  }
+  return MOVS.filter(function(m){return m.caja===caja;})
+    .reduce(function(s,m){return s+Number(m.ingreso||0)-Number(m.egreso||0);},0);
 }
 
 function renderFinCajas(){
@@ -5223,13 +5239,12 @@ async function toggleObjetivoLogrado(cat,canal,anio,mes,id){
 var editChqPropioId=null;
 
 function setChqTab(tab,el){
-  ['cartera','facturas','propios','resumen'].forEach(function(t){
+  ['cartera','propios','resumen'].forEach(function(t){
     document.getElementById('chq-tab-'+t).style.display=t===tab?'block':'none';
   });
   document.querySelectorAll('#chq-tabs .tab').forEach(function(b){b.classList.remove('active');});
   if(el)el.classList.add('active');
   if(tab==='cartera')renderChqCartera();
-  if(tab==='facturas')renderFacturasClientes();
   if(tab==='propios')renderChqPropios();
   if(tab==='resumen')renderChqResumen();
 }
@@ -6802,10 +6817,24 @@ async function posSaveVenta(){
 // ══════════════════════════════════════════════
 // CIERRE DE CAJA
 // ══════════════════════════════════════════════
-var CAJAS_LIST=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL'];
+var CAJAS_LIST=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL','CAJA USD'];
+
+function ultimoCierreCaja(caja, fechaHasta){
+  // CIERRES_CAJA ya viene ordenado fecha DESC, created_at DESC
+  return CIERRES_CAJA.find(function(c){
+    return c.caja===caja && (!fechaHasta || c.fecha<=fechaHasta);
+  })||null;
+}
 
 function saldoCajaCalculado(caja, fechaHasta){
-  return MOVS.filter(function(m){return m.caja===caja&&m.fecha<=fechaHasta;})
+  var cierre=ultimoCierreCaja(caja, fechaHasta);
+  if(cierre){
+    var base=Number(cierre.saldo_real||0);
+    var delta=MOVS.filter(function(m){return m.caja===caja&&m.fecha>cierre.fecha&&(!fechaHasta||m.fecha<=fechaHasta);})
+      .reduce(function(s,m){return s+Number(m.ingreso||0)-Number(m.egreso||0);},0);
+    return base+delta;
+  }
+  return MOVS.filter(function(m){return m.caja===caja&&(!fechaHasta||m.fecha<=fechaHasta);})
     .reduce(function(s,m){return s+Number(m.ingreso||0)-Number(m.egreso||0);},0);
 }
 
@@ -6868,7 +6897,26 @@ async function saveCierreCaja(){
   if(!rows.length){toast('Ingresá el saldo real de al menos una caja','err');return;}
   var r=await sb.from('cierres_caja').insert(rows);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
-  toast('Cierre guardado — '+rows.length+' caja'+(rows.length!==1?'s':''));
+  // Generar movimiento automático por diferencias
+  var movsDif=rows.filter(function(row){return Math.abs(row.diferencia)>=0.01;}).map(function(row){
+    var sobrante=row.diferencia>0;
+    var anio=new Date(row.fecha+'T12:00:00').getFullYear();
+    var mes=MESES_ARR[new Date(row.fecha+'T12:00:00').getMonth()];
+    return{
+      caja:row.caja,fecha:row.fecha,
+      tipo:sobrante?'ingreso':'egreso',
+      concepto:'OTROS',
+      detalle:(sobrante?'Sobrante':'Faltante')+' cierre de caja'+(row.nota?' — '+row.nota:''),
+      ingreso:sobrante?Math.abs(row.diferencia):0,
+      egreso:sobrante?0:Math.abs(row.diferencia),
+      anio:anio,mes:mes,sem:0
+    };
+  });
+  if(movsDif.length){
+    var rMov=await sb.from('movimientos').insert(movsDif);
+    if(rMov.error)toast('Cierre guardado pero error en ajuste: '+rMov.error.message,'err');
+  }
+  toast('Cierre guardado — '+rows.length+' caja'+(rows.length!==1?'s':'')+(movsDif.length?' · '+movsDif.length+' ajuste'+(movsDif.length!==1?'s':'')+' registrado'+(movsDif.length!==1?'s':''):''));
   document.getElementById('cierre-nota').value='';
   CAJAS_LIST.forEach(function(caja){
     var inputId='cierre-real-'+caja.replace(/[\s\/]/g,'_');
@@ -6877,8 +6925,9 @@ async function saveCierreCaja(){
     var diffEl=document.getElementById('diff-'+inputId);
     if(diffEl){diffEl.textContent='';diffEl.style.color='#9ca3af';}
   });
-  await loadCierresCaja();
+  await Promise.all([loadCierresCaja(), loadMovs()]);
   renderCierreHistorial();
+  renderFinCajas();
 }
 
 function renderCierreHistorial(){
