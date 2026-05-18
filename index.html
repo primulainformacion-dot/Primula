@@ -5520,30 +5520,7 @@ function renderChqCartera(){
   });
 
   // ── Generar thead ──
-  var thStyle='padding:8px 6px;cursor:pointer;white-space:nowrap;user-select:none;';
-  var thStyleR=thStyle+'text-align:right;';
-  function thBtn(col,label,align){
-    var active=chqSort.col===col;
-    var arrow=active?(chqSort.dir==='asc'?'↑':'↓'):'<span style="opacity:.3;">↕</span>';
-    return '<th style="'+(align==='r'?thStyleR:thStyle)+'" onclick="setChqSort(\''+col+'\')">'+label+' '+arrow+'</th>';
-  }
-  var thead=document.getElementById('chq-thead');
-  if(thead)thead.innerHTML='<tr>'+
-    thBtn('tipo','Tipo')+
-    thBtn('fecha_recibido','Día recibido')+
-    thBtn('concepto','Concepto')+
-    thBtn('emisor','Emisor')+
-    thBtn('monto','Monto','r')+
-    thBtn('usado','Usado','r')+
-    thBtn('saldo','Saldo','r')+
-    thBtn('nro_factura','N° FAC')+
-    thBtn('numero','N° cheque')+
-    thBtn('banco','Banco')+
-    thBtn('fecha_cobro','Día cobro')+
-    thBtn('dias','Días','r')+
-    thBtn('estado','Estado')+
-    '<th></th>'+
-  '</tr>';
+  renderChqThead();
 
   var tb=document.getElementById('chq-tbody');
   if(!tb)return;
@@ -5918,6 +5895,41 @@ async function quickEstadoChq(id, estado){
 // ── CHEQUES CARTERA (recibidos de terceros) ──
 var editChqCId=null;
 var chqSort={col:'fecha_recibido',dir:'desc'};
+
+var CHQ_COLS=[
+  {col:'tipo',label:'Tipo'},
+  {col:'fecha_recibido',label:'Día recibido'},
+  {col:'concepto',label:'Concepto'},
+  {col:'emisor',label:'Emisor'},
+  {col:'monto',label:'Monto',r:true},
+  {col:'usado',label:'Usado',r:true},
+  {col:'saldo',label:'Saldo',r:true},
+  {col:'nro_factura',label:'N° FAC'},
+  {col:'numero',label:'N° cheque'},
+  {col:'banco',label:'Banco'},
+  {col:'fecha_cobro',label:'Día cobro'},
+  {col:'dias',label:'Días',r:true},
+  {col:'estado',label:'Estado'}
+];
+
+function renderChqThead(){
+  var thead=document.getElementById('chq-thead');
+  if(!thead)return;
+  var ths=CHQ_COLS.map(function(c){
+    var active=chqSort.col===c.col;
+    var arrow=active?(chqSort.dir==='asc'?'↑':'↓'):'↕';
+    var arrowStyle=active?'color:#6c7ae0;font-weight:900;':'color:#d1d5db;';
+    return '<th data-col="'+c.col+'" style="cursor:pointer;white-space:nowrap;padding:8px 6px;user-select:none;'+(c.r?'text-align:right;':'')+'">'
+      +c.label+' <span style="font-size:10px;'+arrowStyle+'">'+arrow+'</span></th>';
+  }).join('');
+  thead.innerHTML='<tr>'+ths+'<th></th></tr>';
+  // Adjuntar listeners después de insertar el HTML
+  thead.querySelectorAll('th[data-col]').forEach(function(th){
+    th.addEventListener('click',function(){
+      setChqSort(this.getAttribute('data-col'));
+    });
+  });
+}
 
 function setChqSort(col){
   chqSort.dir=(chqSort.col===col&&chqSort.dir==='asc')?'desc':'asc';
