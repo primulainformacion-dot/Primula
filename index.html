@@ -1126,6 +1126,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option value="cheque">Solo Cheque</option>
           <option value="echeq">Solo ECHEQ</option>
         </select>
+        <input id="chq-num-filter" placeholder="🔍 N° cheque o emisor" oninput="renderChqCartera()" style="width:190px;padding:7px 10px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:13px;"/>
       </div>
       <div class="panel">
         <div class="panel-hdr">
@@ -1138,13 +1139,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </div>
         <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;" id="chq-stats"></div>
         <div class="tbl"><table>
-          <thead><tr>
-            <th>Tipo</th><th>Día recibido</th><th>Concepto</th><th>Emisor</th>
-            <th style="text-align:right">Monto</th>
-            <th style="text-align:right">Usado</th>
-            <th style="text-align:right;color:#16a34a">Saldo</th>
-            <th>N° FAC</th><th>N° cheque</th><th>Banco</th><th>Día cobro</th><th>Días</th><th>Estado</th><th></th>
-          </tr></thead>
+          <thead id="chq-thead"><tr></tr></thead>
           <tbody id="chq-tbody"></tbody>
         </table></div>
       </div>
@@ -1995,10 +1990,17 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <!-- Pane: Alta -->
     <div id="chqm-pane-alta">
     <!-- Fila 1: campos globales + tipo global -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:14px;align-items:end;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:14px;align-items:end;">
       <div class="field">
         <label>Fecha recibido * (todas)</label>
         <input type="date" id="chqm-fecha-global"/>
+      </div>
+      <div class="field">
+        <label>Emisor (todas)</label>
+        <div style="display:flex;gap:6px;">
+          <input id="chqm-emisor-global" placeholder="Nombre emisor" style="flex:1;"/>
+          <button class="btn btn-sm btn-outline" onclick="applyEmisorGlobal()" title="Aplicar a todas las filas" style="white-space:nowrap;">Aplicar ✓</button>
+        </div>
       </div>
       <div class="field">
         <label>Concepto por defecto</label>
@@ -5462,6 +5464,7 @@ function renderChqCartera(){
   var mes=document.getElementById('chq-mes').value;
   var estadoFilt=document.getElementById('chq-estado-filter')?document.getElementById('chq-estado-filter').value:'';
   var tipoFilt=(document.getElementById('chq-tipo-filter')||{}).value||'';
+  var numFilt=((document.getElementById('chq-num-filter')||{}).value||'').trim().toLowerCase();
   var fechaPor=(document.getElementById('chq-fecha-por')||{}).value||'cobro';
   var hoy=today();
   var cheques=CHEQUES_CARTERA.filter(function(c){
@@ -5474,6 +5477,7 @@ function renderChqCartera(){
     if(estadoFilt==='no_disponible') return c.estado!=='en_cartera';
     if(estadoFilt&&c.estado!==estadoFilt)return false;
     if(tipoFilt&&(c.tipo||'cheque')!==tipoFilt)return false;
+    if(numFilt&&!(c.numero||'').toLowerCase().includes(numFilt)&&!(c.emisor||'').toLowerCase().includes(numFilt))return false;
     return true;
   });
   // Stats
@@ -5507,6 +5511,40 @@ function renderChqCartera(){
       '<div style="font-size:10px;font-weight:800;color:'+(saldoEnCartera>0?'#166534':'#6b7280')+';margin-bottom:4px;letter-spacing:.5px;">DISPONIBLE HOY</div>'+
       '<div style="font-size:20px;font-weight:800;color:'+(saldoEnCartera>0?'#166534':'#6b7280')+';">'+$p(saldoEnCartera)+'</div>'+
       '<div style="font-size:11px;color:'+(saldoEnCartera>0?'#15803d':'#9ca3af')+';margin-top:2px;">sin imputar</div></div>';
+  // ── Ordenar ──
+  cheques.sort(function(a,b){
+    var va=chqSortVal(a,chqSort.col), vb=chqSortVal(b,chqSort.col);
+    if(va<vb)return chqSort.dir==='asc'?-1:1;
+    if(va>vb)return chqSort.dir==='asc'?1:-1;
+    return 0;
+  });
+
+  // ── Generar thead ──
+  var thStyle='padding:8px 6px;cursor:pointer;white-space:nowrap;user-select:none;';
+  var thStyleR=thStyle+'text-align:right;';
+  function thBtn(col,label,align){
+    var active=chqSort.col===col;
+    var arrow=active?(chqSort.dir==='asc'?'↑':'↓'):'<span style="opacity:.3;">↕</span>';
+    return '<th style="'+(align==='r'?thStyleR:thStyle)+'" onclick="setChqSort(\''+col+'\')">'+label+' '+arrow+'</th>';
+  }
+  var thead=document.getElementById('chq-thead');
+  if(thead)thead.innerHTML='<tr>'+
+    thBtn('tipo','Tipo')+
+    thBtn('fecha_recibido','Día recibido')+
+    thBtn('concepto','Concepto')+
+    thBtn('emisor','Emisor')+
+    thBtn('monto','Monto','r')+
+    thBtn('usado','Usado','r')+
+    thBtn('saldo','Saldo','r')+
+    thBtn('nro_factura','N° FAC')+
+    thBtn('numero','N° cheque')+
+    thBtn('banco','Banco')+
+    thBtn('fecha_cobro','Día cobro')+
+    thBtn('dias','Días','r')+
+    thBtn('estado','Estado')+
+    '<th></th>'+
+  '</tr>';
+
   var tb=document.getElementById('chq-tbody');
   if(!tb)return;
   if(!cheques.length){tb.innerHTML='<tr><td colspan="14"><div class="empty"><p>Sin recibos para el período</p></div></td></tr>';return;}
@@ -5879,6 +5917,27 @@ async function quickEstadoChq(id, estado){
 
 // ── CHEQUES CARTERA (recibidos de terceros) ──
 var editChqCId=null;
+var chqSort={col:'fecha_recibido',dir:'desc'};
+
+function setChqSort(col){
+  chqSort.dir=(chqSort.col===col&&chqSort.dir==='asc')?'desc':'asc';
+  chqSort.col=col;
+  renderChqCartera();
+}
+function chqSortVal(c,col){
+  if(col==='monto')return Number(c.monto)||0;
+  if(col==='saldo')return saldoCheque(c.id);
+  if(col==='usado'){
+    var u=CHEQUE_USOS.filter(function(x){return x.cheque_id===c.id;}).reduce(function(s,x){return s+Number(x.monto);},0);
+    var i=CHEQUE_IMPUTACIONES.filter(function(x){return x.cheque_id===c.id;}).reduce(function(s,x){return s+Number(x.monto);},0);
+    return u+i;
+  }
+  if(col==='dias'){
+    if(!c.fecha_cobro)return chqSort.dir==='asc'?9999:-9999;
+    return Math.round((new Date(c.fecha_cobro+'T00:00:00')-new Date())/86400000);
+  }
+  return (c[col]||'').toString().toLowerCase();
+}
 
 // ── Tabs del modal masivo ──
 function setChqmTab(tab,el){
@@ -6061,6 +6120,15 @@ function applyTipoGlobal(){
     if(el) el.value=tipo;
   }
   toast('Tipo "'+tipo+'" aplicado a todas las filas');
+}
+function applyEmisorGlobal(){
+  var emisor=document.getElementById('chqm-emisor-global').value.trim();
+  if(!emisor){toast('Escribí un emisor primero','err');return;}
+  for(var i=1;i<=chqmRowCount;i++){
+    var el=document.getElementById('chqm-emisor-'+i);
+    if(el) el.value=emisor;
+  }
+  toast('Emisor "'+emisor+'" aplicado a todas las filas');
 }
 
 function addChqmRows(n){
