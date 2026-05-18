@@ -2290,8 +2290,7 @@ async function doLogin(){
   var pass=document.getElementById('lg-pass').value;
   if(pass==='primula2025'){
     document.getElementById('login-overlay').style.display='none';
-    document.getElementById('app').style.display='flex';
-    await loadAll();
+    document.getElementById('app').style.display='block';
     return;
   }
   var {error}=await sb.auth.signInWithPassword({email:document.getElementById('lg-email').value.trim(),password:pass});
