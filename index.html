@@ -1061,6 +1061,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="section" id="sec-cheques">
     <div class="tabs" style="margin-bottom:16px;" id="chq-tabs">
       <button class="tab active" onclick="setChqTab('cartera',this)">🧾 Recibos</button>
+      <button class="tab" onclick="setChqTab('facturas',this)">📄 Facturas</button>
       <button class="tab" onclick="setChqTab('propios',this)">📋 Cartera propia</button>
       <button class="tab" onclick="setChqTab('resumen',this)">📊 Resumen</button>
     </div>
@@ -1109,6 +1110,36 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <th>N° FAC</th><th>N° cheque</th><th>Banco</th><th>Día cobro</th><th>Días</th><th>Estado</th><th></th>
           </tr></thead>
           <tbody id="chq-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- Sub-tab: Facturas de clientes -->
+    <div id="chq-tab-facturas" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <input id="faccli-q" placeholder="Buscar cliente o N° FAC..." oninput="renderFacturasClientes()" style="padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;width:230px;"/>
+        <select id="faccli-estado" onchange="renderFacturasClientes()" style="padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendientes</option>
+          <option value="parcial">Cobradas parcialmente</option>
+          <option value="cobrada">Cobradas</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;" id="faccli-stats"></div>
+      <div class="panel">
+        <div class="panel-hdr">
+          <h4>📄 Facturas emitidas a clientes</h4>
+          <button class="btn" onclick="openFacturaClienteModal()">+ Nueva factura</button>
+        </div>
+        <div class="tbl"><table>
+          <thead><tr>
+            <th>N° FAC</th><th>Tipo</th><th>Fecha</th><th>Cliente</th>
+            <th style="text-align:right">Total</th>
+            <th style="text-align:right">Cobrado</th>
+            <th style="text-align:right">Saldo</th>
+            <th>Estado</th><th></th>
+          </tr></thead>
+          <tbody id="faccli-tbody"></tbody>
         </table></div>
       </div>
     </div>
@@ -1956,6 +1987,69 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="modal-footer">
       <button class="btn btn-gray" onclick="closeM('m-pos-cobro')">Cancelar</button>
       <button class="btn" style="background:#16a34a;border-color:#15803d;" onclick="posSaveVenta()">✓ Confirmar venta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: nueva factura de cliente -->
+<div class="modal-bg" id="m-faccli">
+  <div class="modal" style="max-width:560px;">
+    <h3 id="m-faccli-title">Nueva factura de cliente</h3>
+    <div class="grid2">
+      <div class="field"><label>N° Factura *</label><input id="faccli-nro" placeholder="Ej: 00003-00000341"/></div>
+      <div class="field"><label>Tipo comprobante</label>
+        <select id="faccli-tipo">
+          <option value="B">Factura B</option>
+          <option value="A">Factura A</option>
+          <option value="C">Factura C</option>
+          <option value="X">Remito / Otro</option>
+        </select>
+      </div>
+      <div class="field"><label>Fecha emisión *</label><input type="date" id="faccli-fecha"/></div>
+      <div class="field"><label>Monto total $ *</label><input type="number" id="faccli-monto" min="0" placeholder="0"/></div>
+      <div class="field full"><label>Cliente *</label>
+        <input id="faccli-cliente-q" placeholder="Buscar cliente..." oninput="faccliClienteSugg()" autocomplete="off"/>
+        <input type="hidden" id="faccli-cliente-id"/>
+        <div id="faccli-cliente-sugg" style="position:relative;"></div>
+      </div>
+      <div class="field full"><label>Nota</label><input id="faccli-nota" placeholder="Observaciones..."/></div>
+    </div>
+    <div id="faccli-err" style="color:#dc2626;font-size:12px;margin-top:6px;display:none;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeM('m-faccli')">Cancelar</button>
+      <button id="faccli-del-btn" class="btn btn-red" style="display:none;" onclick="deleteFacturaCliente()">Eliminar</button>
+      <button class="btn" onclick="saveFacturaCliente()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: imputar cheque a factura -->
+<div class="modal-bg" id="m-imputar">
+  <div class="modal" style="max-width:600px;">
+    <h3>🔗 Imputar cheque a factura</h3>
+    <div id="m-imputar-cheque-info" style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;"></div>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Factura a imputar *</label>
+      <select id="imp-factura-id" onchange="impActualizarMax()" style="width:100%;">
+        <option value="">— Seleccioná una factura —</option>
+      </select>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label>Monto a imputar $ *</label>
+        <input type="number" id="imp-monto" min="0" placeholder="0" oninput="impActualizarMax()"/>
+        <div id="imp-max-hint" style="font-size:11px;color:#6b7280;margin-top:4px;"></div>
+      </div>
+      <div class="field">
+        <label>Fecha</label>
+        <input type="date" id="imp-fecha"/>
+      </div>
+      <div class="field full"><label>Nota (opcional)</label><input id="imp-nota" placeholder=""/></div>
+    </div>
+    <div id="imp-err" style="color:#dc2626;font-size:12px;margin-top:6px;display:none;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeM('m-imputar')">Cancelar</button>
+      <button class="btn" style="background:#7c3aed;border-color:#6d28d9;" onclick="saveImputacion()">🔗 Imputar</button>
     </div>
   </div>
 </div>
@@ -4990,14 +5084,192 @@ async function toggleObjetivoLogrado(cat,canal,anio,mes,id){
 var editChqPropioId=null;
 
 function setChqTab(tab,el){
-  ['cartera','propios','resumen'].forEach(function(t){
+  ['cartera','facturas','propios','resumen'].forEach(function(t){
     document.getElementById('chq-tab-'+t).style.display=t===tab?'block':'none';
   });
   document.querySelectorAll('#chq-tabs .tab').forEach(function(b){b.classList.remove('active');});
   if(el)el.classList.add('active');
   if(tab==='cartera')renderChqCartera();
+  if(tab==='facturas')renderFacturasClientes();
   if(tab==='propios')renderChqPropios();
   if(tab==='resumen')renderChqResumen();
+}
+
+// ── FACTURAS CLIENTES ──
+var editFacCliId=null;
+function saldoCheque(chequeId){
+  var c=CHEQUES_CARTERA.find(function(x){return x.id===chequeId;})||{};
+  var imp=CHEQUE_IMPUTACIONES.filter(function(i){return i.cheque_id===chequeId;}).reduce(function(s,i){return s+Number(i.monto);},0);
+  return Number(c.monto||0)-imp;
+}
+function saldoFactura(facturaId){
+  var f=FACTURAS_CLIENTES.find(function(x){return x.id===facturaId;})||{};
+  var imp=CHEQUE_IMPUTACIONES.filter(function(i){return i.factura_id===facturaId;}).reduce(function(s,i){return s+Number(i.monto);},0);
+  return Number(f.monto_total||0)-imp;
+}
+function renderFacturasClientes(){
+  var q=(document.getElementById('faccli-q').value||'').toLowerCase();
+  var est=document.getElementById('faccli-estado').value;
+  var list=FACTURAS_CLIENTES.filter(function(f){
+    if(q&&!f.cliente_nombre.toLowerCase().includes(q)&&!(f.nro_factura||'').toLowerCase().includes(q))return false;
+    if(est&&f.estado!==est)return false;
+    return true;
+  });
+  // Stats
+  var pendiente=FACTURAS_CLIENTES.filter(function(f){return f.estado!=='cobrada';}).reduce(function(s,f){return s+saldoFactura(f.id);},0);
+  var cobrado=CHEQUE_IMPUTACIONES.reduce(function(s,i){return s+Number(i.monto);},0);
+  var total=FACTURAS_CLIENTES.reduce(function(s,f){return s+Number(f.monto_total);},0);
+  document.getElementById('faccli-stats').innerHTML=
+    '<div style="background:#f0fdf4;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;"><div style="font-size:10px;font-weight:800;color:#166534;letter-spacing:.5px;">TOTAL FACTURADO</div><div style="font-size:20px;font-weight:800;color:#16a34a;">'+$p(total)+'</div></div>'+
+    '<div style="background:#eff6ff;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;"><div style="font-size:10px;font-weight:800;color:#1d4ed8;letter-spacing:.5px;">COBRADO</div><div style="font-size:20px;font-weight:800;color:#2563eb;">'+$p(cobrado)+'</div></div>'+
+    '<div style="background:'+(pendiente>0?'#fff7ed':'#f9fafb')+';border-radius:10px;padding:12px 18px;flex:1;min-width:130px;"><div style="font-size:10px;font-weight:800;color:'+(pendiente>0?'#c2410c':'#6b7280')+';letter-spacing:.5px;">SALDO A COBRAR</div><div style="font-size:20px;font-weight:800;color:'+(pendiente>0?'#ea580c':'#9ca3af')+';">'+$p(pendiente)+'</div></div>';
+  var tb=document.getElementById('faccli-tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><div class="ei">📄</div><p>Sin facturas registradas</p></div></td></tr>';return;}
+  var estBadge={pendiente:'<span class="badge" style="background:#fef3c7;color:#92400e;">Pendiente</span>',parcial:'<span class="badge" style="background:#dbeafe;color:#1d4ed8;">Parcial</span>',cobrada:'<span class="badge b-green">Cobrada</span>'};
+  tb.innerHTML=list.map(function(f){
+    var cobrado=Number(f.monto_total)-saldoFactura(f.id);
+    var saldo=saldoFactura(f.id);
+    var imps=CHEQUE_IMPUTACIONES.filter(function(i){return i.factura_id===f.id;});
+    var impsHtml=imps.length?('<div style="font-size:10px;color:#6b7280;margin-top:4px;">'+imps.map(function(i){var ch=CHEQUES_CARTERA.find(function(c){return c.id===i.cheque_id;})||{};return '🧾 '+fmtF(i.fecha)+' · '+(ch.emisor||'?')+' · '+$p(Number(i.monto));}).join('<br>')+'</div>'):'';
+    return '<tr>'+
+      '<td style="font-weight:700;">'+(f.nro_factura||'—')+'</td>'+
+      '<td><span class="badge b-gray">'+f.tipo_comprobante+'</span></td>'+
+      '<td style="font-size:12px;">'+fmtF(f.fecha_emision)+'</td>'+
+      '<td><strong>'+esc(f.cliente_nombre)+'</strong>'+impsHtml+'</td>'+
+      '<td style="text-align:right;font-weight:700;">'+$p(Number(f.monto_total))+'</td>'+
+      '<td style="text-align:right;color:#16a34a;font-weight:700;">'+(cobrado>0?$p(cobrado):'—')+'</td>'+
+      '<td style="text-align:right;font-weight:800;color:'+(saldo>0?'#ea580c':'#9ca3af')+';">'+$p(saldo)+'</td>'+
+      '<td>'+(estBadge[f.estado]||f.estado)+'</td>'+
+      '<td style="white-space:nowrap;">'+
+        '<button class="btn btn-outline" style="padding:4px 10px;font-size:12px;" onclick="openFacturaClienteModal('+f.id+')">Editar</button>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
+}
+function openFacturaClienteModal(id){
+  editFacCliId=id||null;
+  var f=id?FACTURAS_CLIENTES.find(function(x){return x.id===id;})||{}:{};
+  document.getElementById('m-faccli-title').textContent=id?'Editar factura':'Nueva factura de cliente';
+  document.getElementById('faccli-nro').value=f.nro_factura||'';
+  document.getElementById('faccli-tipo').value=f.tipo_comprobante||'B';
+  document.getElementById('faccli-fecha').value=f.fecha_emision||today();
+  document.getElementById('faccli-monto').value=f.monto_total||'';
+  document.getElementById('faccli-cliente-q').value=f.cliente_nombre||'';
+  document.getElementById('faccli-cliente-id').value=f.cliente_id||'';
+  document.getElementById('faccli-nota').value=f.nota||'';
+  document.getElementById('faccli-err').style.display='none';
+  document.getElementById('faccli-del-btn').style.display=id?'':'none';
+  openM('m-faccli');
+}
+function faccliClienteSugg(){
+  var q=(document.getElementById('faccli-cliente-q').value||'').toLowerCase();
+  var box=document.getElementById('faccli-cliente-sugg');
+  if(!q){box.innerHTML='';return;}
+  var matches=CLIENTES.filter(function(c){return c.nombre.toLowerCase().includes(q);}).slice(0,6);
+  if(!matches.length){box.innerHTML='';return;}
+  box.innerHTML='<div style="position:absolute;z-index:999;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;width:100%;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:2px;">'+
+    matches.map(function(c){return '<div onclick="faccliSelectCliente('+c.id+',\''+esc(c.nombre)+'\')" style="padding:8px 12px;cursor:pointer;font-size:13px;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'\'">'+esc(c.nombre)+'</div>';}).join('')+'</div>';
+}
+function faccliSelectCliente(id,nombre){
+  document.getElementById('faccli-cliente-id').value=id;
+  document.getElementById('faccli-cliente-q').value=nombre;
+  document.getElementById('faccli-cliente-sugg').innerHTML='';
+}
+async function saveFacturaCliente(){
+  var nro=document.getElementById('faccli-nro').value.trim();
+  var monto=parseFloat(document.getElementById('faccli-monto').value)||0;
+  var clienteNombre=document.getElementById('faccli-cliente-q').value.trim();
+  var clienteId=document.getElementById('faccli-cliente-id').value||null;
+  var errEl=document.getElementById('faccli-err');
+  if(!clienteNombre){errEl.textContent='Ingresá el cliente';errEl.style.display='block';return;}
+  if(!monto){errEl.textContent='Ingresá el monto';errEl.style.display='block';return;}
+  errEl.style.display='none';
+  var payload={
+    nro_factura:nro||null, tipo_comprobante:document.getElementById('faccli-tipo').value,
+    fecha_emision:document.getElementById('faccli-fecha').value||today(),
+    monto_total:monto, cliente_id:clienteId||null, cliente_nombre:clienteNombre,
+    nota:document.getElementById('faccli-nota').value.trim()||null
+  };
+  var r=editFacCliId?await sb.from('facturas_clientes').update(payload).eq('id',editFacCliId):await sb.from('facturas_clientes').insert(payload);
+  if(r.error){errEl.textContent='Error: '+r.error.message;errEl.style.display='block';return;}
+  // Actualizar estado según imputaciones
+  if(editFacCliId) await actualizarEstadoFactura(editFacCliId);
+  toast(editFacCliId?'Factura actualizada':'Factura registrada');
+  closeM('m-faccli');
+  await loadFacturasClientes();
+  renderFacturasClientes();
+}
+async function deleteFacturaCliente(){
+  if(!editFacCliId||!confirm('¿Eliminar esta factura?'))return;
+  await sb.from('facturas_clientes').delete().eq('id',editFacCliId);
+  toast('Factura eliminada');
+  closeM('m-faccli');
+  await loadFacturasClientes();
+  renderFacturasClientes();
+}
+async function actualizarEstadoFactura(facId){
+  var saldo=saldoFactura(facId);
+  var f=FACTURAS_CLIENTES.find(function(x){return x.id===facId;})||{};
+  var estado=saldo<=0?'cobrada':(saldo<Number(f.monto_total)?'parcial':'pendiente');
+  await sb.from('facturas_clientes').update({estado:estado}).eq('id',facId);
+}
+
+// ── IMPUTACIONES ──
+var impChequeId=null;
+function openImputarModal(chequeId){
+  impChequeId=chequeId;
+  var c=CHEQUES_CARTERA.find(function(x){return x.id===chequeId;})||{};
+  var saldo=saldoCheque(chequeId);
+  document.getElementById('m-imputar-cheque-info').innerHTML=
+    '<strong>'+esc(c.emisor||'')+'</strong> · '+(c.tipo==='echeq'?'ECHEQ':'Cheque')+' · Monto: <strong>'+$p(Number(c.monto))+'</strong><br>'+
+    'Saldo disponible para imputar: <strong style="color:'+(saldo>0?'#16a34a':'#dc2626')+';">'+$p(saldo)+'</strong>';
+  document.getElementById('imp-fecha').value=today();
+  document.getElementById('imp-monto').value='';
+  document.getElementById('imp-nota').value='';
+  document.getElementById('imp-err').style.display='none';
+  document.getElementById('imp-max-hint').textContent='Máximo disponible: '+$p(saldo);
+  // Poblar facturas pendientes
+  var sel=document.getElementById('imp-factura-id');
+  sel.innerHTML='<option value="">— Seleccioná una factura —</option>';
+  FACTURAS_CLIENTES.filter(function(f){return f.estado!=='cobrada';}).forEach(function(f){
+    var sf=saldoFactura(f.id);
+    var o=document.createElement('option');
+    o.value=f.id;
+    o.textContent=(f.nro_factura||'S/N')+' · '+f.cliente_nombre+' · Saldo: '+$p(sf)+' · '+fmtF(f.fecha_emision);
+    sel.appendChild(o);
+  });
+  openM('m-imputar');
+}
+function impActualizarMax(){
+  var saldoChq=impChequeId?saldoCheque(impChequeId):0;
+  var facId=parseInt(document.getElementById('imp-factura-id').value)||0;
+  var saldoFac=facId?saldoFactura(facId):0;
+  var max=Math.min(saldoChq,saldoFac||saldoChq);
+  document.getElementById('imp-max-hint').textContent='Máximo: '+$p(max)+(saldoFac?' (saldo factura: '+$p(saldoFac)+')':'');
+}
+async function saveImputacion(){
+  var facId=parseInt(document.getElementById('imp-factura-id').value)||0;
+  var monto=parseFloat(document.getElementById('imp-monto').value)||0;
+  var errEl=document.getElementById('imp-err');
+  if(!facId){errEl.textContent='Seleccioná una factura';errEl.style.display='block';return;}
+  if(!monto||monto<=0){errEl.textContent='Ingresá un monto válido';errEl.style.display='block';return;}
+  var saldoChq=saldoCheque(impChequeId);
+  var saldoFac=saldoFactura(facId);
+  if(monto>saldoChq){errEl.textContent='El monto supera el saldo del cheque ('+$p(saldoChq)+')';errEl.style.display='block';return;}
+  if(monto>saldoFac){errEl.textContent='El monto supera el saldo de la factura ('+$p(saldoFac)+')';errEl.style.display='block';return;}
+  errEl.style.display='none';
+  var r=await sb.from('cheque_imputaciones').insert({
+    cheque_id:impChequeId, factura_id:facId, monto:monto,
+    fecha:document.getElementById('imp-fecha').value||today(),
+    nota:document.getElementById('imp-nota').value.trim()||null
+  });
+  if(r.error){errEl.textContent='Error: '+r.error.message;errEl.style.display='block';return;}
+  await actualizarEstadoFactura(facId);
+  toast('Imputación registrada: '+$p(monto));
+  closeM('m-imputar');
+  await Promise.all([loadChequesCartera(),loadChequeImputaciones(),loadFacturasClientes()]);
+  renderChqCartera();
+  renderFacturasClientes();
 }
 
 function renderChqCartera(){
@@ -5109,6 +5381,7 @@ function renderChqCartera(){
       '<td style="white-space:nowrap;">'+
         (c.estado==='en_cartera'&&saldo>0?'<button class="btn btn-sm" onclick="openChqDepositarModal('+c.id+')" title="Depositar en banco" style="background:#dcfce7;color:#166534;border-color:#bbf7d0;">🏦</button> ':'')+
         (cupoALiberar?'<button class="btn btn-sm" onclick="liberarCupo('+c.id+')" title="Confirmar liberación de cupo" style="background:#fef3c7;color:#92400e;border-color:#fbbf24;">🔓 Liberar</button> ':'')+
+        (c.estado==='en_cartera'&&saldoCheque(c.id)>0?'<button class="btn btn-sm" onclick="openImputarModal('+c.id+')" title="Imputar a factura" style="background:#ede9fe;color:#7c3aed;border-color:#ddd6fe;">🔗 Imputar</button> ':'')+
         '<button class="btn btn-gray btn-sm" onclick="openChqUsoModal('+c.id+')" title="Registrar uso como pago">💸</button> '+
         '<button class="btn btn-gray btn-sm" onclick="openChqCarteraModal('+c.id+')" title="Editar">✏️</button>'+
       '</td>'+
