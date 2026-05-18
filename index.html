@@ -812,15 +812,51 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="section" id="sec-local">
     <div id="local-hero-wrap"></div>
     <div class="tabs" id="local-tabs">
-      <div class="tab active" onclick="setLocalTab('ventas',this)">🛒 Ventas</div>
+      <div class="tab active" onclick="setLocalTab('pos',this)">🛒 POS</div>
+      <div class="tab" onclick="setLocalTab('ventas',this)">📋 Historial</div>
       <div class="tab" onclick="setLocalTab('cobros',this)">💰 Cobros</div>
       <div class="tab" onclick="setLocalTab('stock',this)">🗃️ Stock</div>
       <div class="tab" onclick="setLocalTab('productos',this)">👔 Productos</div>
       <div class="tab" onclick="setLocalTab('facturacion',this)">📈 Facturación</div>
     </div>
 
-    <!-- Tab Ventas -->
-    <div id="lt-ventas">
+    <!-- Tab POS -->
+    <div id="lt-pos">
+      <!-- Barra de cliente -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;position:relative;">
+        <span style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;">Cliente:</span>
+        <div style="flex:1;position:relative;">
+          <input id="pos-cli-q" placeholder="Mostrador (sin cliente)" oninput="posBuscarCliente()" autocomplete="off"
+                 style="width:100%;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;"/>
+          <div id="pos-cli-sugg" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:200;max-height:200px;overflow-y:auto;"></div>
+        </div>
+        <span id="pos-cli-badge" style="display:none;background:#ede9fe;color:#6d28d9;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;" onclick="posClearCliente()"></span>
+      </div>
+      <!-- Layout dos columnas -->
+      <div style="display:grid;grid-template-columns:1fr 310px;gap:14px;">
+        <!-- Izquierda: navegador de productos -->
+        <div>
+          <div id="pos-breadcrumb" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;color:#6b7280;min-height:30px;"></div>
+          <div id="pos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;"></div>
+        </div>
+        <!-- Derecha: ticket -->
+        <div style="background:#f9fafb;border-radius:12px;padding:14px;display:flex;flex-direction:column;min-height:480px;">
+          <div style="font-size:11px;font-weight:800;color:#9ca3af;letter-spacing:.5px;margin-bottom:8px;">TICKET</div>
+          <div id="pos-items" style="flex:1;overflow-y:auto;max-height:380px;"></div>
+          <div style="border-top:2px solid #e5e7eb;padding-top:12px;margin-top:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span style="font-size:14px;font-weight:700;color:#374151;">TOTAL</span>
+              <span style="font-size:24px;font-weight:800;color:#374151;" id="pos-total">$0</span>
+            </div>
+            <button class="btn" style="width:100%;font-size:16px;padding:13px;background:#16a34a;border-color:#15803d;margin-bottom:6px;" onclick="posCobrar()">💳 COBRAR</button>
+            <button class="btn btn-gray" style="width:100%;font-size:13px;" onclick="posCancelar()">🗑️ Cancelar ticket</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Ventas (Historial) -->
+    <div id="lt-ventas" style="display:none">
       <div class="panel">
         <div class="panel-hdr">
           <div class="search-row">
@@ -1775,6 +1811,37 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Modal: cobro POS -->
+<div class="modal-bg" id="m-pos-cobro">
+  <div class="modal" style="max-width:440px;">
+    <h3>💳 Cobrar</h3>
+    <div id="mpc-resumen" style="background:#f9fafb;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.6;"></div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:800;color:#374151;letter-spacing:.5px;margin-bottom:8px;">MÉTODO DE PAGO</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="btn pos-metodo-btn" data-metodo="efectivo" onclick="posSelectMetodo(this)" style="padding:14px 8px;font-size:13px;background:#f0fdf4;color:#16a34a;border-color:#bbf7d0;">💵 Efectivo</button>
+        <button class="btn pos-metodo-btn" data-metodo="tarjeta" onclick="posSelectMetodo(this)" style="padding:14px 8px;font-size:13px;background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;">💳 Tarjeta</button>
+        <button class="btn pos-metodo-btn" data-metodo="mercadopago" onclick="posSelectMetodo(this)" style="padding:14px 8px;font-size:13px;background:#ede9fe;color:#6d28d9;border-color:#ddd6fe;">📱 Mercado Pago</button>
+        <button class="btn pos-metodo-btn" data-metodo="transferencia" onclick="posSelectMetodo(this)" style="padding:14px 8px;font-size:13px;background:#fff7ed;color:#c2410c;border-color:#fed7aa;">🏦 Transferencia</button>
+      </div>
+    </div>
+    <div id="mpc-descuento-info" style="display:none;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:13px;"></div>
+    <div class="grid2">
+      <div class="field"><label>Monto recibido $</label>
+        <input type="number" id="mpc-monto" style="font-size:18px;font-weight:700;" oninput="mpcActualizar()" placeholder="0"/>
+      </div>
+      <div class="field"><label>Vuelto</label>
+        <div style="font-size:18px;font-weight:800;padding-top:6px;" id="mpc-vuelto">—</div>
+      </div>
+      <div class="field full"><label>Nota (opcional)</label><input id="mpc-nota" placeholder=""/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeM('m-pos-cobro')">Cancelar</button>
+      <button class="btn" style="background:#16a34a;border-color:#15803d;" onclick="posSaveVenta()">✓ Confirmar venta</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: vender cheques al banco -->
 <div class="modal-bg" id="m-chqventa">
   <div class="modal" style="max-width:660px;">
@@ -2278,10 +2345,13 @@ function nav(sec, el){
 
 function navLocal(local, tab, el){
   currentLocal=local;
+  // Para llavallol y montegrande siempre arrancar desde el POS
+  if(tab==='ventas'&&local!=='mayorista') tab='pos';
   currentLocalTab=tab;
   nav('local',el);
   renderLocalHero();
-  setLocalTab(tab, document.querySelectorAll('#local-tabs .tab')[['ventas','cobros','stock','facturacion'].indexOf(tab)]);
+  var tabOrder=['pos','ventas','cobros','stock','productos','facturacion'];
+  setLocalTab(tab, document.querySelectorAll('#local-tabs .tab')[tabOrder.indexOf(tab)]);
   document.getElementById('pg-title').textContent=(local==='llavallol'?'Llavallol':local==='mayorista'?'Ropa Mayorista':'Monte Grande');
   document.getElementById('pg-sub').textContent=tab.charAt(0).toUpperCase()+tab.slice(1);
 }
@@ -2786,13 +2856,14 @@ function renderLocalHero(){
     '</div>';
 }
 function setLocalTab(tab, el){
-  ['ventas','cobros','stock','productos','facturacion'].forEach(function(t){
+  ['pos','ventas','cobros','stock','productos','facturacion'].forEach(function(t){
     var d=document.getElementById('lt-'+t);if(d)d.style.display=t===tab?'block':'none';
   });
   document.querySelectorAll('#local-tabs .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
   currentLocalTab=tab;
-  if(tab==='ventas')renderLocalVentas();
+  if(tab==='pos')renderPOS();
+  else if(tab==='ventas')renderLocalVentas();
   else if(tab==='cobros')renderLocalCobros();
   else if(tab==='stock')renderLocalStock();
   else if(tab==='productos')renderLocalProductos();
@@ -5376,6 +5447,302 @@ async function liberarCupo(id){
 // ── CHEQUES / ECHEQ (legacy, mantenido para compatibilidad) ──
 function renderCheques(){ renderChqCartera(); }
 
+
+// ══════════════════════════════════════════════
+// POS DE VENTA
+// ══════════════════════════════════════════════
+var posItems=[];
+var posClienteId=null, posClienteNombre='';
+var posView='root', posL2Type='', posL2Value='', posL2Label='';
+var posMetodo='';
+
+var POS_BTN_STYLE='padding:14px 10px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:13px;font-weight:600;color:#374151;text-align:center;line-height:1.3;transition:border-color .15s;width:100%;';
+var POS_CAT_STYLE='padding:18px 10px;background:linear-gradient(135deg,#6c7ae0,#8b5cf6);color:#fff;border:none;border-radius:14px;cursor:pointer;font-size:14px;font-weight:700;text-align:center;line-height:1.3;width:100%;box-shadow:0 2px 8px rgba(108,122,224,.3);';
+var POS_COL_STYLE='padding:18px 10px;background:linear-gradient(135deg,#0ea5e9,#14b8a6);color:#fff;border:none;border-radius:14px;cursor:pointer;font-size:14px;font-weight:700;text-align:center;line-height:1.3;width:100%;box-shadow:0 2px 8px rgba(14,165,233,.3);';
+
+function renderPOS(){
+  posGoRoot();
+  posRenderTicket();
+}
+
+function posGoRoot(){
+  posView='root'; posL2Type=''; posL2Value=''; posL2Label='';
+  var bc=document.getElementById('pos-breadcrumb');
+  var grid=document.getElementById('pos-grid');
+  if(!bc||!grid)return;
+
+  if(currentLocal==='mayorista'){
+    bc.innerHTML='<span style="color:#9ca3af;">POS no disponible para Mayorista — usá el botón + Nueva Venta en Historial</span>';
+    grid.innerHTML='';
+    return;
+  }
+
+  if(currentLocal==='montegrande'){
+    // Categorías con productos San Marcos y stock > 0 en Monte Grande
+    bc.innerHTML='<span style="font-weight:700;color:#374151;">📂 Categorías — San Marcos</span>';
+    var catMap={};
+    PRODUCTOS.forEach(function(p){
+      if(!p.activo)return;
+      var esSM=(p.colegio||'').toLowerCase().includes('san marcos')||!(p.colegio);
+      if(!esSM)return;
+      var hasStock=STOCK.some(function(s){return s.producto_id===p.id&&s.local==='montegrande'&&s.cantidad>0;});
+      if(!hasStock)return;
+      var cid=p.categoria_id||0;
+      var cnm=p.categorias?p.categorias.nombre:'Sin categoría';
+      if(!catMap[cid])catMap[cid]={id:cid,nombre:cnm,count:0};
+      catMap[cid].count++;
+    });
+    var cats=Object.values(catMap).sort(function(a,b){return a.nombre<b.nombre?-1:1;});
+    if(!cats.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">Sin stock en Monte Grande</div>';return;}
+    grid.innerHTML=cats.map(function(c){
+      return '<button onclick="posGoLevel2(\'cat\',\''+c.id+'\',\''+c.nombre+'\')" style="'+POS_CAT_STYLE+'">'+
+        c.nombre+'<div style="font-size:11px;opacity:.8;margin-top:4px;">'+c.count+' producto'+(c.count!==1?'s':'')+'</div></button>';
+    }).join('');
+
+  }else if(currentLocal==='llavallol'){
+    // Colegios con stock > 0 en Llavallol
+    bc.innerHTML='<span style="font-weight:700;color:#374151;">🏫 Colegios</span>';
+    var colMap={};
+    PRODUCTOS.forEach(function(p){
+      if(!p.activo)return;
+      var hasStock=STOCK.some(function(s){return s.producto_id===p.id&&s.local==='llavallol'&&s.cantidad>0;});
+      if(!hasStock)return;
+      var col=p.colegio||'__gen__';
+      var label=col==='__gen__'?'🏷️ Sin colegio':p.colegio;
+      if(!colMap[col])colMap[col]={value:col,label:label,count:0};
+      colMap[col].count++;
+    });
+    var cols=Object.values(colMap).sort(function(a,b){return a.label<b.label?-1:1;});
+    if(!cols.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">Sin stock en Llavallol</div>';return;}
+    grid.innerHTML=cols.map(function(c){
+      return '<button onclick="posGoLevel2(\'colegio\',\''+c.value+'\',\''+c.label+'\')" style="'+POS_COL_STYLE+'">'+
+        c.label+'<div style="font-size:11px;opacity:.8;margin-top:4px;">'+c.count+' producto'+(c.count!==1?'s':'')+'</div></button>';
+    }).join('');
+  }
+}
+
+function posGoLevel2(type, value, label){
+  posView='level2'; posL2Type=type; posL2Value=value; posL2Label=label;
+  var bc=document.getElementById('pos-breadcrumb');
+  var grid=document.getElementById('pos-grid');
+  bc.innerHTML='<button onclick="posGoRoot()" style="background:#f3f4f6;border:none;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:13px;color:#374151;">← Volver</button>'+
+    '<span style="color:#9ca3af;">›</span><span style="font-weight:700;color:#374151;">'+label+'</span>';
+
+  var prods=PRODUCTOS.filter(function(p){
+    if(!p.activo)return false;
+    if(type==='cat') return String(p.categoria_id)===String(value);
+    if(value==='__gen__') return !p.colegio;
+    return (p.colegio||'')===value;
+  });
+
+  var local=currentLocal;
+  var html='';
+  prods.forEach(function(p){
+    var talles=STOCK.filter(function(s){return s.producto_id===p.id&&s.local===local&&s.cantidad>0;});
+    if(!talles.length)return;
+    var precio=Number(p.precio_minorista||0);
+    html+='<div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;">'+
+      '<div style="font-size:13px;font-weight:700;color:#374151;">'+p.nombre+'</div>'+
+      '<div style="font-size:13px;color:#16a34a;font-weight:700;">'+$p(precio)+'</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+    talles.sort(function(a,b){return(a.talle||'')>(b.talle||'')?1:-1;}).forEach(function(s){
+      var talleLabel=(s.talle||'Único')+(s.color&&s.color!==s.talle?' '+s.color:'');
+      html+='<button onclick="posAddItem('+p.id+','+JSON.stringify(p.nombre)+','+JSON.stringify(s.talle||'')+','+JSON.stringify(s.color||'')+','+precio+','+s.cantidad+')" '+
+        'style="padding:8px 12px;background:#f9fafb;border:2px solid #e5e7eb;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151;" '+
+        'onmouseover="this.style.borderColor=\'#6c7ae0\';this.style.background=\'#ede9fe\'" onmouseout="this.style.borderColor=\'#e5e7eb\';this.style.background=\'#f9fafb\'">'+
+        talleLabel+
+        '<div style="font-size:10px;color:#9ca3af;font-weight:400;">'+s.cantidad+' u.</div>'+
+      '</button>';
+    });
+    html+='</div></div>';
+  });
+
+  if(!html)html='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">Sin stock disponible</div>';
+  grid.innerHTML=html;
+}
+
+function posAddItem(prodId,nombre,talle,color,precio,stockDisp){
+  var existing=posItems.find(function(it){return it.prodId===prodId&&it.talle===talle&&it.color===color;});
+  if(existing){
+    if(existing.cantidad>=stockDisp){toast('Stock máximo alcanzado ('+stockDisp+' u.)','info');return;}
+    existing.cantidad++;
+  }else{
+    posItems.push({prodId:prodId,nombre:nombre,talle:talle,color:color,precio:precio,cantidad:1,stockDisp:stockDisp});
+  }
+  posRenderTicket();
+}
+
+function posRemoveItem(idx){posItems.splice(idx,1);posRenderTicket();}
+
+function posChangeCant(idx,delta){
+  var it=posItems[idx];
+  if(!it)return;
+  var nv=it.cantidad+delta;
+  if(nv<1){posRemoveItem(idx);return;}
+  if(nv>it.stockDisp){toast('Stock máximo: '+it.stockDisp+' u.','info');return;}
+  it.cantidad=nv;
+  posRenderTicket();
+}
+
+function posRenderTicket(){
+  var el=document.getElementById('pos-items');
+  if(!el)return;
+  if(!posItems.length){
+    el.innerHTML='<div style="text-align:center;padding:30px 0;color:#9ca3af;font-size:13px;">Ticket vacío<br>Seleccioná productos →</div>';
+    document.getElementById('pos-total').textContent='$0';
+    return;
+  }
+  var total=0;
+  el.innerHTML=posItems.map(function(it,i){
+    var sub=it.precio*it.cantidad; total+=sub;
+    return '<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid #f1f5f9;">'+
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+it.nombre+'</div>'+
+        (it.talle||it.color?'<div style="font-size:11px;color:#9ca3af;">'+(it.talle||'')+(it.color?' · '+it.color:'')+'</div>':'')+'</div>'+
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
+        '<div style="font-size:13px;font-weight:700;color:#374151;">'+$p(sub)+'</div>'+
+        '<div style="display:flex;align-items:center;gap:4px;">'+
+          '<button onclick="posChangeCant('+i+',-1)" style="width:24px;height:24px;border:1.5px solid #e5e7eb;border-radius:6px;cursor:pointer;font-size:14px;background:#fff;color:#374151;line-height:1;">−</button>'+
+          '<span style="font-size:13px;font-weight:700;min-width:18px;text-align:center;">'+it.cantidad+'</span>'+
+          '<button onclick="posChangeCant('+i+',1)" style="width:24px;height:24px;border:1.5px solid #e5e7eb;border-radius:6px;cursor:pointer;font-size:14px;background:#fff;color:#374151;line-height:1;">+</button>'+
+          '<button onclick="posRemoveItem('+i+')" style="width:24px;height:24px;border:none;border-radius:6px;cursor:pointer;background:#fee2e2;color:#dc2626;font-size:13px;line-height:1;" title="Quitar">✕</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('pos-total').textContent=$p(total);
+}
+
+function posBuscarCliente(){
+  var q=(document.getElementById('pos-cli-q').value||'').toLowerCase();
+  var sugg=document.getElementById('pos-cli-sugg');
+  if(!q||q.length<2){sugg.style.display='none';return;}
+  var matches=CLIENTES.filter(function(c){return(c.nombre||'').toLowerCase().includes(q);}).slice(0,8);
+  if(!matches.length){sugg.style.display='none';return;}
+  sugg.style.display='block';
+  sugg.innerHTML=matches.map(function(c){
+    return '<div onclick="posSelectCliente('+c.id+','+JSON.stringify(c.nombre)+')" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'\'">'+c.nombre+'</div>';
+  }).join('');
+}
+
+function posSelectCliente(id,nombre){
+  posClienteId=id; posClienteNombre=nombre;
+  document.getElementById('pos-cli-q').value='';
+  document.getElementById('pos-cli-sugg').style.display='none';
+  var badge=document.getElementById('pos-cli-badge');
+  badge.textContent=nombre+' ✕'; badge.style.display='';
+}
+
+function posClearCliente(){
+  posClienteId=null; posClienteNombre='';
+  document.getElementById('pos-cli-badge').style.display='none';
+  document.getElementById('pos-cli-q').value='';
+}
+
+function posCancelar(){
+  if(!posItems.length||confirm('¿Cancelar el ticket actual?')){
+    posItems=[]; posRenderTicket(); posClearCliente();
+  }
+}
+
+var POS_DESCUENTO_EFECTIVO=0.20; // 20% descuento al pagar en efectivo
+
+function posGetTotalBruto(){
+  return posItems.reduce(function(s,it){return s+it.precio*it.cantidad;},0);
+}
+function posGetTotalEfectivo(){
+  return Math.round(posGetTotalBruto()*(1-POS_DESCUENTO_EFECTIVO));
+}
+function posGetTotalFinal(){
+  return posMetodo==='efectivo'?posGetTotalEfectivo():posGetTotalBruto();
+}
+
+function posSelectMetodo(btn){
+  document.querySelectorAll('.pos-metodo-btn').forEach(function(b){b.style.outline='';b.style.fontWeight='600';});
+  btn.style.outline='3px solid #6c7ae0'; btn.style.fontWeight='800';
+  posMetodo=btn.dataset.metodo;
+  // Actualizar total mostrado y monto sugerido
+  var bruto=posGetTotalBruto();
+  var final=posGetTotalFinal();
+  var descEl=document.getElementById('mpc-descuento-info');
+  if(descEl){
+    if(posMetodo==='efectivo'){
+      descEl.innerHTML='<span style="color:#dc2626;text-decoration:line-through;font-size:12px;">'+$p(bruto)+'</span> '+
+        '<span style="color:#16a34a;font-weight:800;">− 20% efectivo = '+$p(final)+'</span>';
+      descEl.style.display='block';
+    }else{
+      descEl.style.display='none';
+    }
+  }
+  document.getElementById('mpc-monto').value=final;
+  mpcActualizar();
+  document.getElementById('mpc-monto').focus();
+}
+
+function mpcActualizar(){
+  var totalFinal=posGetTotalFinal();
+  var monto=parseFloat(document.getElementById('mpc-monto').value)||0;
+  var el=document.getElementById('mpc-vuelto');
+  var vuelto=monto-totalFinal;
+  if(monto<=0){el.textContent='—';el.style.color='#9ca3af';}
+  else if(vuelto>=0){el.textContent='Vuelto: '+$p(vuelto);el.style.color='#16a34a';}
+  else{el.textContent='Faltan: '+$p(-vuelto);el.style.color='#dc2626';}
+}
+
+function posCobrar(){
+  if(!posItems.length){toast('El ticket está vacío','info');return;}
+  var bruto=posGetTotalBruto();
+  posMetodo='';
+  document.querySelectorAll('.pos-metodo-btn').forEach(function(b){b.style.outline='';b.style.fontWeight='600';});
+  document.getElementById('mpc-monto').value=bruto;
+  document.getElementById('mpc-nota').value='';
+  document.getElementById('mpc-vuelto').textContent='—';
+  var descEl=document.getElementById('mpc-descuento-info');
+  if(descEl)descEl.style.display='none';
+  document.getElementById('mpc-resumen').innerHTML=
+    (posClienteNombre?'<strong>'+posClienteNombre+'</strong><br>':'<span style="color:#9ca3af;">Sin cliente (mostrador)</span><br>')+
+    '<strong>'+posItems.length+' producto'+(posItems.length!==1?'s':'')+'</strong> · Lista: <strong>'+$p(bruto)+'</strong>'+
+    ' <span style="font-size:11px;color:#16a34a;">· 20% dto. si paga en efectivo → <strong>'+$p(posGetTotalEfectivo())+'</strong></span>';
+  openM('m-pos-cobro');
+}
+
+async function posSaveVenta(){
+  if(!posMetodo){toast('Elegí un método de pago','err');return;}
+  var total=posItems.reduce(function(s,it){return s+it.precio*it.cantidad;},0);
+  var cajaMap={efectivo:currentLocal==='montegrande'?'LOCAL MONTE GRANDE':'LOCAL LLAVALLOL',tarjeta:currentLocal==='montegrande'?'LOCAL MONTE GRANDE':'LOCAL LLAVALLOL',mercadopago:'MERCADO PAGO',transferencia:'BANCO SRL'};
+  var caja=cajaMap[posMetodo];
+  var metodoLabel={efectivo:'Efectivo',tarjeta:'Tarjeta',mercadopago:'Mercado Pago',transferencia:'Transferencia'}[posMetodo];
+  var localLabel=currentLocal==='montegrande'?'Monte Grande':'Llavallol';
+
+  // Crear venta
+  var ventaD={cliente_id:posClienteId||null,cliente_nombre:posClienteNombre||null,local:currentLocal,tipo:'minorista',fecha:today(),estado:'cobrado',total:total,saldo:0,nota:document.getElementById('mpc-nota').value||null};
+  var {data:v,error:vErr}=await sb.from('ventas').insert(ventaD).select().single();
+  if(vErr){toast('Error al guardar venta: '+vErr.message,'err');return;}
+
+  // Items
+  await sb.from('items_venta').insert(posItems.map(function(it){
+    return{venta_id:v.id,descripcion:it.nombre+(it.talle?' · '+it.talle:'')+(it.color?' · '+it.color:''),cantidad:it.cantidad,precio_unitario:it.precio,subtotal:it.precio*it.cantidad};
+  }));
+
+  // Descontar stock
+  for(var i=0;i<posItems.length;i++){
+    var it=posItems[i];
+    var s=STOCK.find(function(s){return s.producto_id===it.prodId&&s.local===currentLocal&&(s.talle||'')===it.talle&&(s.color||'')===it.color;});
+    if(s) await sb.from('stock').update({cantidad:Math.max(0,s.cantidad-it.cantidad)}).eq('id',s.id);
+  }
+
+  // Movimiento en caja
+  var detalle=(posClienteNombre||'Mostrador')+' · '+metodoLabel+(caja==='MERCADO PAGO'?' · '+localLabel:'');
+  await sb.from('movimientos').insert({tipo:'ingreso',caja:caja,fecha:today(),ingreso:total,egreso:0,concepto:'VENTA MINORISTA',detalle:detalle,referencia:'Venta #'+v.id});
+
+  toast('✓ Venta registrada — '+$p(total)+' · '+metodoLabel);
+  closeM('m-pos-cobro');
+  posItems=[]; posRenderTicket(); posClearCliente();
+  await Promise.all([loadVentas(),loadStock(),loadMovs()]);
+  // Refrescar nivel actual del POS para que muestre stock actualizado
+  if(posView==='level2') posGoLevel2(posL2Type,posL2Value,posL2Label);
+  else posGoRoot();
+}
 
 // ══════════════════════════════════════════════
 // CIERRE DE CAJA
