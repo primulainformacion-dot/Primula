@@ -2287,6 +2287,14 @@ async function doLogin(){
   var {error}=await sb.auth.signInWithPassword({email:document.getElementById('lg-email').value.trim(),password:document.getElementById('lg-pass').value});
   if(error) document.getElementById('lg-err').textContent='Email o contraseña incorrectos';
 }
+async function doResetPassword(){
+  var email=document.getElementById('lg-email').value.trim();
+  if(!email){document.getElementById('lg-err').textContent='Ingresá tu email primero';return;}
+  document.getElementById('lg-err').textContent='';
+  var {error}=await sb.auth.resetPasswordForEmail(email);
+  if(error){document.getElementById('lg-err').textContent='Error: '+error.message;return;}
+  document.getElementById('lg-reset-ok').style.display='block';
+}
 async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
