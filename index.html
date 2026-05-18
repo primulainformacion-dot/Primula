@@ -345,6 +345,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <button class="tab active" onclick="setProdTab('lista',this)">👔 Productos</button>
       <button class="tab" onclick="setProdTab('resumen',this)">📊 Resumen</button>
       <button class="tab" onclick="setProdTab('stock',this)">📦 Stock</button>
+      <button class="tab" onclick="setProdTab('costos',this)">💰 Costos</button>
       <button class="tab" onclick="setProdTab('transferencia',this)">🔄 Transferencia</button>
     </div>
 
@@ -487,11 +488,22 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           </div>
         </div>
 
-        <!-- Panel derecho: historial de la sesión -->
-        <div class="panel" id="trf-hist-panel" style="display:none;">
-          <div class="panel-hdr"><h4>📋 Transferencias realizadas (sesión)</h4></div>
+        <!-- Panel derecho: historial persistente -->
+        <div class="panel" id="trf-hist-panel">
+          <div class="panel-hdr" style="display:flex;align-items:center;justify-content:space-between;">
+            <h4>📋 Historial de transferencias</h4>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <input id="trf-hist-q" placeholder="Buscar producto..." oninput="renderTrfHistorial()" style="padding:7px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;flex:1;min-width:120px;"/>
+            <select id="trf-hist-local" onchange="renderTrfHistorial()" style="padding:7px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;">
+              <option value="">Todos los locales</option>
+              <option value="llavallol">Llavallol</option>
+              <option value="montegrande">Monte Grande</option>
+              <option value="mayorista">Mayorista</option>
+            </select>
+          </div>
           <div class="tbl"><table>
-            <thead><tr><th>Producto</th><th>Origen</th><th>Destino</th><th style="text-align:right">Cant.</th><th>Hora</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Producto</th><th>Origen</th><th>Destino</th><th style="text-align:right">Cant.</th></tr></thead>
             <tbody id="trf-hist-tbody"></tbody>
           </table></div>
         </div>
@@ -539,6 +551,50 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </table>
       </div>
     </div><!-- /prod-tab-stock -->
+
+    <!-- Sub-tab: Costos -->
+    <div id="prod-tab-costos" style="display:none;">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+        <input id="cst-q" placeholder="Buscar producto..." oninput="renderCostosPanel()" style="padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;width:220px;"/>
+        <select id="cst-tipo" onchange="renderCostosPanel()" style="padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;">
+          <option value="">Todos</option>
+          <option value="Compra">Compra</option>
+          <option value="Produccion">Producción</option>
+          <option value="Mixto">Mixto</option>
+        </select>
+        <select id="cst-colegio" onchange="renderCostosPanel()" style="padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;">
+          <option value="">Todos los colegios</option>
+          <option>San Marcos</option>
+          <option>Instituto Vicente Pallotti</option>
+          <option>Instituto Apostolado Católico</option>
+          <option>Santa Inés</option>
+          <option>San Francisco</option>
+          <option>La Milagrosa</option>
+          <option>Casita del Sol</option>
+          <option>Ángeles y Soles</option>
+          <option>Euskal Echea</option>
+        </select>
+      </div>
+      <div id="cst-resumen" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;"></div>
+      <div class="tbl">
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th style="text-align:center;">Tipo</th>
+              <th style="text-align:right;">Costo</th>
+              <th style="text-align:right;">Precio mayorista</th>
+              <th style="text-align:right;">Ganancia may.</th>
+              <th style="text-align:right;">Margen may.</th>
+              <th style="text-align:right;">Precio minorista</th>
+              <th style="text-align:right;">Ganancia min.</th>
+              <th style="text-align:right;">Margen min.</th>
+            </tr>
+          </thead>
+          <tbody id="cst-tbody"></tbody>
+        </table>
+      </div>
+    </div><!-- /prod-tab-costos -->
 
   </div>
 
@@ -2388,7 +2444,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadOperacionesVenta()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadOperacionesVenta(),loadTransferenciasStock()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -3904,14 +3960,15 @@ function renderProductos(){
 // PROD TABS (Lista / Resumen)
 // ════════════════════════════════════
 function setProdTab(tab, el){
-  ['lista','resumen','stock','transferencia'].forEach(function(t){
+  ['lista','resumen','stock','costos','transferencia'].forEach(function(t){
     document.getElementById('prod-tab-'+t).style.display=t===tab?'block':'none';
   });
   document.querySelectorAll('#prod-tabs .tab').forEach(function(b){b.classList.remove('active');});
   if(el) el.classList.add('active');
   if(tab==='resumen') renderResumenColegios();
   if(tab==='stock') renderStockPanel();
-  if(tab==='transferencia') renderTrfSearch();
+  if(tab==='costos') renderCostosPanel();
+  if(tab==='transferencia'){renderTrfSearch();renderTrfHistorial();}
 }
 
 function renderStockPanel(){
@@ -3966,6 +4023,62 @@ function renderStockPanel(){
       '<td style="text-align:center;font-weight:800;color:#374151;">'+r.total+'</td>'+
       '<td style="text-align:center;color:#9ca3af;">'+(r.ideal||'—')+'</td>'+
       '<td style="text-align:center;">'+badge+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function renderCostosPanel(){
+  var q=(document.getElementById('cst-q').value||'').toLowerCase();
+  var tipoFil=document.getElementById('cst-tipo').value;
+  var colFil=document.getElementById('cst-colegio').value;
+
+  var list=PRODUCTOS.filter(function(p){
+    if(!p.activo)return false;
+    if(q&&!p.nombre.toLowerCase().includes(q)&&!(p.codigo||'').toLowerCase().includes(q))return false;
+    if(tipoFil&&(p.tipo_2||'')!==tipoFil)return false;
+    if(colFil&&(p.colegio||'')!==colFil)return false;
+    return true;
+  });
+
+  // Tarjetas resumen
+  var conCosto=list.filter(function(p){return p.costo>0;});
+  var sinCosto=list.filter(function(p){return !p.costo;});
+  var avgMargenMin=conCosto.length?conCosto.reduce(function(a,p){return a+(p.precio_minorista-p.costo)/p.precio_minorista*100;},0)/conCosto.length:0;
+  var avgMargenMay=conCosto.length?conCosto.reduce(function(a,p){return a+(p.precio_mayorista-p.costo)/p.precio_mayorista*100;},0)/conCosto.length:0;
+  document.getElementById('cst-resumen').innerHTML=
+    '<div style="background:#f0fdf4;border-radius:10px;padding:12px 16px;"><div style="font-size:10px;font-weight:800;color:#166534;letter-spacing:.5px;">PRODUCTOS CON COSTO</div><div style="font-size:22px;font-weight:800;color:#16a34a;margin-top:4px;">'+conCosto.length+'</div><div style="font-size:11px;color:#9ca3af;">de '+list.length+' filtrados</div></div>'+
+    '<div style="background:'+(sinCosto.length?'#fff7ed':'#f9fafb')+';border-radius:10px;padding:12px 16px;"><div style="font-size:10px;font-weight:800;color:'+(sinCosto.length?'#c2410c':'#6b7280')+';letter-spacing:.5px;">SIN COSTO CARGADO</div><div style="font-size:22px;font-weight:800;color:'+(sinCosto.length?'#ea580c':'#9ca3af')+';margin-top:4px;">'+sinCosto.length+'</div><div style="font-size:11px;color:#9ca3af;">completar para ver márgenes</div></div>'+
+    '<div style="background:#eff6ff;border-radius:10px;padding:12px 16px;"><div style="font-size:10px;font-weight:800;color:#1d4ed8;letter-spacing:.5px;">MARGEN PROM. MINORISTA</div><div style="font-size:22px;font-weight:800;color:#2563eb;margin-top:4px;">'+avgMargenMin.toFixed(1)+'%</div><div style="font-size:11px;color:#9ca3af;">sobre precio de venta</div></div>'+
+    '<div style="background:#f5f3ff;border-radius:10px;padding:12px 16px;"><div style="font-size:10px;font-weight:800;color:#6d28d9;letter-spacing:.5px;">MARGEN PROM. MAYORISTA</div><div style="font-size:22px;font-weight:800;color:#7c3aed;margin-top:4px;">'+avgMargenMay.toFixed(1)+'%</div><div style="font-size:11px;color:#9ca3af;">sobre precio de venta</div></div>';
+
+  var tb=document.getElementById('cst-tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><div class="ei">💰</div><p>Sin productos</p></div></td></tr>';return;}
+
+  function margenColor(m){return m>=50?'#16a34a':m>=30?'#ca8a04':'#dc2626';}
+  function margenCell(precio,costo){
+    if(!costo||!precio)return '<td style="text-align:right;color:#9ca3af;">—</td><td style="text-align:right;color:#9ca3af;">—</td>';
+    var gan=precio-costo;
+    var m=gan/precio*100;
+    var c=margenColor(m);
+    return '<td style="text-align:right;font-weight:700;color:'+c+';">'+$p(gan)+'</td>'+
+           '<td style="text-align:right;"><span style="background:'+(m>=50?'#dcfce7':m>=30?'#fef3c7':'#fee2e2')+';color:'+c+';border-radius:6px;padding:2px 8px;font-size:11px;font-weight:800;">'+m.toFixed(1)+'%</span></td>';
+  }
+  var tipoBadge={'Compra':'<span style="background:#dbeafe;color:#1d4ed8;border-radius:5px;padding:1px 7px;font-size:10px;font-weight:700;">Compra</span>',
+    'Produccion':'<span style="background:#dcfce7;color:#166534;border-radius:5px;padding:1px 7px;font-size:10px;font-weight:700;">Producción</span>',
+    'Mixto':'<span style="background:#fef3c7;color:#92400e;border-radius:5px;padding:1px 7px;font-size:10px;font-weight:700;">Mixto</span>'};
+
+  tb.innerHTML=list.map(function(p){
+    var costo=Number(p.costo||0);
+    var pmin=Number(p.precio_minorista||0);
+    var pmay=Number(p.precio_mayorista||0);
+    return '<tr onclick="openProdModal('+p.id+')" style="cursor:pointer;">'+
+      '<td><strong>'+esc(p.nombre)+'</strong>'+(p.codigo?'<br><span class="badge b-gray" style="font-size:10px;">'+esc(p.codigo)+'</span>':'')+'</td>'+
+      '<td style="text-align:center;">'+(tipoBadge[p.tipo_2]||'<span style="color:#9ca3af;font-size:11px;">—</span>')+'</td>'+
+      '<td style="text-align:right;font-weight:700;">'+(costo?$p(costo):'<span style="color:#dc2626;font-size:11px;">Sin costo</span>')+'</td>'+
+      '<td style="text-align:right;">'+(pmay?$p(pmay):'—')+'</td>'+
+      margenCell(pmay,costo)+
+      '<td style="text-align:right;">'+(pmin?$p(pmin):'—')+'</td>'+
+      margenCell(pmin,costo)+
     '</tr>';
   }).join('');
 }
@@ -4070,6 +4183,31 @@ function renderResumenColegios(){
 // ════════════════════════════════════
 var trfProdId=null, trfStockId=null, trfOrigen=null, trfHist=[];
 
+function renderTrfHistorial(){
+  var q=(document.getElementById('trf-hist-q')||{}).value||'';
+  q=q.toLowerCase();
+  var localFil=(document.getElementById('trf-hist-local')||{}).value||'';
+  var locLabel=function(l){return l==='llavallol'?'Llavallol':l==='montegrande'?'Monte Grande':l==='mayorista'?'Mayorista':l;};
+  var list=TRANSFERENCIAS_STOCK.filter(function(t){
+    if(q&&!t.producto_nombre.toLowerCase().includes(q))return false;
+    if(localFil&&t.origen!==localFil&&t.destino!==localFil)return false;
+    return true;
+  });
+  var tb=document.getElementById('trf-hist-tbody');
+  if(!tb)return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:20px;">Sin transferencias registradas</td></tr>';return;}
+  tb.innerHTML=list.map(function(t){
+    var fecha=t.created_at?t.created_at.slice(0,10):'—';
+    var hora=t.created_at?t.created_at.slice(11,16):'';
+    return'<tr>'+
+      '<td style="font-size:12px;color:#6b7280;">'+fecha+'<br><span style="font-size:11px;">'+hora+'</span></td>'+
+      '<td><strong>'+esc(t.producto_nombre)+'</strong>'+(t.talle?'<br><span class="badge b-gray" style="font-size:10px;">'+esc(t.talle)+'</span>':'')+'</td>'+
+      '<td><span class="badge b-gray">'+locLabel(t.origen)+'</span></td>'+
+      '<td><span class="badge b-blue" style="background:#dbeafe;color:#1d4ed8;">'+locLabel(t.destino)+'</span></td>'+
+      '<td style="text-align:right;font-weight:800;color:#374151;">'+t.cantidad+'</td>'+
+    '</tr>';
+  }).join('');
+}
 function renderTrfSearch(){
   var q=(document.getElementById('trf-q')?document.getElementById('trf-q').value||'':'').toLowerCase().trim();
   var cont=document.getElementById('trf-search-res');
@@ -4170,20 +4308,15 @@ async function doTransferencia(){
   );
   if(rDest.error){toast('Error actualizando destino: '+rDest.error.message,'err');return;}
 
-  // Log historial
-  var now=new Date();
-  var hora=now.toTimeString().slice(0,5);
-  trfHist.unshift({prod:p?p.nombre:'—',origen:trfOrigen,dest:dest,qty:qty,hora:hora});
-
-  var histTb=document.getElementById('trf-hist-tbody');
-  if(histTb){
-    var locLabel=function(l){return l==='llavallol'?'Llavallol':l==='montegrande'?'Monte Grande':'Mayorista';};
-    histTb.innerHTML=trfHist.map(function(h){
-      return'<tr><td>'+esc(h.prod)+'</td><td>'+locLabel(h.origen)+'</td><td>'+locLabel(h.dest)+'</td>'+
-        '<td style="text-align:right;font-weight:700;">'+h.qty+'</td><td style="color:#6b7280;">'+h.hora+'</td></tr>';
-    }).join('');
-    document.getElementById('trf-hist-panel').style.display='block';
-  }
+  // Guardar en DB
+  var nombre=p?p.nombre:'—';
+  await sb.from('transferencias_stock').insert({
+    producto_id:trfProdId, producto_nombre:nombre,
+    origen:trfOrigen, destino:dest, cantidad:qty,
+    talle:talle||null, color:color||null
+  });
+  await loadTransferenciasStock();
+  renderTrfHistorial();
 
   toast('Transferencia realizada: '+qty+' u. → '+(dest==='llavallol'?'Llavallol':dest==='montegrande'?'Monte Grande':'Mayorista'));
   cancelTrf();
@@ -5484,11 +5617,16 @@ async function saveChqDepositar(){
 // OPERACIONES DE VENTA DE CHEQUES AL BANCO
 // ══════════════════════════════════════════════
 var OPERACIONES_VENTA=[];
+var TRANSFERENCIAS_STOCK=[];
 var editVentaCostoId=null;
 
 async function loadOperacionesVenta(){
   var {data}=await sb.from('operaciones_venta_cheques').select('*').order('fecha_venta',{ascending:false});
   OPERACIONES_VENTA=data||[];
+}
+async function loadTransferenciasStock(){
+  var {data}=await sb.from('transferencias_stock').select('*').order('created_at',{ascending:false}).limit(200);
+  TRANSFERENCIAS_STOCK=data||[];
 }
 
 function openChqVentaModal(){
