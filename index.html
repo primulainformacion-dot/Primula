@@ -5599,6 +5599,128 @@ function renderChqResumen(){
   var hoy=today();
   var hoyDate=new Date();
   var en60=new Date(Date.now()+60*86400000).toISOString().split('T')[0];
+  var MN=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // ── Cheques en cartera disponibles ──
+  var enCarteraDisp=CHEQUES_CARTERA.filter(function(c){return c.estado==='en_cartera'&&c.fecha_cobro;});
+  var totalDisp=enCarteraDisp.reduce(function(s,c){return s+saldoCheque(c.id);},0);
+
+  // ── Cupo ──
+  var vendidos=CHEQUES_CARTERA.filter(function(c){return c.estado==='vendido';});
+  var cupoOcupado=vendidos.filter(function(c){return !c.cupo_liberado;});
+  var cupoLibre=vendidos.filter(function(c){return c.cupo_liberado;});
+  var totalCupoOcupado=cupoOcupado.reduce(function(s,c){return s+Number(c.monto);},0);
+  var totalCupoLibre=cupoLibre.reduce(function(s,c){return s+Number(c.monto);},0);
+
+  // ── Agrupar por MES ──
+  var porMes={};
+  enCarteraDisp.forEach(function(c){
+    var d=new Date(c.fecha_cobro+'T12:00:00');
+    var key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    if(!porMes[key])porMes[key]={label:MN[d.getMonth()]+' '+d.getFullYear(),count:0,total:0,echeq:0,cheque:0};
+    var sal=saldoCheque(c.id);
+    porMes[key].count++;porMes[key].total+=sal;
+    if((c.tipo||'cheque')==='echeq')porMes[key].echeq++;else porMes[key].cheque++;
+  });
+  var mesesKeys=Object.keys(porMes).sort();
+
+  // ── Agrupar por SEMANA ──
+  var porSem={};
+  enCarteraDisp.forEach(function(c){
+    var d=new Date(c.fecha_cobro+'T12:00:00');
+    var dow=d.getDay()||7; // lunes=1..dom=7
+    var lunes=new Date(d);lunes.setDate(d.getDate()-dow+1);
+    var domingo=new Date(lunes);domingo.setDate(lunes.getDate()+6);
+    var key=lunes.toISOString().split('T')[0];
+    var labelFrom=lunes.getDate()+'/'+(lunes.getMonth()+1);
+    var labelTo=domingo.getDate()+'/'+(domingo.getMonth()+1);
+    var vencida=key<hoy.slice(0,7+3);// simplificado
+    if(!porSem[key])porSem[key]={label:labelFrom+' – '+labelTo,count:0,total:0,pasada:domingo.toISOString().split('T')[0]<hoy};
+    porSem[key].count++;porSem[key].total+=saldoCheque(c.id);
+  });
+  var semKeys=Object.keys(porSem).sort();
+
+  var cont=document.getElementById('chq-resumen-cont');
+  var html='';
+
+  // ── Cards de cupo ──
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px;">';
+  html+='<div class="stat" style="border-top:3px solid #7c3aed;">'+
+    '<div class="stat-icon" style="background:#ede9fe;">🧾</div>'+
+    '<h3 style="color:#7c3aed;">'+$p(totalDisp)+'</h3>'+
+    '<p>Disponible en cartera</p>'+
+    '<div style="font-size:11px;color:#8b5cf6;">'+enCarteraDisp.length+' cheque'+(enCarteraDisp.length!==1?'s':'')+'</div>'+
+  '</div>';
+  html+='<div class="stat" style="border-top:3px solid #0ea5e9;">'+
+    '<div class="stat-icon" style="background:#e0f2fe;">🏦</div>'+
+    '<h3 style="color:#0ea5e9;">'+$p(totalCupoOcupado)+'</h3>'+
+    '<p>Cupo ocupado</p>'+
+    '<div style="font-size:11px;color:#0369a1;">'+cupoOcupado.length+' vendido'+(cupoOcupado.length!==1?'s':'')+' sin liberar</div>'+
+  '</div>';
+  html+='<div class="stat" style="border-top:3px solid #16a34a;">'+
+    '<div class="stat-icon" style="background:#dcfce7;">✅</div>'+
+    '<h3 style="color:#16a34a;">'+$p(totalCupoLibre)+'</h3>'+
+    '<p>Cupo liberado</p>'+
+    '<div style="font-size:11px;color:#15803d;">'+cupoLibre.length+' confirmado'+(cupoLibre.length!==1?'s':'')+'</div>'+
+  '</div>';
+  html+='</div>';
+
+  // ── Vista por MES ──
+  html+='<div class="panel" style="margin-bottom:18px;">';
+  html+='<div class="panel-hdr"><h4>📅 Disponibles por mes</h4><span style="font-size:12px;color:#9ca3af;">cheques en_cartera · saldo disponible</span></div>';
+  if(!mesesKeys.length){
+    html+='<p style="color:#9ca3af;text-align:center;padding:16px;">Sin cheques en cartera</p>';
+  } else {
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;padding:4px 0;">';
+    mesesKeys.forEach(function(k){
+      var m=porMes[k];
+      var esPasado=k<hoy.slice(0,7);
+      html+='<div style="background:'+(esPasado?'#f9fafb':'#f0fdf4')+';border:1.5px solid '+(esPasado?'#e5e7eb':'#bbf7d0')+';border-radius:10px;padding:12px 14px;">'+
+        '<div style="font-size:11px;font-weight:800;color:'+(esPasado?'#9ca3af':'#166534')+';letter-spacing:.5px;">'+m.label+'</div>'+
+        '<div style="font-size:20px;font-weight:800;color:'+(esPasado?'#6b7280':'#16a34a')+';margin:4px 0;">'+$p(m.total)+'</div>'+
+        '<div style="font-size:11px;color:#9ca3af;">'+m.count+' cheque'+(m.count!==1?'s':'')+
+          (m.echeq?' · '+m.echeq+' ECH':'')+
+          (m.cheque?' · '+m.cheque+' fís.':'')+
+        '</div>'+
+      '</div>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+
+  // ── Vista por SEMANA ──
+  html+='<div class="panel" style="margin-bottom:18px;">';
+  html+='<div class="panel-hdr"><h4>📆 Disponibles por semana</h4><span style="font-size:12px;color:#9ca3af;">lunes a domingo</span></div>';
+  if(!semKeys.length){
+    html+='<p style="color:#9ca3af;text-align:center;padding:16px;">Sin cheques en cartera</p>';
+  } else {
+    html+='<div class="tbl"><table><thead><tr>'+
+      '<th>Semana</th><th style="text-align:center">Cheques</th>'+
+      '<th style="text-align:center">ECHEQ</th><th style="text-align:center">Físico</th>'+
+      '<th style="text-align:right">Saldo disponible</th>'+
+    '</tr></thead><tbody>';
+    semKeys.forEach(function(k){
+      var s=porSem[k];
+      // contar echeq/cheque por semana
+      var ecsem=enCarteraDisp.filter(function(c){
+        var d=new Date(c.fecha_cobro+'T12:00:00');
+        var dow=d.getDay()||7;var lun=new Date(d);lun.setDate(d.getDate()-dow+1);
+        return lun.toISOString().split('T')[0]===k&&(c.tipo||'cheque')==='echeq';
+      }).length;
+      var chsem=s.count-ecsem;
+      var pasada=s.pasada;
+      html+='<tr style="'+(pasada?'opacity:.55;':'')+'">' +
+        '<td style="font-weight:600;">'+(pasada?'<span style="font-size:10px;color:#9ca3af;">vencida</span> ':'')+s.label+'</td>'+
+        '<td style="text-align:center;font-weight:700;color:#7c3aed;">'+s.count+'</td>'+
+        '<td style="text-align:center;"><span class="badge" style="background:#dbeafe;color:#1d4ed8;">'+ecsem+'</span></td>'+
+        '<td style="text-align:center;"><span class="badge b-gray">'+chsem+'</span></td>'+
+        '<td style="text-align:right;font-weight:700;color:'+(pasada?'#9ca3af':'#16a34a')+';">'+$p(s.total)+'</td>'+
+      '</tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+  html+='</div>';
+
   // Cheques de terceros (a cobrar) con vencimiento próximo
   var aCobrar=MOVS.filter(function(m){
     return m.caja==='ECHEQ/CHEQUE'&&m.tipo==='ingreso'&&m.fecha_vencimiento&&m.fecha_vencimiento>=hoy;
@@ -5616,14 +5738,10 @@ function renderChqResumen(){
   var totPagar=aPagar.reduce(function(s,x){return s+x.monto;},0);
 
   // ── Panel de operaciones de venta ──
-  var vendidos=CHEQUES_CARTERA.filter(function(c){return c.estado==='vendido';});
   var vendidosPendCupo=vendidos.filter(function(c){return !c.cupo_liberado;});
   var vendidosALiberar=vendidosPendCupo.filter(function(c){return c.fecha_cobro&&c.fecha_cobro<hoy;});
   var totalEnVenta=vendidosPendCupo.reduce(function(s,c){return s+Number(c.monto);},0);
   var totalALiberar=vendidosALiberar.reduce(function(s,c){return s+Number(c.monto);},0);
-
-  var cont=document.getElementById('chq-resumen-cont');
-  var html='';
 
   // Panel operaciones
   if(OPERACIONES_VENTA.length||vendidos.length){
