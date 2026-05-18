@@ -5567,24 +5567,26 @@ function posGoRoot(){
     }).join('');
 
   }else if(currentLocal==='llavallol'){
-    // Colegios con stock > 0 en Llavallol
     bc.innerHTML='<span style="font-weight:700;color:#374151;">🏫 Colegios</span>';
-    var colMap={};
+    var COLEGIOS_LISTA=['San Marcos','Instituto Vicente Pallotti','Instituto Apostolado Católico','Santa Inés','San Francisco','La Milagrosa','Casita del Sol','Ángeles y Soles','Euskal Echea'];
+    // Contar productos con stock por colegio
+    var colCount={};
     PRODUCTOS.forEach(function(p){
       if(!p.activo)return;
-      var hasStock=STOCK.some(function(s){return s.producto_id===p.id&&s.local==='llavallol'&&s.cantidad>0;});
-      if(!hasStock)return;
       var col=p.colegio||'__gen__';
-      var label=col==='__gen__'?'🏷️ Sin colegio':p.colegio;
-      if(!colMap[col])colMap[col]={value:col,label:label,count:0};
-      colMap[col].count++;
+      var hasStock=STOCK.some(function(s){return s.producto_id===p.id&&s.local==='llavallol'&&s.cantidad>0;});
+      if(hasStock){colCount[col]=(colCount[col]||0)+1;}
     });
-    var cols=Object.values(colMap).sort(function(a,b){return a.label<b.label?-1:1;});
-    if(!cols.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">Sin stock en Llavallol</div>';return;}
     var btnStL=posNavBtnStyle();
+    var cols=COLEGIOS_LISTA.map(function(nombre){return {value:nombre,label:nombre,count:colCount[nombre]||0};});
+    // Agregar "Sin colegio" si hay productos sin colegio con stock
+    if(colCount['__gen__'])cols.push({value:'__gen__',label:'🏷️ Sin colegio',count:colCount['__gen__']});
     grid.innerHTML=cols.map(function(c){
-      return '<button onclick="posGoLevel2(\'colegio\',\''+c.value+'\',\''+c.label+'\')" style="'+btnStL+'">'+
-        c.label+'<div style="font-size:11px;opacity:.8;margin-top:4px;">'+c.count+' producto'+(c.count!==1?'s':'')+'</div></button>';
+      var sinStock=c.count===0;
+      var st=sinStock?posNavBtnStyle().replace('cursor:pointer','cursor:default').replace(/box-shadow:[^;]+;/,'')+'opacity:.45;filter:grayscale(.6);':posNavBtnStyle();
+      var click=sinStock?'':'onclick="posGoLevel2(\'colegio\',\''+c.value+'\',\''+c.label+'\')"';
+      return '<button '+click+' style="'+st+'">'+
+        c.label+'<div style="font-size:11px;opacity:.8;margin-top:4px;">'+(sinStock?'Sin stock':c.count+' producto'+(c.count!==1?'s':''))+'</div></button>';
     }).join('');
   }
 }
