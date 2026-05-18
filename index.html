@@ -1094,6 +1094,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <button class="tab active" onclick="setChqTab('cartera',this)">🧾 Recibos</button>
       <button class="tab" onclick="setChqTab('propios',this)">📋 Cartera propia</button>
       <button class="tab" onclick="setChqTab('resumen',this)">📊 Resumen</button>
+      <button class="tab" onclick="setChqTab('operaciones',this)">🏦 Operaciones banco</button>
     </div>
 
     <!-- Sub-tab 1: Recibos -->
@@ -1170,6 +1171,11 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <!-- Sub-tab 3: Resumen -->
     <div id="chq-tab-resumen" style="display:none;">
       <div id="chq-resumen-cont"></div>
+    </div>
+
+    <!-- Sub-tab 4: Operaciones banco -->
+    <div id="chq-tab-operaciones" style="display:none;">
+      <div id="chq-oper-cont"></div>
     </div>
   </div>
 
@@ -2263,9 +2269,17 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </select>
       </div>
       <div class="field"><label>Fecha de venta *</label><input type="date" id="mv-fecha"/></div>
-      <div class="field full"><label>Descuento de la operación $</label>
+      <div class="field"><label>Caja que recibe el neto *</label>
+        <select id="mv-caja-destino">
+          <option value="BANCO SRL">BANCO SRL</option>
+          <option value="BANCO POLY">BANCO POLY</option>
+          <option value="EFECTIVO ADMINISTRACIÓN">EFECTIVO ADMINISTRACIÓN</option>
+          <option value="CAJA USD">CAJA USD</option>
+        </select>
+      </div>
+      <div class="field"><label>Descuento de la operación $</label>
         <input type="number" id="mv-descuento" min="0" step="0.01" placeholder="Dejar vacío si no se sabe todavía" oninput="mvActualizarTotales()"/>
-        <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Podés completarlo después desde el Resumen de cheques</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Si no lo sabés todavía, registralo después</div>
       </div>
       <div class="field full"><label>Nota</label><input id="mv-nota" placeholder="Observaciones de la operación"/></div>
     </div>
@@ -2307,8 +2321,17 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="field"><label>Descuento / Costo real $</label>
         <input type="number" id="mvc-descuento" min="0" step="0.01" placeholder="0" oninput="mvcActualizar()"/>
       </div>
-      <div class="field"><label>Monto neto que depositó el banco</label>
+      <div class="field"><label>Neto que depositó el banco</label>
         <div style="font-size:18px;font-weight:800;color:#16a34a;padding-top:6px;" id="mvc-neto">—</div>
+      </div>
+      <div class="field full"><label>Acreditar neto en caja</label>
+        <select id="mvc-caja-destino">
+          <option value="BANCO SRL">BANCO SRL</option>
+          <option value="BANCO POLY">BANCO POLY</option>
+          <option value="EFECTIVO ADMINISTRACIÓN">EFECTIVO ADMINISTRACIÓN</option>
+          <option value="CAJA USD">CAJA USD</option>
+        </select>
+        <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Se generará un ingreso automático en esta caja</div>
       </div>
       <div class="field full"><label>Nota adicional</label><input id="mvc-nota" placeholder=""/></div>
     </div>
@@ -5239,7 +5262,7 @@ async function toggleObjetivoLogrado(cat,canal,anio,mes,id){
 var editChqPropioId=null;
 
 function setChqTab(tab,el){
-  ['cartera','propios','resumen'].forEach(function(t){
+  ['cartera','propios','resumen','operaciones'].forEach(function(t){
     document.getElementById('chq-tab-'+t).style.display=t===tab?'block':'none';
   });
   document.querySelectorAll('#chq-tabs .tab').forEach(function(b){b.classList.remove('active');});
@@ -5247,6 +5270,7 @@ function setChqTab(tab,el){
   if(tab==='cartera')renderChqCartera();
   if(tab==='propios')renderChqPropios();
   if(tab==='resumen')renderChqResumen();
+  if(tab==='operaciones')renderChqOperaciones();
 }
 
 // ── FACTURAS CLIENTES ──
@@ -5736,69 +5760,6 @@ function renderChqResumen(){
   var timeline=[].concat(aCobrar,aPagar).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
   var totCobrar=aCobrar.reduce(function(s,x){return s+x.monto;},0);
   var totPagar=aPagar.reduce(function(s,x){return s+x.monto;},0);
-
-  // ── Panel de operaciones de venta ──
-  var vendidosPendCupo=vendidos.filter(function(c){return !c.cupo_liberado;});
-  var vendidosALiberar=vendidosPendCupo.filter(function(c){return c.fecha_cobro&&c.fecha_cobro<hoy;});
-  var totalEnVenta=vendidosPendCupo.reduce(function(s,c){return s+Number(c.monto);},0);
-  var totalALiberar=vendidosALiberar.reduce(function(s,c){return s+Number(c.monto);},0);
-
-  // Panel operaciones
-  if(OPERACIONES_VENTA.length||vendidos.length){
-    html+='<div class="panel" style="margin-bottom:18px;border-left:4px solid #0ea5e9;">';
-    html+='<div class="panel-hdr"><h4>🏦 Operaciones de venta al banco</h4>';
-    html+='<div style="display:flex;gap:8px;">';
-    html+='<span style="font-size:12px;color:#9ca3af;">cupo ocupado: <strong style="color:#d97706;">'+$p(totalEnVenta)+'</strong></span>';
-    if(vendidosALiberar.length)html+='<span class="badge" style="background:#fef3c7;color:#92400e;">⚠️ '+vendidosALiberar.length+' a liberar</span>';
-    html+='</div></div>';
-
-    // Cards resumen
-    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">';
-    html+='<div style="background:#e0f2fe;border-radius:10px;padding:12px 16px;"><div style="font-size:10px;font-weight:800;color:#0369a1;letter-spacing:.5px;">CUPO OCUPADO</div><div style="font-size:20px;font-weight:800;color:#0369a1;margin-top:4px;">'+$p(totalEnVenta)+'</div><div style="font-size:11px;color:#9ca3af;">'+vendidosPendCupo.length+' cheque'+(vendidosPendCupo.length!==1?'s':'')+'</div></div>';
-    html+='<div style="background:'+(vendidosALiberar.length?'#fef3c7':'#f9fafb')+';border-radius:10px;padding:12px 16px;"><div style="font-size:10px;font-weight:800;color:'+(vendidosALiberar.length?'#92400e':'#9ca3af')+';letter-spacing:.5px;">⚠️ CUPO A LIBERAR</div><div style="font-size:20px;font-weight:800;color:'+(vendidosALiberar.length?'#92400e':'#9ca3af')+';margin-top:4px;">'+$p(totalALiberar)+'</div><div style="font-size:11px;color:#9ca3af;">'+vendidosALiberar.length+' con fecha vencida</div></div>';
-    var opsSinCosto=OPERACIONES_VENTA.filter(function(o){return o.descuento==null;});
-    html+='<div style="background:'+(opsSinCosto.length?'#fff7ed':'#f9fafb')+';border-radius:10px;padding:12px 16px;"><div style="font-size:10px;font-weight:800;color:'+(opsSinCosto.length?'#c2410c':'#9ca3af')+';letter-spacing:.5px;">SIN COSTO REGISTRADO</div><div style="font-size:20px;font-weight:800;color:'+(opsSinCosto.length?'#c2410c':'#9ca3af')+';margin-top:4px;">'+opsSinCosto.length+'</div><div style="font-size:11px;color:#9ca3af;">operación'+(opsSinCosto.length!==1?'es':'')+' pendiente'+(opsSinCosto.length!==1?'s':'')+'</div></div>';
-    html+='</div>';
-
-    // Tabla de operaciones
-    if(OPERACIONES_VENTA.length){
-      html+='<div class="tbl"><table><thead><tr>'+
-        '<th>Banco</th><th>Fecha venta</th><th style="text-align:center">Cheques</th>'+
-        '<th style="text-align:right">Bruto</th><th style="text-align:right">Descuento</th><th style="text-align:right">Neto</th>'+
-        '<th style="text-align:center">Cupo a liberar</th><th></th>'+
-      '</tr></thead><tbody>';
-      OPERACIONES_VENTA.forEach(function(op){
-        var chOp=CHEQUES_CARTERA.filter(function(c){return c.venta_id===op.id;});
-        var aLiberar=chOp.filter(function(c){return !c.cupo_liberado&&c.fecha_cobro&&c.fecha_cobro<hoy;});
-        html+='<tr>'+
-          '<td style="font-weight:700;">'+op.banco+'</td>'+
-          '<td style="font-size:12px;">'+op.fecha_venta+'</td>'+
-          '<td style="text-align:center;">'+chOp.length+'</td>'+
-          '<td style="text-align:right;font-weight:600;">'+$p(Number(op.monto_bruto||0))+'</td>'+
-          '<td style="text-align:right;">'+
-            (op.descuento!=null
-              ?'<span style="color:#dc2626;font-weight:700;">'+$p(Number(op.descuento))+'</span>'
-              :'<button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa;" onclick="openVentaCostoModal('+op.id+')">+ Registrar costo</button>')+
-          '</td>'+
-          '<td style="text-align:right;font-weight:700;color:#16a34a;">'+
-            (op.monto_neto!=null?$p(Number(op.monto_neto)):'<span style="color:#9ca3af;font-size:11px;">pendiente</span>')+
-          '</td>'+
-          '<td style="text-align:center;">'+
-            (aLiberar.length
-              ?'<span style="color:#92400e;font-weight:700;">'+aLiberar.length+' cheque'+(aLiberar.length!==1?'s':'')+'</span>'
-              :'<span style="color:#9ca3af;font-size:11px;">—</span>')+
-          '</td>'+
-          '<td>'+
-            aLiberar.map(function(c){
-              return '<button class="btn btn-sm" onclick="liberarCupo('+c.id+')" style="background:#fef3c7;color:#92400e;border-color:#fbbf24;margin:1px;white-space:nowrap;" title="cobro: '+(c.fecha_cobro||'—')+'">🔓 '+(c.emisor||'#'+c.id)+'</button>';
-            }).join('')+
-          '</td>'+
-        '</tr>';
-      });
-      html+='</tbody></table></div>';
-    }
-    html+='</div>';
-  }
 
   // Cards resumen cheques a cobrar / propios
   html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">';
@@ -6545,16 +6506,34 @@ function mvActualizarTotales(){
 async function saveChqVenta(){
   var banco=document.getElementById('mv-banco').value;
   var fecha=document.getElementById('mv-fecha').value;
+  var cajaDestino=document.getElementById('mv-caja-destino').value;
   if(!fecha){toast('Completá la fecha','err');return;}
   var checks=document.querySelectorAll('#mv-lista input[type=checkbox]:checked');
   if(!checks.length){toast('Seleccioná al menos un cheque','err');return;}
   var ids=[],bruto=0;
   checks.forEach(function(ch){ids.push(parseInt(ch.value));bruto+=parseFloat(ch.dataset.monto)||0;});
   var desc=parseFloat(document.getElementById('mv-descuento').value)||null;
+  var neto=desc!=null?bruto-desc:null;
+  var movId=null;
+
+  // Si el neto ya se conoce, crear el movimiento ahora
+  if(neto!=null){
+    var d=new Date(fecha+'T12:00:00');
+    var movData={
+      caja:cajaDestino, fecha:fecha,
+      tipo:'ingreso', concepto:'CHEQUES/TRANSFERENCIAS',
+      detalle:'Neto venta cheques al '+banco,
+      ingreso:neto, egreso:0,
+      anio:d.getFullYear(), mes:MESES_ARR[d.getMonth()], sem:0
+    };
+    var {data:movRes}=await sb.from('movimientos').insert(movData).select('id').single();
+    if(movRes)movId=movRes.id;
+  }
+
   var op={
-    banco,fecha_venta:fecha,monto_bruto:bruto,
-    descuento:desc,
-    monto_neto:desc!=null?bruto-desc:null,
+    banco, fecha_venta:fecha, monto_bruto:bruto,
+    descuento:desc, monto_neto:neto,
+    caja_destino:cajaDestino, mov_id:movId,
     nota:document.getElementById('mv-nota').value||null
   };
   var {data:opData,error:opErr}=await sb.from('operaciones_venta_cheques').insert(op).select().single();
@@ -6563,10 +6542,152 @@ async function saveChqVenta(){
     .update({estado:'vendido',venta_id:opData.id,updated_at:new Date().toISOString()})
     .in('id',ids);
   if(chErr){toast('Error al actualizar cheques: '+chErr.message,'err');return;}
-  toast('Operación registrada — '+ids.length+' cheque'+(ids.length!==1?'s':'')+' vendidos al '+banco);
+  toast('Operación registrada — '+ids.length+' cheque'+(ids.length!==1?'s':'')+' vendidos al '+banco+(neto!=null?' · ingreso en '+cajaDestino:''));
   closeM('m-chqventa');
-  await Promise.all([loadChequesCartera(),loadOperacionesVenta()]);
+  await Promise.all([loadChequesCartera(),loadOperacionesVenta(),loadMovs()]);
   renderChqCartera();
+}
+
+function renderChqOperaciones(){
+  var hoy=today();
+  var cont=document.getElementById('chq-oper-cont');
+  if(!cont)return;
+  var html='';
+
+  var vendidos=CHEQUES_CARTERA.filter(function(c){return c.estado==='vendido';});
+  var vendidosPendCupo=vendidos.filter(function(c){return !c.cupo_liberado;});
+  var vendidosALiberar=vendidosPendCupo.filter(function(c){return c.fecha_cobro&&c.fecha_cobro<hoy;});
+  var totalCupoOcupado=vendidosPendCupo.reduce(function(s,c){return s+Number(c.monto);},0);
+  var totalALiberar=vendidosALiberar.reduce(function(s,c){return s+Number(c.monto);},0);
+
+  var opsConCosto=OPERACIONES_VENTA.filter(function(o){return o.descuento!=null;});
+  var opsSinCosto=OPERACIONES_VENTA.filter(function(o){return o.descuento==null;});
+  var totalBruto=OPERACIONES_VENTA.reduce(function(s,o){return s+Number(o.monto_bruto||0);},0);
+  var totalComisiones=opsConCosto.reduce(function(s,o){return s+Number(o.descuento||0);},0);
+  var totalNeto=opsConCosto.reduce(function(s,o){return s+Number(o.monto_neto||0);},0);
+  var pctMedio=totalBruto>0?(totalComisiones/totalBruto*100):0;
+
+  // ── Cards de resumen ──
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px;margin-bottom:20px;">';
+  html+='<div class="stat" style="border-top:3px solid #0369a1;">'+
+    '<div class="stat-icon" style="background:#e0f2fe;">📤</div>'+
+    '<h3 style="color:#0369a1;">'+$p(totalBruto)+'</h3>'+
+    '<p>Total vendido (bruto)</p>'+
+    '<div style="font-size:11px;color:#9ca3af;">'+OPERACIONES_VENTA.length+' operación'+(OPERACIONES_VENTA.length!==1?'es':'')+'</div>'+
+  '</div>';
+  html+='<div class="stat" style="border-top:3px solid #dc2626;">'+
+    '<div class="stat-icon" style="background:#fee2e2;">💸</div>'+
+    '<h3 style="color:#dc2626;">'+$p(totalComisiones)+'</h3>'+
+    '<p>Comisiones banco</p>'+
+    '<div style="font-size:11px;color:#9ca3af;">'+(pctMedio>0?pctMedio.toFixed(2)+'% promedio':'sin datos')+'</div>'+
+  '</div>';
+  html+='<div class="stat" style="border-top:3px solid #16a34a;">'+
+    '<div class="stat-icon" style="background:#dcfce7;">✅</div>'+
+    '<h3 style="color:#16a34a;">'+$p(totalNeto)+'</h3>'+
+    '<p>Neto recibido</p>'+
+    '<div style="font-size:11px;color:#9ca3af;">'+opsConCosto.length+' op. con costo</div>'+
+  '</div>';
+  html+='<div class="stat" style="border-top:3px solid '+(opsSinCosto.length?'#f59e0b':'#6b7280')+'">' +
+    '<div class="stat-icon" style="background:'+(opsSinCosto.length?'#fef3c7':'#f3f4f6')+';">⏳</div>'+
+    '<h3 style="color:'+(opsSinCosto.length?'#d97706':'#9ca3af')+';">'+opsSinCosto.length+'</h3>'+
+    '<p>Sin costo registrado</p>'+
+    '<div style="font-size:11px;color:#9ca3af;">op. pendientes</div>'+
+  '</div>';
+  html+='<div class="stat" style="border-top:3px solid '+(vendidosALiberar.length?'#92400e':'#6b7280')+'">' +
+    '<div class="stat-icon" style="background:'+(vendidosALiberar.length?'#fef3c7':'#f3f4f6')+';">🔓</div>'+
+    '<h3 style="color:'+(vendidosALiberar.length?'#92400e':'#9ca3af')+';">'+$p(totalALiberar)+'</h3>'+
+    '<p>Cupo a liberar</p>'+
+    '<div style="font-size:11px;color:#9ca3af;">'+vendidosALiberar.length+' cheque'+(vendidosALiberar.length!==1?'s':'')+' vencidos</div>'+
+  '</div>';
+  html+='</div>';
+
+  // ── Tabla de operaciones ──
+  html+='<div class="panel">';
+  html+='<div class="panel-hdr"><h4>📋 Detalle de operaciones</h4>';
+  html+='<span style="font-size:12px;color:#9ca3af;">historial completo · más reciente primero</span></div>';
+
+  if(!OPERACIONES_VENTA.length){
+    html+='<p style="color:#9ca3af;text-align:center;padding:24px;">Sin operaciones registradas</p>';
+  } else {
+    html+='<div class="tbl"><table><thead><tr>'+
+      '<th>Banco</th><th>Fecha</th><th style="text-align:center;">Cheques</th>'+
+      '<th style="text-align:right;">Monto bruto</th>'+
+      '<th style="text-align:right;">Comisión banco</th>'+
+      '<th style="text-align:center;">%</th>'+
+      '<th style="text-align:right;">Neto recibido</th>'+
+      '<th>Caja</th>'+
+      '<th style="text-align:center;">Cupo</th>'+
+      '<th></th>'+
+    '</tr></thead><tbody>';
+
+    OPERACIONES_VENTA.forEach(function(op){
+      var chOp=CHEQUES_CARTERA.filter(function(c){return c.venta_id===op.id;});
+      var aLiberar=chOp.filter(function(c){return !c.cupo_liberado&&c.fecha_cobro&&c.fecha_cobro<hoy;});
+      var pct=op.descuento!=null&&Number(op.monto_bruto)>0
+        ?(Number(op.descuento)/Number(op.monto_bruto)*100).toFixed(2)
+        :null;
+
+      html+='<tr>'+
+        '<td style="font-weight:700;">'+op.banco+'</td>'+
+        '<td style="font-size:12px;white-space:nowrap;">'+fmtF(op.fecha_venta)+'</td>'+
+        '<td style="text-align:center;">'+
+          '<span style="font-weight:700;color:#7c3aed;">'+chOp.length+'</span>'+
+          (op.nota?'<div style="font-size:10px;color:#9ca3af;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+op.nota+'">'+op.nota+'</div>':'')+
+        '</td>'+
+        '<td style="text-align:right;font-weight:600;">'+$p(Number(op.monto_bruto||0))+'</td>'+
+        '<td style="text-align:right;">'+
+          (op.descuento!=null
+            ?'<span style="color:#dc2626;font-weight:700;">'+$p(Number(op.descuento))+'</span>'
+            :'<button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa;" onclick="openVentaCostoModal('+op.id+')">+ Registrar</button>')+
+        '</td>'+
+        '<td style="text-align:center;">'+
+          (pct!=null
+            ?'<span class="badge" style="background:#fee2e2;color:#dc2626;">'+pct+'%</span>'
+            :'<span style="color:#9ca3af;font-size:11px;">—</span>')+
+        '</td>'+
+        '<td style="text-align:right;font-weight:700;color:#16a34a;">'+
+          (op.monto_neto!=null?$p(Number(op.monto_neto)):'<span style="color:#9ca3af;font-size:11px;">—</span>')+
+        '</td>'+
+        '<td style="font-size:12px;">'+
+          (op.caja_destino
+            ?'<span style="display:flex;align-items:center;gap:4px;">'+
+              (op.mov_id?'<span style="color:#16a34a;font-size:10px;">✓</span>':'')+
+              '<span style="color:'+(CAJA_COLORES[op.caja_destino]||'#374151')+';font-weight:600;">'+op.caja_destino+'</span>'+
+            '</span>'
+            :'<span style="color:#9ca3af;">—</span>')+
+        '</td>'+
+        '<td style="text-align:center;">'+
+          (aLiberar.length
+            ?'<div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center;">'+
+              aLiberar.map(function(c){
+                return '<button class="btn btn-sm" onclick="liberarCupo('+c.id+')" style="background:#fef3c7;color:#92400e;border-color:#fbbf24;white-space:nowrap;" title="cobro: '+(c.fecha_cobro||'—')+'">🔓 '+(c.emisor||'#'+c.id)+'</button>';
+              }).join('')+
+            '</div>'
+            :'<span style="color:#9ca3af;font-size:11px;">—</span>')+
+        '</td>'+
+        '<td>'+
+          (op.descuento!=null
+            ?'<button class="btn btn-sm" onclick="openVentaCostoModal('+op.id+')" style="background:#f9fafb;color:#6b7280;border-color:#e5e7eb;">✏️</button>'
+            :'')+
+        '</td>'+
+      '</tr>';
+    });
+
+    // Fila de totales
+    html+='<tr style="border-top:2px solid #e5e7eb;background:#f9fafb;font-weight:700;">'+
+      '<td colspan="3" style="color:#374151;">TOTAL</td>'+
+      '<td style="text-align:right;color:#0369a1;">'+$p(totalBruto)+'</td>'+
+      '<td style="text-align:right;color:#dc2626;">'+$p(totalComisiones)+'</td>'+
+      '<td style="text-align:center;font-size:11px;color:#dc2626;">'+(pctMedio>0?pctMedio.toFixed(2)+'%':'—')+'</td>'+
+      '<td style="text-align:right;color:#16a34a;">'+$p(totalNeto)+'</td>'+
+      '<td colspan="3"></td>'+
+    '</tr>';
+
+    html+='</tbody></table></div>';
+  }
+  html+='</div>';
+
+  cont.innerHTML=html;
 }
 
 function openVentaCostoModal(ventaId){
@@ -6575,11 +6696,16 @@ function openVentaCostoModal(ventaId){
   if(!op)return;
   var chequesOp=CHEQUES_CARTERA.filter(function(c){return c.venta_id===ventaId;});
   var info=document.getElementById('mvc-info');
-  info.innerHTML='<strong>'+op.banco+'</strong> · '+op.fecha_venta+
+  info.innerHTML='<strong>'+op.banco+'</strong> · '+fmtF(op.fecha_venta)+
     ' · <strong>'+chequesOp.length+' cheque'+(chequesOp.length!==1?'s':'')+'</strong>'+
-    ' · Bruto: <strong>'+$p(Number(op.monto_bruto||0))+'</strong>';
+    ' · Bruto: <strong>'+$p(Number(op.monto_bruto||0))+'</strong>'+
+    (op.mov_id?'<span class="badge b-green" style="margin-left:8px;">✓ Movimiento ya generado</span>':'');
   document.getElementById('mvc-descuento').value=op.descuento||'';
   document.getElementById('mvc-nota').value=op.nota||'';
+  var sel=document.getElementById('mvc-caja-destino');
+  sel.value=op.caja_destino||'BANCO SRL';
+  // Si ya tiene movimiento generado, deshabilitar el selector de caja
+  sel.disabled=!!op.mov_id;
   mvcActualizar();
   openM('m-venta-costo');
 }
@@ -6599,14 +6725,34 @@ async function saveVentaCosto(){
   if(!op)return;
   var neto=Number(op.monto_bruto||0)-desc;
   var nota=document.getElementById('mvc-nota').value||null;
+  var cajaDestino=document.getElementById('mvc-caja-destino').value;
+
+  // Generar movimiento ingreso si no existe todavía
+  var movId=op.mov_id||null;
+  if(!movId){
+    var fecha=op.fecha_venta;
+    var d=new Date(fecha+'T12:00:00');
+    var movData={
+      caja:cajaDestino, fecha:fecha,
+      tipo:'ingreso', concepto:'CHEQUES/TRANSFERENCIAS',
+      detalle:'Neto venta cheques al '+op.banco,
+      ingreso:neto, egreso:0,
+      anio:d.getFullYear(), mes:MESES_ARR[d.getMonth()], sem:0
+    };
+    var {data:movRes,error:movErr}=await sb.from('movimientos').insert(movData).select('id').single();
+    if(movErr){toast('Error creando movimiento: '+movErr.message,'err');return;}
+    movId=movRes.id;
+  }
+
   var {error}=await sb.from('operaciones_venta_cheques')
-    .update({descuento:desc,monto_neto:neto,nota:nota||op.nota,updated_at:new Date().toISOString()})
+    .update({descuento:desc,monto_neto:neto,caja_destino:cajaDestino,mov_id:movId,nota:nota||op.nota,updated_at:new Date().toISOString()})
     .eq('id',editVentaCostoId);
   if(error){toast('Error: '+error.message,'err');return;}
-  toast('Costo registrado — Neto: '+$p(neto));
+  toast('Costo registrado — Neto '+$p(neto)+' acreditado en '+cajaDestino);
   closeM('m-venta-costo');
-  await loadOperacionesVenta();
+  await Promise.all([loadOperacionesVenta(),loadMovs()]);
   if(document.getElementById('chq-tab-resumen').style.display!=='none')renderChqResumen();
+  if(document.getElementById('chq-tab-operaciones').style.display!=='none')renderChqOperaciones();
 }
 
 async function liberarCupo(id){
@@ -6617,6 +6763,7 @@ async function liberarCupo(id){
   await loadChequesCartera();
   renderChqCartera();
   if(document.getElementById('chq-tab-resumen').style.display!=='none')renderChqResumen();
+  if(document.getElementById('chq-tab-operaciones').style.display!=='none')renderChqOperaciones();
 }
 
 // ── CHEQUES / ECHEQ (legacy, mantenido para compatibilidad) ──
