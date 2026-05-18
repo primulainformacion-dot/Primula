@@ -4861,7 +4861,6 @@ function renderPanelGeneral(){
   var efectivo=saldoCaja('EFECTIVO ADMINISTRACIÓN')+saldoCaja('LOCAL LLAVALLOL')+saldoCaja('LOCAL MONTE GRANDE');
   var bancos=saldoCaja('BANCO SRL')+saldoCaja('BANCO POLY');
   var mp=saldoCaja('MERCADO PAGO');
-  var echeqNet=saldoCaja('ECHEQ/CHEQUE');
   var acobrar=VENTAS.filter(function(v){return v.estado!=='cobrado';}).reduce(function(s,v){return s+Number(v.saldo);},0);
   var stockMay=calcStockValue(null,'mayorista');
   var stockLL=calcStockValue('llavallol','minorista');
@@ -4869,20 +4868,21 @@ function renderPanelGeneral(){
   var uMay=calcStockUnidades(null);
   var uLL=calcStockUnidades('llavallol');
   var uMG=calcStockUnidades('montegrande');
-  var echeqActivo=Math.max(echeqNet,0);
-  var echeqPasivo=Math.max(-echeqNet,0);
+  // Cheques en cartera: valor real desde CHEQUES_CARTERA, no desde movimientos
+  var chqCartDisp=CHEQUES_CARTERA.filter(function(c){return c.estado==='en_cartera'&&saldoCheque(c.id)>0;});
+  var chqCartTotal=chqCartDisp.reduce(function(s,c){return s+saldoCheque(c.id);},0);
+  var echeqPasivo=0;
   // Total usa stock a precio minorista (valor de realización retail)
   var stockTotal=calcStockValue(null,'minorista');
-  var totalActivos=efectivo+bancos+mp+echeqActivo+acobrar+stockTotal;
+  var totalActivos=efectivo+bancos+mp+chqCartTotal+acobrar+stockTotal;
   var el=function(id){return document.getElementById(id);};
   if(!el('pg-efectivo'))return;
   el('pg-efectivo').textContent=$p(efectivo);
   el('pg-bancos').textContent=$p(bancos);
   el('pg-mp').textContent=$p(mp);
   if(el('pg-saldo-liquido'))el('pg-saldo-liquido').textContent=$p(efectivo+bancos+mp);
-  el('pg-echeq-act').textContent=$p(echeqActivo);
-  var chqDisp=CHEQUES_CARTERA.filter(function(c){return c.estado==='en_cartera'&&saldoCheque(c.id)>0;});
-  if(el('pg-chq-cartera-count'))el('pg-chq-cartera-count').textContent=chqDisp.length+' cheque'+(chqDisp.length!==1?'s':'')+' disponible'+(chqDisp.length!==1?'s':'')+' · '+$p(chqDisp.reduce(function(s,c){return s+saldoCheque(c.id);},0));
+  el('pg-echeq-act').textContent=$p(chqCartTotal);
+  if(el('pg-chq-cartera-count'))el('pg-chq-cartera-count').textContent=chqCartDisp.length+' cheque'+(chqCartDisp.length!==1?'s':'')+' disponible'+(chqCartDisp.length!==1?'s':'');
   el('pg-acobrar').textContent=$p(acobrar);
   if(el('pg-stock-may'))el('pg-stock-may').textContent=$p(stockMay);
   if(el('pg-stock-may-u'))el('pg-stock-may-u').textContent=uMay.toLocaleString('es-AR')+' u · precio mayorista';
