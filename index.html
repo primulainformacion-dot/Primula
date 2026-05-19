@@ -5019,7 +5019,7 @@ function renderFin(){
   tb.innerHTML=list.map(function(m){
     var tipoBadge=m.tipo==='ingreso'?'b-green':m.tipo==='transferencia'?'b-purple':'b-red';
     return '<tr>'+
-      '<td>'+m.fecha+'</td>'+
+      '<td style="white-space:nowrap;">'+fmtF(m.fecha)+'</td>'+
       '<td><span style="font-size:11px;font-weight:700;color:'+(CAJA_COLORES[m.caja]||'#6b7280')+';">'+m.caja+'</span></td>'+
       '<td><span class="badge '+tipoBadge+'">'+m.tipo+'</span></td>'+
       '<td>'+(m.concepto||'—')+'</td>'+
