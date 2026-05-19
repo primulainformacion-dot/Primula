@@ -1049,7 +1049,12 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               </div>
             </div>
             <!-- Botones -->
-            <button class="btn btn-gray" style="width:100%;font-size:13px;margin-bottom:6px;" onclick="posCambioToggle()">🔢 Calcular cambio</button>
+            <button class="btn btn-gray" id="pos-btn-cambio" style="width:100%;font-size:13px;margin-bottom:6px;" onclick="posCambioToggle()">🔢 Calcular cambio</button>
+            <div id="pos-dto-efectivo-box" style="display:none;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin-bottom:6px;text-align:center;">
+              <div style="font-size:10px;font-weight:800;color:#166534;letter-spacing:.5px;margin-bottom:2px;">💵 PRECIO EFECTIVO — 20% DTO.</div>
+              <div id="pos-dto-efectivo-precio" style="font-size:26px;font-weight:800;color:#16a34a;">$0</div>
+              <div id="pos-dto-efectivo-ahorro" style="font-size:11px;color:#4b7c59;margin-top:2px;"></div>
+            </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
               <button class="btn" style="background:#16a34a;border-color:#15803d;font-size:14px;padding:12px;" onclick="posCobrar(false)">💳 Cobrar</button>
               <button class="btn" style="background:#6c7ae0;border-color:#4f46e5;font-size:14px;padding:12px;" onclick="posCobrar(true)">🧾 Facturar</button>
@@ -8386,9 +8391,18 @@ function posChangeCant(idx,delta){
 function posRenderTicket(){
   var el=document.getElementById('pos-items');
   if(!el)return;
+  var _esLocal=currentLocal==='llavallol'||currentLocal==='montegrande';
+  var _btnCambio=document.getElementById('pos-btn-cambio');
+  var _dtoBox=document.getElementById('pos-dto-efectivo-box');
+  if(_btnCambio)_btnCambio.style.display='none';
+  if(_dtoBox)_dtoBox.style.display=_esLocal?'':'none';
   if(!posItems.length){
     el.innerHTML='<div style="text-align:center;padding:30px 0;color:#9ca3af;font-size:13px;">Ticket vacío<br>Seleccioná productos →</div>';
     document.getElementById('pos-total').textContent='$0';
+    if(_esLocal&&_dtoBox){
+      document.getElementById('pos-dto-efectivo-precio').textContent='$0';
+      document.getElementById('pos-dto-efectivo-ahorro').textContent='';
+    }
     return;
   }
   var total=0;
@@ -8410,6 +8424,12 @@ function posRenderTicket(){
     '</div>';
   }).join('');
   document.getElementById('pos-total').textContent=$p(total);
+  if(_esLocal&&_dtoBox){
+    var _dto=Math.round(total*(1-POS_DESCUENTO_EFECTIVO));
+    var _ahorro=total-_dto;
+    document.getElementById('pos-dto-efectivo-precio').textContent=$p(_dto);
+    document.getElementById('pos-dto-efectivo-ahorro').textContent='Ahorrás '+$p(_ahorro)+' pagando en efectivo';
+  }
 }
 
 function posBuscarCliente(){
@@ -9429,7 +9449,10 @@ function mm_onConcepto(){
       var prevMor=selMor.value;
       selMor.innerHTML='<option value="">— Sin vincular —</option>';
       MORATORIAS.filter(function(m){return m.estado!=='finalizada';}).forEach(function(m){
-        var o=document.createElement('option');o.value=m.id;o.textContent=m.nombre+(m.acreedor?' ('+m.acreedor+')':'');selMor.appendChild(o);
+        var o=document.createElement('option');o.value=m.id;
+        var cuotaInfo=' – cuota '+(m.cuotas_pagadas+1)+'/'+m.cuotas_total+' · '+$p(m.monto_cuota);
+        o.textContent=m.nombre+(m.acreedor?' ('+m.acreedor+')':'')+cuotaInfo;
+        selMor.appendChild(o);
       });
       if(prevMor)selMor.value=prevMor;
       mm_onMoratoria();
