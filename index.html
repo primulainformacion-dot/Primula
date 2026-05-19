@@ -2490,28 +2490,36 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
 <!-- Modal: objetivo -->
 <div class="modal-bg" id="m-obj">
-  <div class="modal" style="max-width:420px;">
+  <div class="modal" style="max-width:440px;">
     <h3 id="m-obj-title">Editar objetivo</h3>
     <div class="grid2">
       <div class="field full" id="m-obj-canal-wrap" style="display:none;">
         <label>Nombre del objetivo *</label>
-        <input id="m-obj-canal" placeholder="ej. Exportaciones, Online, Outlet..."/>
+        <input id="m-obj-canal" placeholder="ej. Abrir nuevo local, Renovar showroom..."/>
       </div>
-      <div class="field">
+      <div class="field full" id="m-obj-nota-wrap">
+        <label>Descripción / contexto</label>
+        <textarea id="m-obj-nota" style="min-height:56px;" placeholder="¿En qué consiste este objetivo?"></textarea>
+      </div>
+      <div class="field" id="m-obj-fecha-ini-wrap" style="display:none;">
+        <label>Fecha inicio</label>
+        <input type="date" id="m-obj-fecha-ini"/>
+      </div>
+      <div class="field" id="m-obj-fecha-fin-wrap" style="display:none;">
+        <label>Fecha límite</label>
+        <input type="date" id="m-obj-fecha-fin"/>
+      </div>
+      <div class="field" id="m-obj-meta-pesos-wrap">
         <label>Meta en $ (0 = sin meta $)</label>
         <input type="number" id="m-obj-meta-pesos" placeholder="0" min="0" step="1000"/>
       </div>
-      <div class="field">
+      <div class="field" id="m-obj-meta-unid-wrap">
         <label>Meta en unidades</label>
         <input type="number" id="m-obj-meta-unid" placeholder="0" min="0"/>
       </div>
       <div class="field full" id="m-obj-real-unid-wrap" style="display:none;">
         <label>Unidades producidas real (cargado a mano)</label>
         <input type="number" id="m-obj-real-unid" placeholder="0" min="0"/>
-      </div>
-      <div class="field full">
-        <label>Nota (opcional)</label>
-        <input id="m-obj-nota" placeholder="Descripción, contexto del objetivo..."/>
       </div>
     </div>
     <div class="modal-footer">
@@ -5316,63 +5324,73 @@ function renderObjetivos(){
     '<button class="btn btn-sm" onclick="openObjetivoModal(\'custom\',null,'+anio+','+ms_(mes)+',null)" style="font-size:12px;">+ Agregar</button>'+
   '</div>';
   if(customs.length){
-    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">';
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">';
     customs.forEach(function(o){
-      var logrado=!!o.logrado;
-      var canal=o.canal.replace(/'/g,"\\'");
-      var oc1="openObjetivoModal('custom','"+canal+"',"+o.anio+','+ms_(o.mes)+','+o.id+')';
-      var oc2="toggleObjetivoLogrado('custom','"+canal+"',"+o.anio+','+ms_(o.mes)+','+o.id+')';
       var metas=OBJ_METAS.filter(function(m){return m.objetivo_id===o.id;});
       var mComp=metas.filter(function(m){return m.completada;}).length;
-      var mPct=metas.length?Math.round(mComp/metas.length*100):0;
+      var mTot=metas.length;
+      var mPct=mTot?Math.round(mComp/mTot*100):0;
+      var autoLogrado=mTot>0&&mComp===mTot;
+      var logrado=autoLogrado||!!o.logrado;
       var mClr=mPct>=100?'#16a34a':mPct>=60?'#7c3aed':'#f59e0b';
+      var canal=o.canal.replace(/'/g,"\\'");
+      var oc1="openObjetivoModal('custom','"+canal+"',"+o.anio+','+ms_(o.mes)+','+o.id+')';
 
-      // Metas checklist
-      var metaHtml='';
-      if(metas.length||true){ // always show add input
-        metaHtml+='<div style="margin:10px 0 6px;padding:10px;background:#f9fafb;border-radius:8px;border:1px solid #f3f4f6;">';
-        if(metas.length){
-          metaHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'+
-            '<span style="font-size:10px;color:#9ca3af;font-weight:700;letter-spacing:.4px;text-transform:uppercase;">METAS</span>'+
-            '<span style="font-size:10px;font-weight:800;color:'+mClr+';">'+mComp+'/'+metas.length+'</span>'+
-          '</div>';
-          metaHtml+='<div style="background:#e5e7eb;border-radius:4px;height:4px;margin-bottom:8px;">'+
-            '<div style="height:4px;background:'+mClr+';border-radius:4px;width:'+mPct+'%;transition:width .4s;"></div></div>';
-          metas.forEach(function(m){
-            metaHtml+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'+
-              '<input type="checkbox" '+(m.completada?'checked':'')+' onchange="toggleMeta('+m.id+',this.checked)" '+
-              'style="width:14px;height:14px;cursor:pointer;accent-color:#7c3aed;flex-shrink:0;">'+
-              '<span style="font-size:12px;color:'+(m.completada?'#9ca3af':'#374151')+';flex:1;line-height:1.3;'+(m.completada?'text-decoration:line-through;':'')+'">'+m.texto+'</span>'+
-              '<button onclick="deleteMeta('+m.id+')" style="border:none;background:none;cursor:pointer;color:#d1d5db;font-size:11px;padding:1px 3px;line-height:1;flex-shrink:0;">✕</button>'+
-            '</div>';
-          });
-        }
-        metaHtml+='<div style="display:flex;gap:4px;margin-top:'+(metas.length?'6':'0')+'px;">'+
-          '<input id="nm_'+o.id+'" placeholder="+ Nueva meta..." '+
-          'style="flex:1;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;" '+
-          'onkeydown="if(event.key===\'Enter\')addMeta('+o.id+')">'+
-          '<button class="btn btn-sm btn-gray" onclick="addMeta('+o.id+')" style="padding:4px 10px;font-weight:700;">+</button>'+
+      // Fechas
+      var fechaHtml='';
+      if(o.fecha_inicio||o.fecha_fin){
+        var fI=o.fecha_inicio?o.fecha_inicio.slice(0,10).split('-').reverse().join('/'):'';
+        var fF=o.fecha_fin?o.fecha_fin.slice(0,10).split('-').reverse().join('/'):'';
+        var hoy2=new Date(); var vencido=o.fecha_fin&&new Date(o.fecha_fin)<hoy2&&!logrado;
+        fechaHtml='<div style="display:flex;gap:8px;margin-bottom:8px;font-size:11px;color:'+(vencido?'#dc2626':'#6b7280')+';">'+
+          (fI?'<span>📅 '+fI+'</span>':'')+
+          (fI&&fF?'<span>→</span>':'')+
+          (fF?'<span style="font-weight:'+(vencido?'700':'400')+';">'+(vencido?'⚠️ ':'')+fF+'</span>':'')+
         '</div>';
-        metaHtml+='</div>';
       }
 
-      html+='<div style="border:2px solid '+(logrado?'#16a34a':'#e5e7eb')+';border-radius:14px;padding:14px 16px;background:'+(logrado?'#f0fdf4':'#fff')+';display:flex;flex-direction:column;">'+
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'+
-          '<span style="font-size:18px;">🎯</span>'+
-          '<div style="font-size:12px;font-weight:800;color:'+(logrado?'#166534':'#374151')+';flex:1;line-height:1.2;">'+o.canal+'</div>'+
-          (logrado?'<span style="font-size:9px;font-weight:800;color:#16a34a;background:#dcfce7;padding:2px 7px;border-radius:20px;white-space:nowrap;">✓ LOGRADO</span>':'')+
+      // Checklist
+      var listHtml='';
+      metas.forEach(function(m){
+        listHtml+='<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">'+
+          '<input type="checkbox" '+(m.completada?'checked':'')+' onchange="toggleMeta('+m.id+',this.checked)" '+
+          'style="width:16px;height:16px;cursor:pointer;accent-color:#7c3aed;flex-shrink:0;margin-top:1px;">'+
+          '<span style="font-size:13px;color:'+(m.completada?'#9ca3af':'#374151')+';flex:1;line-height:1.4;'+(m.completada?'text-decoration:line-through;':'')+'">'+m.texto+'</span>'+
+          '<button onclick="deleteMeta('+m.id+')" style="border:none;background:none;cursor:pointer;color:#d1d5db;font-size:12px;padding:0 2px;line-height:1;flex-shrink:0;margin-top:2px;">✕</button>'+
+        '</div>';
+      });
+
+      html+='<div style="border:2px solid '+(logrado?'#16a34a':'#e5e7eb')+';border-radius:14px;padding:16px;background:'+(logrado?'#f0fdf4':'#fff')+';display:flex;flex-direction:column;gap:0;">'+
+        // Header
+        '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">'+
+          '<span style="font-size:20px;flex-shrink:0;">🎯</span>'+
+          '<div style="flex:1;">'+
+            '<div style="font-size:14px;font-weight:800;color:'+(logrado?'#166534':'#1f2937')+';line-height:1.3;">'+o.canal+'</div>'+
+            (o.nota?'<div style="font-size:12px;color:#9ca3af;margin-top:2px;line-height:1.4;">'+o.nota+'</div>':'')+
+          '</div>'+
+          '<button class="btn btn-gray btn-sm" onclick="'+oc1+'" style="padding:3px 7px;flex-shrink:0;">✏️</button>'+
         '</div>'+
-        (Number(o.meta_pesos||0)>0?'<div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Meta $: <strong>'+$p(Number(o.meta_pesos))+'</strong></div>':'')+
-        (Number(o.meta_unidades||0)>0?'<div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Meta unidades: <strong>'+Number(o.meta_unidades)+'</strong></div>':'')+
-        (o.nota?'<div style="font-size:11px;color:#9ca3af;font-style:italic;margin-bottom:2px;">'+o.nota+'</div>':'')+
-        metaHtml+
-        '<div style="display:flex;align-items:center;gap:6px;margin-top:auto;padding-top:6px;">'+
-          '<button class="btn btn-gray btn-sm" onclick="'+oc1+'" style="padding:4px 8px;">✏️</button>'+
-          '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:5px 10px;border-radius:8px;border:1px solid '+(logrado?'#bbf7d0':'#e5e7eb')+';background:'+(logrado?'#dcfce7':'#f9fafb')+';flex:1;justify-content:center;">'+
-            '<input type="checkbox" '+(logrado?'checked':'')+' onchange="'+oc2+'" style="width:14px;height:14px;cursor:pointer;accent-color:#16a34a;flex-shrink:0;">'+
-            '<span style="font-size:11px;font-weight:700;color:'+(logrado?'#166534':'#6b7280')+';white-space:nowrap;">'+(logrado?'✓ Logrado':'Logrado')+'</span>'+
-          '</label>'+
+        fechaHtml+
+        // Progreso
+        (mTot>0?
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'+
+            '<span style="font-size:10px;color:#9ca3af;font-weight:700;letter-spacing:.4px;text-transform:uppercase;">TAREAS</span>'+
+            '<span style="font-size:11px;font-weight:800;color:'+mClr+';">'+mComp+'/'+mTot+(mPct>=100?' ✓':'')+'</span>'+
+          '</div>'+
+          '<div style="background:#e5e7eb;border-radius:4px;height:5px;margin-bottom:10px;">'+
+            '<div style="height:5px;background:'+mClr+';border-radius:4px;width:'+mPct+'%;transition:width .4s;"></div></div>'
+        :'')+
+        // Checklist
+        (listHtml?'<div style="margin-bottom:8px;">'+listHtml+'</div>':'')+
+        // Input nueva tarea
+        '<div style="display:flex;gap:4px;margin-top:4px;">'+
+          '<input id="nm_'+o.id+'" placeholder="+ Agregar tarea..." '+
+          'style="flex:1;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;padding:5px 8px;color:#374151;" '+
+          'onkeydown="if(event.key===\'Enter\')addMeta('+o.id+')">'+
+          '<button class="btn btn-sm btn-gray" onclick="addMeta('+o.id+')" style="padding:5px 10px;font-weight:700;font-size:14px;">+</button>'+
         '</div>'+
+        // Badge completado (auto cuando todo listo)
+        (logrado?'<div style="margin-top:10px;padding:6px;background:#dcfce7;border-radius:8px;text-align:center;font-size:11px;font-weight:800;color:#166534;">✓ OBJETIVO COMPLETADO</div>':'')+
       '</div>';
     });
     html+='</div>';
@@ -5390,14 +5408,25 @@ function openObjetivoModal(cat,canal,anio,mes,id){
   editObjCat=cat;editObjCanal=canal||null;editObjAnio=anio;editObjMes=mes||null;editObjId=id||null;
   var obj=id?OBJETIVOS.find(function(o){return o.id===id;}):null;
   var isCustom=cat==='custom';
-  document.getElementById('m-obj-title').textContent=isCustom?(id?'Editar objetivo personalizado':'Nuevo objetivo personalizado'):'Editar objetivo — '+canal;
+  var isProd=cat==='produccion';
+  document.getElementById('m-obj-title').textContent=isCustom?(id?'Editar objetivo':'Nuevo objetivo'):'Editar objetivo — '+canal;
+  // Nombre (solo custom)
   document.getElementById('m-obj-canal-wrap').style.display=isCustom?'block':'none';
   document.getElementById('m-obj-canal').value=obj?obj.canal:(canal||'');
+  // Fechas (solo custom)
+  document.getElementById('m-obj-fecha-ini-wrap').style.display=isCustom?'block':'none';
+  document.getElementById('m-obj-fecha-fin-wrap').style.display=isCustom?'block':'none';
+  document.getElementById('m-obj-fecha-ini').value=obj&&obj.fecha_inicio?obj.fecha_inicio:'';
+  document.getElementById('m-obj-fecha-fin').value=obj&&obj.fecha_fin?obj.fecha_fin:'';
+  // Números (ocultos en custom)
+  document.getElementById('m-obj-meta-pesos-wrap').style.display=isCustom?'none':'block';
+  document.getElementById('m-obj-meta-unid-wrap').style.display=isCustom?'none':'block';
   document.getElementById('m-obj-meta-pesos').value=obj&&obj.meta_pesos?obj.meta_pesos:'';
   document.getElementById('m-obj-meta-unid').value=obj&&obj.meta_unidades?obj.meta_unidades:'';
-  var showProd=cat==='produccion';
-  document.getElementById('m-obj-real-unid-wrap').style.display=showProd?'block':'none';
-  if(showProd)document.getElementById('m-obj-real-unid').value=obj&&obj.real_unidades_manual?obj.real_unidades_manual:'';
+  // Producción manual
+  document.getElementById('m-obj-real-unid-wrap').style.display=isProd?'block':'none';
+  if(isProd)document.getElementById('m-obj-real-unid').value=obj&&obj.real_unidades_manual?obj.real_unidades_manual:'';
+  // Descripción
   document.getElementById('m-obj-nota').value=obj&&obj.nota?obj.nota:'';
   document.getElementById('m-obj-del').style.display=(id&&isCustom)?'':'none';
   openM('m-obj');
@@ -5406,12 +5435,15 @@ function openObjetivoModal(cat,canal,anio,mes,id){
 async function saveObjetivo(){
   var canal=editObjCanal||document.getElementById('m-obj-canal').value.trim();
   if(!canal){toast('Ingresá un nombre para el objetivo','err');return;}
+  var isCustom=editObjCat==='custom';
   var d={
     anio:editObjAnio,mes:editObjMes||null,
     categoria:editObjCat,canal:canal,
-    meta_pesos:parseFloat(document.getElementById('m-obj-meta-pesos').value)||0,
-    meta_unidades:parseInt(document.getElementById('m-obj-meta-unid').value)||0,
+    meta_pesos:isCustom?0:(parseFloat(document.getElementById('m-obj-meta-pesos').value)||0),
+    meta_unidades:isCustom?0:(parseInt(document.getElementById('m-obj-meta-unid').value)||0),
     real_unidades_manual:editObjCat==='produccion'?(parseInt(document.getElementById('m-obj-real-unid').value)||0):null,
+    fecha_inicio:isCustom?(document.getElementById('m-obj-fecha-ini').value||null):null,
+    fecha_fin:isCustom?(document.getElementById('m-obj-fecha-fin').value||null):null,
     nota:document.getElementById('m-obj-nota').value||null,
     updated_at:new Date().toISOString()
   };
