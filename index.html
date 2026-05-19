@@ -255,6 +255,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
   <!-- ════════════ INICIO ════════════ -->
   <div class="section active" id="sec-inicio">
+    <div id="pan-alertas" style="margin-bottom:16px;"></div>
     <div class="stats">
       <div class="stat"><div class="stat-icon" style="background:#ede9fe;">💰</div><h3 id="ds-hoy">$0</h3><p>Ventas hoy (ambos locales)</p></div>
       <div class="stat"><div class="stat-icon" style="background:#fee2e2;">⚠️</div><h3 id="ds-deuda">$0</h3><p>Total por cobrar</p></div>
@@ -275,18 +276,32 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
   <!-- ════════════ CLIENTES ════════════ -->
   <div class="section" id="sec-clientes">
-    <div class="panel">
-      <div class="panel-hdr">
-        <div class="search-row">
-          <input id="cli-q" placeholder="Buscar cliente..." oninput="renderClientes()"/>
-          <select id="cli-tipo" onchange="renderClientes()"><option value="">Todos</option><option value="mayorista">Mayorista</option><option value="minorista">Minorista</option></select>
+    <div class="tabs" id="cli-tabs" style="margin-bottom:16px;">
+      <div class="tab active" onclick="setCliTab('lista',this)">👥 Clientes</div>
+      <div class="tab" onclick="setCliTab('cc',this)">📒 CC Mayoristas</div>
+    </div>
+
+    <!-- Tab: Lista -->
+    <div id="cli-tab-lista">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="search-row">
+            <input id="cli-q" placeholder="Buscar cliente..." oninput="renderClientes()"/>
+            <select id="cli-tipo" onchange="renderClientes()"><option value="">Todos</option><option value="mayorista">Mayorista</option><option value="minorista">Minorista</option></select>
+          </div>
+          <button class="btn" onclick="openCli()">+ Nuevo</button>
         </div>
-        <button class="btn" onclick="openCli()">+ Nuevo</button>
+        <div class="tbl"><table>
+          <thead id="cli-thead"></thead>
+          <tbody id="cli-tbody"></tbody>
+        </table></div>
       </div>
-      <div class="tbl"><table>
-        <thead id="cli-thead"></thead>
-        <tbody id="cli-tbody"></tbody>
-      </table></div>
+    </div>
+
+    <!-- Tab: CC Mayoristas -->
+    <div id="cli-tab-cc" style="display:none;">
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;" id="cli-cc-stats"></div>
+      <div id="cli-cc-cont"></div>
     </div>
   </div>
 
@@ -768,9 +783,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </select>
       <span style="font-size:12px;color:#9ca3af;">← período activo del panel</span>
     </div>
-
-    <!-- Panel de alertas -->
-    <div id="pan-alertas" style="margin-bottom:16px;"></div>
 
     <!-- Tabs -->
     <div class="tabs" id="pan-tabs">
@@ -1750,19 +1762,34 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <h3>Registrar cobro</h3>
     <input type="hidden" id="mcob-vid"/>
     <input type="hidden" id="mcob-cid"/>
+    <input type="hidden" id="mcob-saldo-num"/>
     <div style="background:#f9fafb;border-radius:10px;padding:14px;margin-bottom:16px;">
       <div style="font-size:12px;color:#6b7280;">Saldo pendiente</div>
       <div style="font-size:26px;font-weight:800;color:#dc2626;" id="mcob-saldo">$0</div>
     </div>
     <div class="grid2">
       <div class="field"><label>Monto *</label><input type="number" id="mcob-monto" min="0" placeholder="0"/></div>
-      <div class="field"><label>Medio</label>
-        <select id="mcob-medio"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="tarjeta">Tarjeta</option><option value="qr">QR / Mercado Pago</option><option value="cheque">Cheque</option></select>
+      <div class="field"><label>Medio de pago</label>
+        <select id="mcob-medio" onchange="mcob_onMedio()">
+          <option value="efectivo">Efectivo</option>
+          <option value="transferencia">Transferencia bancaria</option>
+          <option value="tarjeta">Tarjeta</option>
+          <option value="qr">QR / Mercado Pago</option>
+          <option value="cheque">Cheque</option>
+        </select>
+      </div>
+      <div class="field"><label>Caja destino *</label>
+        <select id="mcob-caja">
+          <option>EFECTIVO ADMINISTRACIÓN</option>
+          <option>BANCO SRL</option><option>BANCO POLY</option>
+          <option>MERCADO PAGO</option>
+          <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
+        </select>
       </div>
       <div class="field"><label>Fecha</label><input type="date" id="mcob-fecha"/></div>
-      <div class="field"><label>Nota</label><input id="mcob-nota" placeholder="Observaciones..."/></div>
+      <div class="field full"><label>Nota</label><input id="mcob-nota" placeholder="N° transferencia, referencia..."/></div>
     </div>
-    <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-cobro')">Cancelar</button><button class="btn btn-green" onclick="saveCobro()">Registrar</button></div>
+    <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-cobro')">Cancelar</button><button class="btn btn-green" onclick="saveCobro()">Registrar cobro</button></div>
   </div>
 </div>
 
@@ -3116,7 +3143,8 @@ function nav(sec, el){
   if(el) el.classList.add('active');
   document.getElementById('pg-title').textContent=el?el.textContent.trim():sec;
   document.getElementById('pg-sub').textContent='';
-  if(sec==='panel'){renderAlertas();renderPanelGeneral();}
+  if(sec==='inicio'){renderAlertas();}
+  if(sec==='panel'){renderPanelGeneral();}
   if(sec==='finanzas'){renderFinCajas();renderFin();}
   if(sec==='cheques'){renderChqResumen();renderChqCartera();renderChqPropios();}
   if(sec==='productos'){renderResumenColegios();}
@@ -3455,6 +3483,96 @@ function renderDash(){
 // ════════════════════════════════════
 // CLIENTES
 // ════════════════════════════════════
+function setCliTab(tab,el){
+  document.getElementById('cli-tab-lista').style.display=tab==='lista'?'block':'none';
+  document.getElementById('cli-tab-cc').style.display=tab==='cc'?'block':'none';
+  document.querySelectorAll('#cli-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  if(el)el.classList.add('active');
+  if(tab==='cc')renderCCMayoristas();
+}
+
+function renderCCMayoristas(){
+  var statsEl=document.getElementById('cli-cc-stats');
+  var cont=document.getElementById('cli-cc-cont');
+  if(!statsEl||!cont)return;
+
+  var pendientes=VENTAS.filter(function(v){return v.tipo==='mayorista'&&v.estado!=='cobrado'&&Number(v.saldo)>0;});
+  var totalDeuda=pendientes.reduce(function(s,v){return s+Number(v.saldo);},0);
+  var clisConDeuda=new Set(pendientes.map(function(v){return v.cliente_id;})).size;
+  var ventasPend=pendientes.length;
+
+  statsEl.innerHTML=
+    '<div style="background:#fee2e2;border-radius:12px;padding:14px 20px;flex:1;min-width:140px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#991b1b;letter-spacing:.5px;">DEUDA TOTAL</div>'+
+      '<div style="font-size:24px;font-weight:900;color:#991b1b;margin-top:4px;">'+$p(totalDeuda)+'</div>'+
+      '<div style="font-size:11px;color:#b91c1c;margin-top:2px;">'+clisConDeuda+' cliente'+(clisConDeuda!==1?'s':'')+' con saldo</div></div>'+
+    '<div style="background:#fef3c7;border-radius:12px;padding:14px 20px;flex:1;min-width:140px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#92400e;letter-spacing:.5px;">VENTAS PENDIENTES</div>'+
+      '<div style="font-size:24px;font-weight:900;color:#92400e;margin-top:4px;">'+ventasPend+'</div>'+
+      '<div style="font-size:11px;color:#b45309;margin-top:2px;">sin cobrar completamente</div></div>'+
+    '<div style="background:#f0fdf4;border-radius:12px;padding:14px 20px;flex:1;min-width:140px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#166534;letter-spacing:.5px;">COBRADO (TOTAL HISTÓRICO)</div>'+
+      '<div style="font-size:24px;font-weight:900;color:#166534;margin-top:4px;">'+$p(VENTAS.filter(function(v){return v.tipo==='mayorista';}).reduce(function(s,v){return s+Number(v.total)-Number(v.saldo);},0))+'</div></div>';
+
+  // Agrupar por cliente
+  var mayClientes=CLIENTES.filter(function(c){return c.tipo==='mayorista';});
+  // Ordenar: primero los que tienen deuda (mayor deuda arriba), luego sin deuda
+  mayClientes=mayClientes.slice().sort(function(a,b){
+    var da=VENTAS.filter(function(v){return v.cliente_id===a.id&&v.estado!=='cobrado';}).reduce(function(s,v){return s+Number(v.saldo);},0);
+    var db=VENTAS.filter(function(v){return v.cliente_id===b.id&&v.estado!=='cobrado';}).reduce(function(s,v){return s+Number(v.saldo);},0);
+    return db-da;
+  });
+
+  if(!mayClientes.length){
+    cont.innerHTML='<div class="empty"><p>No hay clientes mayoristas registrados</p></div>';
+    return;
+  }
+
+  cont.innerHTML=mayClientes.map(function(c){
+    var ventasCli=VENTAS.filter(function(v){return v.cliente_id===c.id;}).sort(function(a,b){return a.fecha<b.fecha?1:-1;});
+    var pendCli=ventasCli.filter(function(v){return v.estado!=='cobrado'&&Number(v.saldo)>0;});
+    var deudaCli=pendCli.reduce(function(s,v){return s+Number(v.saldo);},0);
+    var cobradoTotal=ventasCli.reduce(function(s,v){return s+Number(v.total)-Number(v.saldo);},0);
+    var hayDeuda=deudaCli>0;
+
+    var ventasRows=ventasCli.slice(0,8).map(function(v){
+      var estadoBadge=v.estado==='cobrado'?'b-green':v.estado==='parcial'?'b-blue':'b-yellow';
+      return '<tr>'+
+        '<td style="font-size:12px;color:#6b7280;">'+fmtF(v.fecha)+'</td>'+
+        '<td style="font-size:12px;">'+(v.nota||'—')+'</td>'+
+        '<td style="text-align:right;font-weight:700;">'+$p(Number(v.total))+'</td>'+
+        '<td style="text-align:right;font-weight:800;color:'+(Number(v.saldo)>0?'#dc2626':'#16a34a')+';">'+$p(Number(v.saldo))+'</td>'+
+        '<td><span class="badge '+estadoBadge+'">'+v.estado+'</span></td>'+
+        '<td style="white-space:nowrap;">'+
+          (v.estado!=='cobrado'?'<button class="btn btn-sm btn-green" onclick="openCobro('+v.id+','+c.id+','+v.saldo+')">💰 Cobrar</button> ':'')+
+          '<button class="btn btn-sm btn-gray" onclick="verVenta('+v.id+',\'cuenta\')">Ver</button>'+
+        '</td>'+
+      '</tr>';
+    }).join('');
+
+    return '<div style="margin-bottom:14px;border:2px solid '+(hayDeuda?'#fecaca':'#e5e7eb')+';border-radius:12px;overflow:hidden;">'+
+      '<div style="background:'+(hayDeuda?'#fff1f2':'#f9fafb')+';padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid '+(hayDeuda?'#fecaca':'#e5e7eb')+';">'+
+        '<div>'+
+          '<span style="font-weight:800;font-size:15px;color:#1a1f36;">'+esc(c.nombre)+'</span>'+
+          (c.telefono?'<span style="margin-left:10px;font-size:12px;color:#9ca3af;">📞 '+c.telefono+'</span>':'')+
+          (hayDeuda?'<span style="margin-left:14px;font-size:13px;font-weight:800;color:#dc2626;">Debe: '+$p(deudaCli)+'</span>':
+           '<span style="margin-left:14px;font-size:12px;color:#16a34a;font-weight:700;">✅ Sin deuda</span>')+
+        '</div>'+
+        '<div style="display:flex;gap:8px;align-items:center;">'+
+          '<span style="font-size:12px;color:#9ca3af;">Cobrado: '+$p(cobradoTotal)+'</span>'+
+          '<button class="btn btn-sm btn-outline" onclick="verCuenta('+c.id+')">Cuenta completa →</button>'+
+        '</div>'+
+      '</div>'+
+      (ventasCli.length?
+        '<div class="tbl"><table>'+
+          '<thead><tr><th>Fecha</th><th>Nota</th><th style="text-align:right">Total</th><th style="text-align:right">Saldo</th><th>Estado</th><th></th></tr></thead>'+
+          '<tbody>'+ventasRows+'</tbody>'+
+        '</table></div>':
+        '<div style="padding:14px;color:#9ca3af;font-size:13px;">Sin ventas registradas</div>')+
+    '</div>';
+  }).join('');
+}
+
 function renderClientes(){
   var q=(document.getElementById('cli-q').value||'').toLowerCase();
   var tipo=document.getElementById('cli-tipo').value;
@@ -4176,30 +4294,64 @@ async function saveVenta(){
 // ════════════════════════════════════
 // COBRO
 // ════════════════════════════════════
+function mcob_onMedio(){
+  var medio=document.getElementById('mcob-medio').value;
+  var cajaMap={efectivo:'EFECTIVO ADMINISTRACIÓN',transferencia:'BANCO SRL',tarjeta:'EFECTIVO ADMINISTRACIÓN',qr:'MERCADO PAGO',cheque:'EFECTIVO ADMINISTRACIÓN'};
+  document.getElementById('mcob-caja').value=cajaMap[medio]||'EFECTIVO ADMINISTRACIÓN';
+}
+
 function openCobro(vid,cid,saldo){
   document.getElementById('mcob-vid').value=vid;
   document.getElementById('mcob-cid').value=cid||'';
+  document.getElementById('mcob-saldo-num').value=saldo;
   document.getElementById('mcob-saldo').textContent=$p(saldo);
   document.getElementById('mcob-monto').value=saldo;
+  document.getElementById('mcob-medio').value='efectivo';
+  document.getElementById('mcob-caja').value='EFECTIVO ADMINISTRACIÓN';
   document.getElementById('mcob-fecha').value=today();
   document.getElementById('mcob-nota').value='';
   openM('m-cobro');
 }
 async function saveCobro(){
   var monto=parseFloat(document.getElementById('mcob-monto').value)||0;
-  if(!monto){toast('Ingresá un monto','err');return;}
+  var fecha=document.getElementById('mcob-fecha').value;
+  if(!monto||!fecha){toast('Completá monto y fecha','err');return;}
   var vid=parseInt(document.getElementById('mcob-vid').value);
-  var cid=document.getElementById('mcob-cid').value||null;
-  var r=await sb.from('cobros').insert({venta_id:vid,cliente_id:cid,fecha:document.getElementById('mcob-fecha').value,monto,medio:document.getElementById('mcob-medio').value,nota:document.getElementById('mcob-nota').value});
-  if(r.error){toast('Error: '+r.error.message,'err');return;}
-  toast('Cobro registrado');
+  var cid=parseInt(document.getElementById('mcob-cid').value)||null;
+  var medio=document.getElementById('mcob-medio').value;
+  var caja=document.getElementById('mcob-caja').value;
+  var nota=document.getElementById('mcob-nota').value.trim();
+  var saldoAnterior=parseFloat(document.getElementById('mcob-saldo-num').value)||0;
+
+  // 1) Registrar cobro
+  var rCob=await sb.from('cobros').insert({venta_id:vid,cliente_id:cid,fecha,monto,medio,nota:nota||null});
+  if(rCob.error){toast('Error: '+rCob.error.message,'err');return;}
+
+  // 2) Actualizar saldo y estado de la venta
+  var nuevoSaldo=Math.max(saldoAnterior-monto,0);
+  var nuevoEstado=nuevoSaldo===0?'cobrado':(monto>0?'parcial':'pendiente');
+  await sb.from('ventas').update({saldo:nuevoSaldo,estado:nuevoEstado,updated_at:new Date().toISOString()}).eq('id',vid);
+
+  // 3) Crear movimiento de ingreso en la caja seleccionada
+  var venta=VENTAS.find(function(v){return v.id===vid;})||{};
+  var cli=cid?CLIENTES.find(function(c){return c.id===cid;}):null;
+  var dMov={
+    caja,fecha,tipo:'ingreso',concepto:'COBRO CLIENTE',
+    detalle:'Cobro venta #'+vid+(cli?' — '+cli.nombre:''),
+    ingreso:monto,egreso:0,
+    referencia:nota||null,
+    anio:new Date(fecha+'T12:00:00').getFullYear(),
+    mes:MESES_ARR[new Date(fecha+'T12:00:00').getMonth()],sem:0
+  };
+  await sb.from('movimientos').insert(dMov);
+
+  toast('Cobro registrado'+(nuevoEstado==='cobrado'?' — ¡Venta cobrada al 100%!':''));
   closeM('m-cobro');
-  await loadVentas();renderDash();
-  if(document.getElementById('sec-local').classList.contains('active')) renderLocalVentas();
-  if(document.getElementById('sec-cuenta').classList.contains('active')){
-    var cidN=document.getElementById('mcob-cid').value;
-    if(cidN) verCuenta(parseInt(cidN));
-  }
+  await Promise.all([loadVentas(),loadMovs()]);
+  renderDash();renderFin();
+  if(document.getElementById('sec-local').classList.contains('active'))renderLocalVentas();
+  if(document.getElementById('sec-cuenta').classList.contains('active')&&cid)verCuenta(cid);
+  if(document.getElementById('sec-clientes').classList.contains('active'))renderCCMayoristas();
 }
 
 // ════════════════════════════════════
