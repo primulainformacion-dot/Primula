@@ -229,6 +229,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="nav-group">
     <div class="nav-label">Producción</div>
     <div class="nav-item" onclick="nav('pedidos',this)"><span class="ni">📋</span> Pedidos</div>
+    <div class="nav-item" onclick="nav('tizada',this)"><span class="ni">✂️</span> Tizada / Corte</div>
     <div class="nav-item" onclick="nav('costura',this)"><span class="ni">🧵</span> Costura</div>
     <div class="nav-item" onclick="nav('entregas',this)"><span class="ni">📦</span> Entregas</div>
     <div class="nav-item" onclick="nav('materiales',this)"><span class="ni">🎨</span> Materia Prima</div>
@@ -1371,6 +1372,27 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div id="ped-lista"></div>
   </div>
 
+  <!-- ════════════ TIZADA / CORTE ════════════ -->
+  <div class="section" id="sec-tizada">
+    <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
+      <div class="stat"><div class="stat-icon" style="background:#fef3c7;">✂️</div><h3 id="tiz-stat-activas">0</h3><p>Tizadas activas</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#ede9fe;">📋</div><h3 id="tiz-stat-borrador">0</h3><p>En borrador</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#dbeafe;">⚙️</div><h3 id="tiz-stat-proceso">0</h3><p>En proceso</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#d1fae5;">✅</div><h3 id="tiz-stat-completadas">0</h3><p>Completadas</p></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+      <select id="tiz-fil-est" onchange="renderTizadas()" style="min-width:160px;">
+        <option value="">Todos los estados</option>
+        <option value="borrador">Borrador</option>
+        <option value="en_proceso">En proceso</option>
+        <option value="completado">Completado</option>
+      </select>
+      <button class="btn btn-gray btn-sm" onclick="renderTizadas()">↻ Actualizar</button>
+      <button class="btn" style="margin-left:auto;" onclick="openTizadaModal()">+ Nueva tizada</button>
+    </div>
+    <div id="tiz-lista"></div>
+  </div>
+
   <!-- ════════════ COSTURA (órdenes a talleristas) ════════════ -->
   <div class="section" id="sec-costura">
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
@@ -1880,6 +1902,78 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-orden')">Cancelar</button>
       <button class="btn btn-green" onclick="saveOrden()">Guardar orden</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tizada / Corte -->
+<div class="modal-bg" id="m-tizada">
+  <div class="modal" style="max-width:900px;width:98%;">
+    <h3 id="m-tizada-title">Nueva tizada</h3>
+    <input type="hidden" id="mtiz-id"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div class="field"><label>Nº Tizada *</label>
+        <input type="text" id="mtiz-nro" placeholder="T-001"/>
+      </div>
+      <div class="field"><label>Fecha *</label>
+        <input type="date" id="mtiz-fecha"/>
+      </div>
+      <div class="field"><label>Estado</label>
+        <select id="mtiz-estado" style="width:100%;">
+          <option value="borrador">Borrador</option>
+          <option value="en_proceso">En proceso</option>
+          <option value="completado">Completado</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div class="field"><label>Responsable armado</label>
+        <select id="mtiz-armado" style="width:100%;"><option value="">— Sin asignar —</option></select>
+      </div>
+      <div class="field"><label>Responsable tirado</label>
+        <select id="mtiz-tirado" style="width:100%;"><option value="">— Sin asignar —</option></select>
+      </div>
+      <div class="field"><label>Responsable corte</label>
+        <select id="mtiz-corte" style="width:100%;"><option value="">— Sin asignar —</option></select>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:16px;">
+      <label>Nota</label>
+      <input type="text" id="mtiz-nota" placeholder="Observaciones..."/>
+    </div>
+
+    <!-- Agregar ítems -->
+    <div style="font-size:12px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Ítems a cortar</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#f9fafb;border-radius:10px;padding:10px;margin-bottom:10px;">
+      <select id="tiz-sel-item" style="flex:1;min-width:200px;font-size:13px;">
+        <option value="">— Elegir ítem de pedido pendiente —</option>
+      </select>
+      <input type="number" id="tiz-sel-cant" min="1" placeholder="Cant." style="width:80px;font-size:13px;"/>
+      <button class="btn btn-sm btn-gray" onclick="tizAgregarItem()">+ Agregar</button>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:700px;">
+        <thead>
+          <tr style="background:#f3f4f6;">
+            <th style="padding:6px 8px;text-align:left;">Pedido · Cliente</th>
+            <th style="padding:6px 8px;text-align:left;">Prenda</th>
+            <th style="padding:6px 8px;">Tela</th>
+            <th style="padding:6px 8px;">Color</th>
+            <th style="padding:6px 8px;">Talle</th>
+            <th style="padding:6px 8px;text-align:right;color:#6c7ae0;">Pendiente</th>
+            <th style="padding:6px 8px;text-align:right;">Planificado</th>
+            <th style="padding:6px 8px;text-align:right;">Cortado</th>
+            <th style="padding:6px 8px;"></th>
+          </tr>
+        </thead>
+        <tbody id="tiz-items-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-tizada')">Cancelar</button>
+      <button class="btn" onclick="saveTizada()">💾 Guardar tizada</button>
     </div>
   </div>
 </div>
@@ -3132,7 +3226,7 @@ var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[];
 var CONCEPTOS_POR_TIPO={
   'CONFESIÓN':['Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal','Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre','Chaleco Polar','Campera Polar','Campera Friza','Campera canguro','Sudadera','Joggins','Pantalón común','Cuellos','Bufandas / Cuellos','Reflectivo','Cofia','Arreglo'],
   'BORDADO':[],
@@ -3251,7 +3345,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderAlertas(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -3311,6 +3405,7 @@ function nav(sec, el){
   if(sec==='productos'){renderResumenColegios();}
   if(sec==='materiales'){renderMateriales();}
   if(sec==='pedidos'){renderPedidos();}
+  if(sec==='tizada'){renderTizadas();}
   if(sec==='costura'){renderOrdenes();}
 }
 
@@ -7188,6 +7283,8 @@ async function loadOrdenes(){ var {data}=await sb.from('ordenes_confeccion').sel
 async function loadOrdenesItems(){ var {data}=await sb.from('ordenes_confeccion_items').select('*'); ORDENES_ITEMS=data||[]; }
 async function loadPedidos(){ var {data}=await sb.from('pedidos').select('*').order('fecha',{ascending:false}); PEDIDOS=data||[]; }
 async function loadPedidosItems(){ var {data}=await sb.from('pedidos_items').select('*'); PEDIDOS_ITEMS=data||[]; }
+async function loadTizadas(){ var {data}=await sb.from('tizadas').select('*').order('fecha',{ascending:false}); TIZADAS=data||[]; }
+async function loadTizadasItems(){ var {data}=await sb.from('tizadas_items').select('*'); TIZADAS_ITEMS=data||[]; }
 
 var COLORES_TELAS=['MARINO','NEGRO','GRIS MELANGE','GRIS TOPO','GRIS PERLA','BLANCO','ROJO','BORDO','FRANCIA','AMARILLO','NARANJA','BEIGE','CELESTE','VERDE'];
 
@@ -10948,6 +11045,306 @@ async function confirmImport(){
   if(errs>0)toast(ok+' importados, '+errs+' fallaron','info');
   else toast(ok+' movimientos importados');
   await loadMovs();renderFin();
+}
+
+// ══════════════════════════════════════════════════════════
+// MÓDULO TIZADA / CORTE
+// ══════════════════════════════════════════════════════════
+
+function renderTizadas(){
+  var cont=document.getElementById('tiz-lista');
+  if(!cont)return;
+  var filEst=(document.getElementById('tiz-fil-est')||{}).value||'';
+
+  var borrador=TIZADAS.filter(function(t){return t.estado==='borrador';}).length;
+  var enProceso=TIZADAS.filter(function(t){return t.estado==='en_proceso';}).length;
+  var completadas=TIZADAS.filter(function(t){return t.estado==='completado';}).length;
+  var setEl=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
+  setEl('tiz-stat-activas',borrador+enProceso);
+  setEl('tiz-stat-borrador',borrador);
+  setEl('tiz-stat-proceso',enProceso);
+  setEl('tiz-stat-completadas',completadas);
+
+  var list=TIZADAS.slice();
+  if(filEst)list=list.filter(function(t){return t.estado===filEst;});
+
+  if(!list.length){
+    cont.innerHTML='<div class="empty"><div class="ei">✂️</div><p>No hay tizadas'+(filEst?' con estado "'+filEst+'"':'')+'</p></div>';
+    return;
+  }
+
+  var estMap={
+    borrador:{bg:'#f3f4f6',c:'#374151',t:'Borrador'},
+    en_proceso:{bg:'#fef3c7',c:'#92400e',t:'En proceso'},
+    completado:{bg:'#d1fae5',c:'#065f46',t:'Completado'}
+  };
+
+  cont.innerHTML=list.map(function(t){
+    var items=TIZADAS_ITEMS.filter(function(i){return i.tizada_id===t.id;});
+    var totPlan=items.reduce(function(s,i){return s+Number(i.cantidad_planificada);},0);
+    var totCort=items.reduce(function(s,i){return s+Number(i.cantidad_cortada);},0);
+    var em=estMap[t.estado]||{bg:'#f3f4f6',c:'#374151',t:t.estado};
+    var estBadge='<span style="background:'+em.bg+';color:'+em.c+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">'+em.t+'</span>';
+
+    var armado=PERSONAL.find(function(p){return p.id===t.resp_armado_id;});
+    var tirado=PERSONAL.find(function(p){return p.id===t.resp_tirado_id;});
+    var corte=PERSONAL.find(function(p){return p.id===t.resp_corte_id;});
+
+    var itemsHTML='';
+    if(items.length){
+      itemsHTML='<div style="overflow-x:auto;margin-top:12px;">'
+        +'<table style="width:100%;font-size:12px;border-collapse:collapse;min-width:600px;">'
+        +'<thead><tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">'
+        +'<th style="padding:5px 8px;text-align:left;">Pedido · Cliente</th>'
+        +'<th style="padding:5px 8px;text-align:left;">Prenda</th>'
+        +'<th style="padding:5px 8px;">Tela</th><th style="padding:5px 8px;">Color</th><th style="padding:5px 8px;">Talle</th>'
+        +'<th style="padding:5px 8px;text-align:right;color:#6c7ae0;">Pendiente</th>'
+        +'<th style="padding:5px 8px;text-align:right;">Planificado</th>'
+        +'<th style="padding:5px 8px;text-align:right;color:#16a34a;font-weight:700;">Cortado</th>'
+        +'</tr></thead><tbody>'
+        +items.map(function(ti){
+          var pi=PEDIDOS_ITEMS.find(function(x){return x.id===ti.pedido_item_id;});
+          if(!pi)return '';
+          var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+          var cli=ped&&CLIENTES.find(function(c){return c.id===ped.cliente_id;});
+          var pendiente=Number(pi.cantidad)-Number(pi.tizada);
+          return '<tr style="border-bottom:1px solid #f3f4f6;">'
+            +'<td style="padding:5px 8px;font-size:11px;">#'+(ped?ped.nro_pedido:'?')+' <span style="color:#9ca3af;">'+(cli?cli.nombre:'—')+'</span></td>'
+            +'<td style="padding:5px 8px;font-weight:600;">'+pi.prenda+'</td>'
+            +'<td style="padding:5px 8px;text-align:center;">'+(pi.tela||'—')+'</td>'
+            +'<td style="padding:5px 8px;text-align:center;">'+(pi.color||'—')+'</td>'
+            +'<td style="padding:5px 8px;text-align:center;">'+(pi.talle||'—')+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;color:#6c7ae0;">'+pendiente+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;">'+ti.cantidad_planificada+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;color:#16a34a;font-weight:700;">'+ti.cantidad_cortada+'</td>'
+            +'</tr>';
+        }).join('')
+        +'<tr style="background:#f9fafb;font-weight:700;border-top:2px solid #e5e7eb;">'
+        +'<td colspan="6" style="padding:5px 8px;">TOTAL</td>'
+        +'<td style="padding:5px 8px;text-align:right;">'+totPlan+'</td>'
+        +'<td style="padding:5px 8px;text-align:right;color:#16a34a;">'+totCort+'</td>'
+        +'</tr>'
+        +'</tbody></table></div>';
+    }
+
+    var btnCompletar=t.estado!=='completado'
+      ?'<button class="btn btn-sm" style="background:#d1fae5;color:#065f46;border:none;" onclick="completarTizada('+t.id+')">✅ Completar</button>'
+      :'';
+
+    return '<div class="panel" style="margin-bottom:12px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">'
+      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+      +'<span style="font-size:20px;font-weight:800;color:#1f2937;">T #'+t.nro_tizada+'</span>'
+      +estBadge
+      +'<span style="color:#9ca3af;font-size:13px;">'+fmtF(t.fecha)+'</span>'
+      +(t.nota?'<span style="color:#9ca3af;font-size:12px;">📝 '+t.nota+'</span>':'')
+      +'</div>'
+      +'<div style="display:flex;gap:6px;">'
+      +btnCompletar
+      +'<button class="btn btn-sm btn-gray" onclick="openTizadaModal('+t.id+')">✏️ Editar</button>'
+      +'<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;" onclick="deleteTizada('+t.id+')">🗑️</button>'
+      +'</div></div>'
+      +'<div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;font-size:12px;color:#6b7280;">'
+      +(armado?'<span>🔧 Armado: <strong>'+armado.nombre+'</strong></span>':'')
+      +(tirado?'<span>📐 Tirado: <strong>'+tirado.nombre+'</strong></span>':'')
+      +(corte?'<span>✂️ Corte: <strong>'+corte.nombre+'</strong></span>':'')
+      +'<span style="margin-left:auto;color:#6c7ae0;font-weight:600;">'+items.length+' ítems · '+totPlan+' plan. · '+totCort+' cortados</span>'
+      +'</div>'
+      +itemsHTML
+      +'</div>';
+  }).join('');
+}
+
+function tizPoblarSelector(){
+  var sel=document.getElementById('tiz-sel-item');
+  if(!sel)return;
+  var yaAgregados=Array.from(document.querySelectorAll('#tiz-items-tbody tr'))
+    .map(function(r){return String(r.getAttribute('data-pid'));});
+  sel.innerHTML='<option value="">— Elegir ítem de pedido pendiente —</option>';
+  var pending=PEDIDOS_ITEMS.filter(function(pi){
+    return Number(pi.cantidad)>Number(pi.tizada)&&!yaAgregados.includes(String(pi.id));
+  });
+  pending.forEach(function(pi){
+    var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+    var cli=ped&&CLIENTES.find(function(c){return c.id===ped.cliente_id;});
+    var pendiente=Number(pi.cantidad)-Number(pi.tizada);
+    var label='#'+(ped?ped.nro_pedido:'?')+' · '+(cli?cli.nombre:'—')+' — '+pi.prenda
+      +(pi.tela?' '+pi.tela:'')+(pi.color?' '+pi.color:'')+(pi.talle?' '+pi.talle:'')
+      +' (Pendiente: '+pendiente+')';
+    var o=document.createElement('option');
+    o.value=pi.id;
+    o.textContent=label;
+    o.setAttribute('data-pendiente',pendiente);
+    sel.appendChild(o);
+  });
+}
+
+function tizAgregarItem(){
+  var sel=document.getElementById('tiz-sel-item');
+  var cantEl=document.getElementById('tiz-sel-cant');
+  if(!sel||!sel.value){toast('Seleccioná un ítem','err');return;}
+  var piId=parseInt(sel.value);
+  var cant=parseInt(cantEl.value)||0;
+  var pendiente=parseInt(sel.options[sel.selectedIndex].getAttribute('data-pendiente'))||0;
+  if(cant<=0){toast('Ingresá una cantidad mayor a 0','err');return;}
+  if(cant>pendiente){toast('La cantidad ('+cant+') supera el pendiente ('+pendiente+')','err');return;}
+
+  var pi=PEDIDOS_ITEMS.find(function(x){return x.id===piId;});
+  if(!pi)return;
+  var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+  var cli=ped&&CLIENTES.find(function(c){return c.id===ped.cliente_id;});
+
+  var tb=document.getElementById('tiz-items-tbody');
+  var tr=document.createElement('tr');
+  tr.setAttribute('data-pid',piId);
+  tr.innerHTML=
+    '<td style="padding:5px 8px;font-size:11px;">#'+(ped?ped.nro_pedido:'?')+' <span style="color:#9ca3af;">'+(cli?cli.nombre:'—')+'</span></td>'
+    +'<td style="padding:5px 8px;font-weight:600;font-size:12px;">'+pi.prenda+'</td>'
+    +'<td style="padding:5px 8px;font-size:12px;">'+(pi.tela||'—')+'</td>'
+    +'<td style="padding:5px 8px;font-size:12px;">'+(pi.color||'—')+'</td>'
+    +'<td style="padding:5px 8px;font-size:12px;">'+(pi.talle||'—')+'</td>'
+    +'<td style="padding:5px 8px;text-align:right;color:#6c7ae0;font-size:12px;">'+pendiente+'</td>'
+    +'<td><input type="number" value="'+cant+'" min="0" max="'+pendiente+'" style="width:65px;font-size:12px;text-align:right;"/></td>'
+    +'<td><input type="number" value="0" min="0" style="width:65px;font-size:12px;text-align:right;"/></td>'
+    +'<td><button style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;" '
+    +'onclick="this.closest(\'tr\').remove();tizPoblarSelector()">✕</button></td>';
+  tb.appendChild(tr);
+  cantEl.value='';
+  sel.value='';
+  tizPoblarSelector();
+}
+
+var editTizadaId=null;
+function openTizadaModal(id){
+  editTizadaId=id||null;
+  document.getElementById('m-tizada-title').textContent=id?'Editar tizada':'Nueva tizada';
+  document.getElementById('mtiz-id').value=id||'';
+  document.getElementById('mtiz-nro').value='';
+  document.getElementById('mtiz-fecha').value=today();
+  document.getElementById('mtiz-estado').value='borrador';
+  document.getElementById('mtiz-nota').value='';
+  document.getElementById('tiz-items-tbody').innerHTML='';
+
+  ['mtiz-armado','mtiz-tirado','mtiz-corte'].forEach(function(sid){
+    var sel=document.getElementById(sid);
+    sel.innerHTML='<option value="">— Sin asignar —</option>';
+    PERSONAL.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre);}).forEach(function(p){
+      var o=document.createElement('option');o.value=p.id;o.textContent=p.nombre;sel.appendChild(o);
+    });
+  });
+
+  if(id){
+    var t=TIZADAS.find(function(x){return x.id===id;});
+    if(!t)return;
+    document.getElementById('mtiz-nro').value=t.nro_tizada||'';
+    document.getElementById('mtiz-fecha').value=t.fecha||today();
+    document.getElementById('mtiz-estado').value=t.estado||'borrador';
+    document.getElementById('mtiz-nota').value=t.nota||'';
+    if(t.resp_armado_id)document.getElementById('mtiz-armado').value=t.resp_armado_id;
+    if(t.resp_tirado_id)document.getElementById('mtiz-tirado').value=t.resp_tirado_id;
+    if(t.resp_corte_id)document.getElementById('mtiz-corte').value=t.resp_corte_id;
+
+    var tizItems=TIZADAS_ITEMS.filter(function(i){return i.tizada_id===id;});
+    tizItems.forEach(function(ti){
+      var pi=PEDIDOS_ITEMS.find(function(x){return x.id===ti.pedido_item_id;});
+      if(!pi)return;
+      var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+      var cli=ped&&CLIENTES.find(function(c){return c.id===ped.cliente_id;});
+      var pendiente=Number(pi.cantidad)-Number(pi.tizada);
+      var tb=document.getElementById('tiz-items-tbody');
+      var tr=document.createElement('tr');
+      tr.setAttribute('data-pid',ti.pedido_item_id);
+      tr.setAttribute('data-tiz-item-id',ti.id);
+      tr.innerHTML=
+        '<td style="padding:5px 8px;font-size:11px;">#'+(ped?ped.nro_pedido:'?')+' <span style="color:#9ca3af;">'+(cli?cli.nombre:'—')+'</span></td>'
+        +'<td style="padding:5px 8px;font-weight:600;font-size:12px;">'+pi.prenda+'</td>'
+        +'<td style="padding:5px 8px;font-size:12px;">'+(pi.tela||'—')+'</td>'
+        +'<td style="padding:5px 8px;font-size:12px;">'+(pi.color||'—')+'</td>'
+        +'<td style="padding:5px 8px;font-size:12px;">'+(pi.talle||'—')+'</td>'
+        +'<td style="padding:5px 8px;text-align:right;color:#6c7ae0;font-size:12px;">'+pendiente+'</td>'
+        +'<td><input type="number" value="'+ti.cantidad_planificada+'" min="0" style="width:65px;font-size:12px;text-align:right;"/></td>'
+        +'<td><input type="number" value="'+ti.cantidad_cortada+'" min="0" style="width:65px;font-size:12px;text-align:right;"/></td>'
+        +'<td><button style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;" '
+        +'onclick="this.closest(\'tr\').remove();tizPoblarSelector()">✕</button></td>';
+      tb.appendChild(tr);
+    });
+  }
+  tizPoblarSelector();
+  openM('m-tizada');
+}
+
+async function saveTizada(){
+  var nro=document.getElementById('mtiz-nro').value.trim();
+  var fecha=document.getElementById('mtiz-fecha').value;
+  var estado=document.getElementById('mtiz-estado').value;
+  var nota=document.getElementById('mtiz-nota').value.trim();
+  var armadoId=document.getElementById('mtiz-armado').value||null;
+  var tiradoId=document.getElementById('mtiz-tirado').value||null;
+  var corteId=document.getElementById('mtiz-corte').value||null;
+  if(!nro||!fecha){toast('Completá Nº Tizada y Fecha','err');return;}
+
+  var rows=Array.from(document.querySelectorAll('#tiz-items-tbody tr'));
+  if(!rows.length){toast('Agregá al menos un ítem','err');return;}
+  var items=rows.map(function(r){
+    var piId=parseInt(r.getAttribute('data-pid'));
+    var nums=r.querySelectorAll('input[type=number]');
+    return{pedido_item_id:piId,cantidad_planificada:parseInt(nums[0]?nums[0].value:0)||0,cantidad_cortada:parseInt(nums[1]?nums[1].value:0)||0};
+  }).filter(function(i){return i.pedido_item_id;});
+  if(!items.length){toast('Sin ítems válidos','err');return;}
+
+  var header={nro_tizada:nro,fecha:fecha,estado:estado,nota:nota||null,
+    resp_armado_id:armadoId?parseInt(armadoId):null,
+    resp_tirado_id:tiradoId?parseInt(tiradoId):null,
+    resp_corte_id:corteId?parseInt(corteId):null,
+    updated_at:new Date().toISOString()};
+
+  var tizId;
+  if(editTizadaId){
+    var r=await sb.from('tizadas').update(header).eq('id',editTizadaId);
+    if(r.error){toast('Error: '+r.error.message,'err');return;}
+    tizId=editTizadaId;
+    await sb.from('tizadas_items').delete().eq('tizada_id',tizId);
+  }else{
+    var r=await sb.from('tizadas').insert(header).select().single();
+    if(r.error){toast('Error: '+r.error.message,'err');return;}
+    tizId=r.data.id;
+  }
+  var conTiz=items.map(function(i){return Object.assign({},i,{tizada_id:tizId});});
+  var r2=await sb.from('tizadas_items').insert(conTiz);
+  if(r2.error){toast('Error ítems: '+r2.error.message,'err');return;}
+  toast(editTizadaId?'Tizada actualizada':'Tizada #'+nro+' creada');
+  closeM('m-tizada');
+  await Promise.all([loadTizadas(),loadTizadasItems()]);
+  renderTizadas();
+}
+
+async function completarTizada(id){
+  if(!confirm('¿Completar la tizada? Esto sumará las cantidades cortadas a cada pedido.'))return;
+  var tizItems=TIZADAS_ITEMS.filter(function(i){return i.tizada_id===id;});
+  if(!tizItems.length){toast('Sin ítems para completar','err');return;}
+
+  var updates=tizItems.map(async function(ti){
+    var pi=PEDIDOS_ITEMS.find(function(x){return x.id===ti.pedido_item_id;});
+    if(!pi)return;
+    return sb.from('pedidos_items').update({tizada:Number(pi.tizada)+Number(ti.cantidad_cortada)}).eq('id',ti.pedido_item_id);
+  });
+  var results=await Promise.all(updates);
+  var errs=results.filter(function(r){return r&&r.error;});
+  if(errs.length){toast('Algunos ítems no se actualizaron','err');return;}
+
+  await sb.from('tizadas').update({estado:'completado',updated_at:new Date().toISOString()}).eq('id',id);
+  await Promise.all([loadTizadas(),loadTizadasItems(),loadPedidosItems()]);
+  renderTizadas();
+  toast('Tizada completada — cantidades actualizadas en pedidos ✂️');
+}
+
+async function deleteTizada(id){
+  if(!confirm('¿Eliminar esta tizada y sus ítems?'))return;
+  var r=await sb.from('tizadas').delete().eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Tizada eliminada','info');
+  await Promise.all([loadTizadas(),loadTizadasItems()]);
+  renderTizadas();
 }
 
 // ══════════════════════════════════════════════════════════
