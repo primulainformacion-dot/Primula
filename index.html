@@ -771,13 +771,13 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
     <!-- Tabs -->
     <div class="tabs" id="pan-tabs">
-      <div class="tab active" onclick="setPanTab('semana',this)">📅 Control semanal</div>
-      <div class="tab" onclick="setPanTab('resumen',this)">📊 Resumen financiero</div>
+      <div class="tab active" onclick="setPanTab('resumen',this)">📊 Resumen financiero</div>
+      <div class="tab" onclick="setPanTab('semana',this)">📅 Control semanal</div>
       <div class="tab" onclick="setPanTab('objetivos',this)">🎯 Objetivos</div>
     </div>
 
     <!-- Tab: Control semanal -->
-    <div id="pan-tab-semana">
+    <div id="pan-tab-semana" style="display:none;">
       <!-- Barra de control -->
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:20px;margin-top:4px;">
         <div style="font-size:13px;font-weight:700;color:#6b7280;">Horizonte de análisis:</div>
@@ -821,7 +821,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     </div>
 
     <!-- Tab: Resumen -->
-    <div id="pan-tab-resumen" style="display:none;">
+    <div id="pan-tab-resumen">
 
       <!-- TARJETAS MACRO: activos / pasivos / neto -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:22px;">
@@ -3056,7 +3056,7 @@ function nav(sec, el){
   if(el) el.classList.add('active');
   document.getElementById('pg-title').textContent=el?el.textContent.trim():sec;
   document.getElementById('pg-sub').textContent='';
-  if(sec==='panel'){renderSemana();}
+  if(sec==='panel'){renderPanelGeneral();}
   if(sec==='finanzas'){renderFinCajas();renderFin();}
   if(sec==='cheques'){renderChqResumen();renderChqCartera();renderChqPropios();}
   if(sec==='productos'){renderResumenColegios();}
@@ -3112,7 +3112,7 @@ function poblarSelectProductos(){
 // ════════════════════════════════════
 // CONTROL SEMANAL
 // ════════════════════════════════════
-var _semHorizon=14;
+var _semHorizon=7;
 
 function setSemHorizon(dias,el){
   _semHorizon=dias;
@@ -3127,14 +3127,17 @@ function renderSemana(){
   var hace28=new Date(hoy.getTime()-28*86400000);
 
   // ── COMPROMISOS ──────────────────────────────────────────
-  // 1) Sueldos semanales (personal activo)
-  var sueldoSem=PERSONAL.filter(function(p){return p.activo;})
-    .reduce(function(s,p){return s+Number(p.sueldo_semanal||0);},0);
+  var semanas=_semHorizon/7; // 1 para 7d, 2 para 14d, ~4.33 para 30d
 
-  // 2) Gastos fijos → equivalente semanal (mensual / 4.33)
+  // 1) Sueldos: una semana × cantidad de semanas en el horizonte
+  var sueldoPorSem=PERSONAL.filter(function(p){return p.activo;})
+    .reduce(function(s,p){return s+Number(p.sueldo_semanal||0);},0);
+  var sueldoSem=Math.round(sueldoPorSem*semanas);
+
+  // 2) Gastos fijos → equivalente proporcional al horizonte
   var gastosFijosSemanales=GASTOS_FIJOS.filter(function(g){return g.activo;})
     .reduce(function(s,g){return s+Number(g.monto||0)/(FREC_MESES[g.frecuencia||'mensual']*4.33);},0);
-  gastosFijosSemanales=Math.round(gastosFijosSemanales);
+  gastosFijosSemanales=Math.round(gastosFijosSemanales*semanas);
 
   // 3) Cheques propios a vencer en el horizonte
   var chqPropVencer=CHEQUES_PROPIOS.filter(function(c){
@@ -3208,8 +3211,8 @@ function renderSemana(){
       '</div></div>';
   }
   cc.innerHTML=
-    semCard('👤','Sueldos del personal',sueldoSem,PERSONAL.filter(function(p){return p.activo;}).length+' empleados activos — pago semanal','#6c7ae0')+
-    semCard('📌','Gastos fijos (equiv. semanal)',gastosFijosSemanales,'Prorrateado de '+$p(Math.round(gastosFijosSemanales*4.33))+'/mes','#f59e0b')+
+    semCard('👤','Sueldos del personal',sueldoSem,PERSONAL.filter(function(p){return p.activo;}).length+' empleados · '+(_semHorizon===7?'1 semana':_semHorizon===14?'2 semanas':'~4 semanas')+' · $'+$p(sueldoPorSem)+'/sem','#6c7ae0')+
+    semCard('📌','Gastos fijos (equiv. período)',gastosFijosSemanales,'Prorrateado al horizonte de '+_semHorizon+' días','#f59e0b')+
     semCard('📝','Cheques propios a vencer',chqPropMonto,chqPropVencer.length+' cheque'+(chqPropVencer.length!==1?'s':'')+' en los próximos '+_semHorizon+' días','#dc2626');
 
   document.getElementById('sem-total-compromisos').innerHTML=
