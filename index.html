@@ -2414,7 +2414,8 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option value="BANCO POLY">BANCO POLY</option>
         </select>
       </div>
-      <div class="field"><label>Fecha de venta *</label><input type="date" id="mv-fecha"/></div>
+      <div class="field"><label>Día de venta *</label><input type="date" id="mv-fecha"/></div>
+      <div class="field"><label>Día que acredita en banco</label><input type="date" id="mv-fecha-acred" placeholder="Dejar vacío si no se sabe"/></div>
       <div class="field"><label>Caja que recibe el neto *</label>
         <select id="mv-caja-destino">
           <option value="BANCO SRL">BANCO SRL</option>
@@ -7370,6 +7371,7 @@ async function deleteGastoFijo(){
 
 function openChqVentaModal(){
   document.getElementById('mv-fecha').value=today();
+  document.getElementById('mv-fecha-acred').value='';
   document.getElementById('mv-banco').value='BANCO SRL';
   document.getElementById('mv-descuento').value='';
   document.getElementById('mv-nota').value='';
@@ -7431,8 +7433,9 @@ async function saveChqVenta(){
     if(movRes)movId=movRes.id;
   }
 
+  var fechaAcred=document.getElementById('mv-fecha-acred').value||null;
   var op={
-    banco, fecha_venta:fecha, monto_bruto:bruto,
+    banco, fecha_venta:fecha, fecha_acreditacion:fechaAcred, monto_bruto:bruto,
     descuento:desc, monto_neto:neto,
     caja_destino:cajaDestino, mov_id:movId,
     nota:document.getElementById('mv-nota').value||null
@@ -7511,7 +7514,7 @@ function renderChqOperaciones(){
     html+='<p style="color:#9ca3af;text-align:center;padding:24px;">Sin operaciones registradas</p>';
   } else {
     html+='<div class="tbl"><table><thead><tr>'+
-      '<th>Banco</th><th>Fecha</th><th style="text-align:center;">Cheques</th>'+
+      '<th>Banco</th><th>Día venta</th><th>Día banco</th><th style="text-align:center;">Cheques</th>'+
       '<th style="text-align:right;">Monto bruto</th>'+
       '<th style="text-align:right;">Comisión banco</th>'+
       '<th style="text-align:center;">%</th>'+
@@ -7528,9 +7531,15 @@ function renderChqOperaciones(){
         ?(Number(op.descuento)/Number(op.monto_bruto)*100).toFixed(2)
         :null;
 
+      var diasDif=op.fecha_venta&&op.fecha_acreditacion?Math.round((new Date(op.fecha_acreditacion+'T12:00:00')-new Date(op.fecha_venta+'T12:00:00'))/86400000):null;
       html+='<tr>'+
         '<td style="font-weight:700;">'+op.banco+'</td>'+
         '<td style="font-size:12px;white-space:nowrap;">'+fmtF(op.fecha_venta)+'</td>'+
+        '<td style="font-size:12px;white-space:nowrap;">'+
+          (op.fecha_acreditacion
+            ?'<span>'+fmtF(op.fecha_acreditacion)+'</span>'+(diasDif!=null?'<span style="font-size:10px;color:#9ca3af;margin-left:4px;">(+'+diasDif+'d)</span>':'')
+            :'<span style="color:#d1d5db;">—</span>')+
+        '</td>'+
         '<td style="text-align:center;">'+
           '<span style="font-weight:700;color:#7c3aed;">'+chOp.length+'</span>'+
           (op.nota?'<div style="font-size:10px;color:#9ca3af;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+op.nota+'">'+op.nota+'</div>':'')+
