@@ -837,6 +837,12 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <div id="sem-ingresos-tabla"></div>
         </div>
       </div>
+
+      <!-- Proyección 90 días -->
+      <div style="margin-top:28px;">
+        <div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:14px;">📈 Proyección de flujo de caja — próximos 90 días</div>
+        <div id="sem-proyeccion" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;"></div>
+      </div>
     </div>
 
     <!-- Tab: Resumen -->
@@ -3444,6 +3450,140 @@ function renderSemana(){
   negIngHTML+='</tbody></table>'+
     '<div style="margin-top:10px;font-size:10px;color:#9ca3af;text-align:center;">S = semana · k = miles de pesos</div>';
   ti.innerHTML=negIngHTML;
+
+  renderProyeccion();
+}
+
+function renderProyeccion(){
+  var cont=document.getElementById('sem-proyeccion');
+  if(!cont)return;
+
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+  var cajasLiq=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','LOCAL LLAVALLOL','LOCAL MONTE GRANDE'];
+  var saldoInicial=cajasLiq.reduce(function(s,c){return s+saldoCaja(c);},0);
+
+  // Promedio mensual de ingresos (últimas 4 semanas × 4.33/4)
+  var hace28=new Date(hoy.getTime()-28*86400000);
+  var ingUlt=MOVS.filter(function(m){
+    var f=new Date(m.fecha+'T12:00:00');
+    return f>=hace28&&f<hoy&&Number(m.ingreso||0)>0&&m.tipo!=='transferencia';
+  }).reduce(function(s,m){return s+Number(m.ingreso||0);},0);
+  var promMensualIng=Math.round(ingUlt*(4.33/4));
+
+  // Sueldos mensuales
+  var sueldoMensual=Math.round(PERSONAL.filter(function(p){return p.activo;})
+    .reduce(function(s,p){return s+Number(p.sueldo_semanal||0);},0)*4.33);
+
+  // Gastos fijos mensuales
+  var gastosMensual=Math.round(GASTOS_FIJOS.filter(function(g){return g.activo;})
+    .reduce(function(s,g){return s+Number(g.monto||0)/FREC_MESES[g.frecuencia||'mensual'];},0));
+
+  // Función: calcular egresos/ingresos de un período de días [desde, hasta)
+  function calcPeriodo(desdeDias, hastaDias){
+    var desde=new Date(hoy.getTime()+desdeDias*86400000);
+    var hasta=new Date(hoy.getTime()+hastaDias*86400000);
+
+    // Cheques propios a vencer en el período
+    var chqProp=CHEQUES_PROPIOS.filter(function(c){
+      if(c.estado!=='pendiente')return false;
+      var f=new Date((c.fecha_vencimiento||c.fecha_pago)+'T12:00:00');
+      return f>=desde&&f<hasta;
+    }).reduce(function(s,c){return s+Number(c.monto||0);},0);
+
+    // Moratorias: proyectar cuotas en este período
+    var morTotal=0;
+    var morItems=[];
+    MORATORIAS.filter(function(m){return m.estado!=='finalizada'&&m.estado!=='suspendida'&&m.prox_vencimiento;})
+      .forEach(function(m){
+        // Proyectar hasta 3 cuotas futuras desde prox_vencimiento
+        for(var mes=0;mes<3;mes++){
+          var baseDate=new Date(m.prox_vencimiento+'T12:00:00');
+          baseDate.setMonth(baseDate.getMonth()+mes);
+          if(baseDate>=desde&&baseDate<hasta){
+            morTotal+=Number(m.monto_cuota||0);
+            morItems.push(m.nombre+(m.acreedor?' ('+m.acreedor+')':''));
+          }
+        }
+      });
+
+    // Cheques cartera a cobrar en el período
+    var chqCart=CHEQUES_CARTERA.filter(function(c){
+      if(c.estado!=='en_cartera')return false;
+      var f=new Date((c.fecha_cobro||c.fecha_vencimiento)+'T12:00:00');
+      return f&&f>=desde&&f<hasta;
+    }).reduce(function(s,c){return s+Number(c.monto||0);},0);
+
+    var egresos=sueldoMensual+gastosMensual+chqProp+morTotal;
+    var ingresos=promMensualIng+chqCart;
+    return {egresos,ingresos,chqProp,morTotal,morItems,chqCart,sueldoMensual,gastosMensual};
+  }
+
+  var periodos=[
+    {label:'Mes 1',sub:'Próximos 30 días',desde:0,hasta:30},
+    {label:'Mes 2',sub:'Días 31 a 60',desde:30,hasta:60},
+    {label:'Mes 3',sub:'Días 61 a 90',desde:60,hasta:90}
+  ];
+
+  var saldoAcum=saldoInicial;
+  cont.innerHTML=periodos.map(function(p){
+    var d=calcPeriodo(p.desde,p.hasta);
+    var flujo=d.ingresos-d.egresos;
+    var saldoFinal=saldoAcum+flujo;
+    var status=saldoFinal<0?'rojo':saldoFinal<d.egresos*0.15?'amarillo':'verde';
+    var colores={rojo:{bg:'#fff1f2',border:'#fecaca',txt:'#991b1b',accent:'#dc2626',icon:'🔴'},
+                 amarillo:{bg:'#fffbeb',border:'#fde68a',txt:'#92400e',accent:'#d97706',icon:'🟡'},
+                 verde:{bg:'#f0fdf4',border:'#bbf7d0',txt:'#166534',accent:'#16a34a',icon:'🟢'}};
+    var col=colores[status];
+
+    var detalleEgr=
+      '<div style="margin-top:10px;border-top:1px solid #e5e7eb;padding-top:8px;">'+
+        fila('👤 Sueldos',d.sueldoMensual,'#6c7ae0')+
+        fila('📌 Gastos fijos',d.gastosMensual,'#f59e0b')+
+        fila('📝 Cheques a pagar',d.chqProp,'#dc2626')+
+        fila('📋 Moratorias'+(d.morItems.length?' ('+d.morItems.length+')':''),d.morTotal,'#7c3aed')+
+      '</div>';
+    var detalleIng=
+      '<div style="margin-top:6px;border-top:1px solid #e5e7eb;padding-top:8px;">'+
+        fila('📈 Prom. ventas/cobros',d.promMensualIng||promMensualIng,'#16a34a')+
+        fila('🧾 Cheques a cobrar',d.chqCart,'#0ea5e9')+
+      '</div>';
+
+    var card='<div style="background:'+col.bg+';border:2px solid '+col.border+';border-radius:14px;padding:18px 20px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'+
+        '<div>'+
+          '<div style="font-size:11px;font-weight:800;color:'+col.txt+';text-transform:uppercase;letter-spacing:.8px;">'+p.label+'</div>'+
+          '<div style="font-size:12px;color:#9ca3af;margin-top:2px;">'+p.sub+'</div>'+
+        '</div>'+
+        '<span style="font-size:22px;">'+col.icon+'</span>'+
+      '</div>'+
+
+      '<div style="margin-bottom:8px;">'+
+        '<div style="font-size:10px;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Egresos</div>'+
+        '<div style="font-size:20px;font-weight:900;color:#dc2626;">'+$p(Math.round(d.egresos))+'</div>'+
+        detalleEgr+
+      '</div>'+
+
+      '<div style="margin-bottom:12px;">'+
+        '<div style="font-size:10px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Ingresos esperados</div>'+
+        '<div style="font-size:20px;font-weight:900;color:#16a34a;">'+$p(Math.round(d.ingresos))+'</div>'+
+        detalleIng+
+      '</div>'+
+
+      '<div style="border-top:2px solid '+col.border+';padding-top:12px;">'+
+        '<div style="font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Saldo proyectado al cierre</div>'+
+        '<div style="font-size:24px;font-weight:900;color:'+col.accent+';margin-top:4px;">'+$p(Math.round(saldoFinal))+'</div>'+
+        '<div style="font-size:11px;color:#9ca3af;margin-top:2px;">Flujo del mes: '+(flujo>=0?'+':'')+$p(Math.round(flujo))+'</div>'+
+      '</div>'+
+    '</div>';
+
+    saldoAcum=saldoFinal;
+    return card;
+  }).join('');
+
+  function fila(label,monto,color){
+    if(!monto)return '<div style="display:flex;justify-content:space-between;font-size:11px;color:#d1d5db;padding:2px 0;"><span>'+label+'</span><span>—</span></div>';
+    return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;"><span style="color:#6b7280;">'+label+'</span><span style="font-weight:700;color:'+color+';">'+$p(Math.round(monto))+'</span></div>';
+  }
 }
 
 // ════════════════════════════════════
