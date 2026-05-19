@@ -952,7 +952,26 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               <span style="font-size:14px;font-weight:700;color:#374151;">TOTAL</span>
               <span style="font-size:24px;font-weight:800;color:#374151;" id="pos-total">$0</span>
             </div>
-            <button class="btn" style="width:100%;font-size:16px;padding:13px;background:#16a34a;border-color:#15803d;margin-bottom:6px;" onclick="posCobrar()">💳 COBRAR</button>
+            <!-- Calculadora de cambio inline -->
+            <div id="pos-cambio-box" style="display:none;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+              <div style="font-size:10px;font-weight:800;color:#166534;letter-spacing:.5px;margin-bottom:6px;">CALCULADORA DE CAMBIO</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <div style="flex:1;">
+                  <div style="font-size:11px;color:#6b7280;margin-bottom:3px;">Recibido $</div>
+                  <input type="number" id="pos-cambio-input" style="width:100%;font-size:18px;font-weight:700;border:1.5px solid #bbf7d0;border-radius:7px;padding:5px 8px;" oninput="posActualizarCambio()" placeholder="0"/>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div style="font-size:11px;color:#6b7280;margin-bottom:3px;">Vuelto</div>
+                  <div style="font-size:20px;font-weight:800;" id="pos-cambio-vuelto">—</div>
+                </div>
+              </div>
+            </div>
+            <!-- Botones -->
+            <button class="btn btn-gray" style="width:100%;font-size:13px;margin-bottom:6px;" onclick="posCambioToggle()">🔢 Calcular cambio</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+              <button class="btn" style="background:#16a34a;border-color:#15803d;font-size:14px;padding:12px;" onclick="posCobrar(false)">💳 Cobrar</button>
+              <button class="btn" style="background:#6c7ae0;border-color:#4f46e5;font-size:14px;padding:12px;" onclick="posCobrar(true)">🧾 Facturar</button>
+            </div>
             <button class="btn btn-gray" style="width:100%;font-size:13px;" onclick="posCancelar()">🗑️ Cancelar ticket</button>
           </div>
         </div>
@@ -2158,6 +2177,16 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <div style="font-size:18px;font-weight:800;padding-top:6px;" id="mpc-vuelto">—</div>
       </div>
       <div class="field full"><label>Nota (opcional)</label><input id="mpc-nota" placeholder=""/></div>
+    </div>
+    <!-- Sección factura (visible solo al facturar) -->
+    <div id="mpc-factura-section" style="display:none;border-top:1.5px solid #e5e7eb;margin-top:12px;padding-top:14px;">
+      <div style="font-size:11px;font-weight:800;color:#374151;letter-spacing:.5px;margin-bottom:8px;">🧾 FACTURA · IVA 21%</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <button id="mpc-tipo-b" class="btn pos-tipo-fac" onclick="posSelectTipoFac('B',this)" style="padding:10px;font-size:13px;background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;">B · Consumidor Final</button>
+        <button id="mpc-tipo-a" class="btn pos-tipo-fac" onclick="posSelectTipoFac('A',this)" style="padding:10px;font-size:13px;background:#fef3c7;color:#92400e;border-color:#fcd34d;">A · Resp. Inscripto</button>
+      </div>
+      <div id="mpc-cuit-wrap" style="display:none;" class="field full"><label>CUIT</label><input id="mpc-cuit" placeholder="20-12345678-9"/></div>
+      <div id="mpc-razon-wrap" style="display:none;" class="field full"><label>Razón Social</label><input id="mpc-razon" placeholder="Empresa S.A."/></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-gray" onclick="closeM('m-pos-cobro')">Cancelar</button>
@@ -5944,7 +5973,7 @@ var chqpSort={col:null,dir:'asc'};
 var CHQP_COLS=[{col:'numero',label:'N° Cheque'},{col:'banco',label:'Banco'},{col:'destinatario',label:'Destinatario'},{col:'concepto',label:'Concepto'},{col:'monto',label:'Monto',r:true},{col:'fecha_emision',label:'Emisión'},{col:'fecha_pago',label:'Fecha pago'},{col:'estado',label:'Estado'},{col:null,label:''}];
 
 var perSort={col:null,dir:'asc'};
-var PER_COLS=[{col:'nombre',label:'Nombre'},{col:'cargo',label:'Cargo'},{col:'sueldo_semanal',label:'Sueldo semanal',r:true},{col:null,label:'Equiv. mensual',r:true},{col:'telefono',label:'Teléfono'},{col:'estado',label:'Estado'},{col:null,label:''}];
+var PER_COLS=[{col:'nombre',label:'Nombre'},{col:'cargo',label:'Cargo'},{col:'sueldo_semanal',label:'Sueldo semanal',r:true},{col:null,label:'Equiv. mensual',r:true},{col:'anual',label:'Equiv. anual',r:true},{col:'telefono',label:'Teléfono'},{col:'estado',label:'Estado'},{col:null,label:''}];
 
 var talSort={col:null,dir:'asc'};
 var TAL_COLS=[{col:'nombre',label:'Nombre'},{col:'precio_prenda',label:'Precio/prenda',r:true},{col:'telefono',label:'Teléfono'},{col:'nota',label:'Nota'},{col:'estado',label:'Estado'},{col:null,label:''}];
@@ -7189,8 +7218,46 @@ function mpcActualizar(){
   else{el.textContent='Faltan: '+$p(-vuelto);el.style.color='#dc2626';}
 }
 
-function posCobrar(){
+var posConFactura=false;
+var posFacturaTipo='B';
+
+function posCambioToggle(){
+  var box=document.getElementById('pos-cambio-box');
+  if(!box)return;
+  var show=box.style.display==='none';
+  box.style.display=show?'block':'none';
+  if(show){
+    var inp=document.getElementById('pos-cambio-input');
+    inp.value='';
+    document.getElementById('pos-cambio-vuelto').textContent='—';
+    document.getElementById('pos-cambio-vuelto').style.color='#9ca3af';
+    inp.focus();
+  }
+}
+
+function posActualizarCambio(){
+  var total=posGetTotalBruto();
+  var recibido=parseFloat(document.getElementById('pos-cambio-input').value)||0;
+  var el=document.getElementById('pos-cambio-vuelto');
+  var vuelto=recibido-total;
+  if(recibido<=0){el.textContent='—';el.style.color='#9ca3af';}
+  else if(vuelto>=0){el.textContent=$p(vuelto);el.style.color='#16a34a';}
+  else{el.textContent='Faltan '+$p(-vuelto);el.style.color='#dc2626';}
+}
+
+function posSelectTipoFac(tipo,btn){
+  posFacturaTipo=tipo;
+  document.querySelectorAll('.pos-tipo-fac').forEach(function(b){b.style.outline='';b.style.fontWeight='600';});
+  if(btn){btn.style.outline='3px solid #6c7ae0';btn.style.fontWeight='800';}
+  var showA=tipo==='A';
+  document.getElementById('mpc-cuit-wrap').style.display=showA?'':'none';
+  document.getElementById('mpc-razon-wrap').style.display=showA?'':'none';
+}
+
+function posCobrar(conFactura){
   if(!posItems.length){toast('El ticket está vacío','info');return;}
+  posConFactura=!!conFactura;
+  posFacturaTipo='B';
   var bruto=posGetTotalBruto();
   posMetodo='';
   document.querySelectorAll('.pos-metodo-btn').forEach(function(b){b.style.outline='';b.style.fontWeight='600';});
@@ -7203,6 +7270,16 @@ function posCobrar(){
     (posClienteNombre?'<strong>'+posClienteNombre+'</strong><br>':'<span style="color:#9ca3af;">Sin cliente (mostrador)</span><br>')+
     '<strong>'+posItems.length+' producto'+(posItems.length!==1?'s':'')+'</strong> · Lista: <strong>'+$p(bruto)+'</strong>'+
     ' <span style="font-size:11px;color:#16a34a;">· 20% dto. si paga en efectivo → <strong>'+$p(posGetTotalEfectivo())+'</strong></span>';
+  // Sección factura
+  var facSec=document.getElementById('mpc-factura-section');
+  if(facSec)facSec.style.display=conFactura?'block':'none';
+  if(conFactura){
+    document.getElementById('mpc-cuit').value='';
+    document.getElementById('mpc-razon').value='';
+    document.getElementById('mpc-cuit-wrap').style.display='none';
+    document.getElementById('mpc-razon-wrap').style.display='none';
+    posSelectTipoFac('B',document.getElementById('mpc-tipo-b'));
+  }
   openM('m-pos-cobro');
 }
 
@@ -7239,13 +7316,108 @@ async function posSaveVenta(){
   var detalle=(posClienteNombre||'Mostrador')+' · '+metodoLabel+(caja==='MERCADO PAGO'?' · '+localLabel:'');
   await sb.from('movimientos').insert({tipo:'ingreso',caja:caja,fecha:today(),ingreso:totalFinal,egreso:0,concepto:'VENTA MINORISTA',detalle:detalle,referencia:'Venta #'+v.id});
 
-  toast('✓ Venta registrada — '+$p(totalFinal)+(conDescuento?' (20% dto. efectivo)':'')+' · '+metodoLabel);
+  // Factura (si se pidió)
+  if(posConFactura){
+    var cuit=document.getElementById('mpc-cuit').value.trim()||null;
+    var razon=document.getElementById('mpc-razon').value.trim()||null;
+    var facNom=posFacturaTipo==='A'?(razon||posClienteNombre||'Responsable Inscripto'):(posClienteNombre||'Consumidor Final');
+    await sb.from('facturas_clientes').insert({
+      cliente_id:posClienteId||null,
+      cliente_nombre:facNom,
+      tipo_comprobante:posFacturaTipo,
+      fecha_emision:today(),
+      monto_total:totalFinal,
+      estado:'cobrada',
+      nota:'IVA 21% · POS · Venta #'+v.id+(cuit?' · CUIT: '+cuit:'')
+    });
+  }
+  toast('✓ Venta registrada — '+$p(totalFinal)+(conDescuento?' (20% dto. efectivo)':'')+' · '+metodoLabel+(posConFactura?' · Factura '+posFacturaTipo:''));
   closeM('m-pos-cobro');
+  // Guardar datos antes de limpiar para imprimir ticket
+  var ticketData={id:v.id,fecha:today(),cliente:posClienteNombre||'',local:localLabel,items:posItems.slice(),total:totalFinal,bruto:bruto,conDescuento:conDescuento,metodo:metodoLabel};
   posItems=[]; posRenderTicket(); posClearCliente();
+  posImprimirTicketCambio(ticketData);
   await Promise.all([loadVentas(),loadStock(),loadMovs()]);
-  // Refrescar nivel actual del POS para que muestre stock actualizado
   if(posView==='level2') posGoLevel2(posL2Type,posL2Value,posL2Label);
   else posGoRoot();
+}
+
+function posImprimirTicketCambio(d){
+  var DIAS_VALIDEZ=30;
+  var venc=new Date(d.fecha+'T12:00:00');venc.setDate(venc.getDate()+DIAS_VALIDEZ);
+  var vencStr=venc.getDate()+'/'+(venc.getMonth()+1)+'/'+venc.getFullYear();
+  var fechaStr=fmtF(d.fecha);
+  var localNom=d.local||'Local';
+  var itemsRows=d.items.map(function(it){
+    var desc=it.nombre+(it.talle?' · '+it.talle:'')+(it.color?' · '+it.color:'');
+    return '<tr><td style="padding:5px 0;border-bottom:1px dashed #e5e7eb;">'+desc+'</td>'+
+      '<td style="text-align:center;padding:5px;border-bottom:1px dashed #e5e7eb;">'+it.cantidad+'</td>'+
+      '<td style="text-align:right;padding:5px 0;border-bottom:1px dashed #e5e7eb;">'+$p(it.precio)+'</td></tr>';
+  }).join('');
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8">'+
+    '<title>Ticket de cambio #'+d.id+'</title>'+
+    '<style>'+
+      '*{margin:0;padding:0;box-sizing:border-box;}'+
+      'body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#000;background:#fff;padding:10px;}'+
+      '.ticket{max-width:320px;margin:0 auto;padding:16px;}'+
+      '.header{text-align:center;border-bottom:2px solid #000;padding-bottom:12px;margin-bottom:12px;}'+
+      '.tienda{font-size:18px;font-weight:900;letter-spacing:1px;}'+
+      '.local{font-size:12px;color:#555;margin-top:2px;}'+
+      '.titulo{font-size:16px;font-weight:800;background:#000;color:#fff;text-align:center;padding:6px;margin:12px 0;letter-spacing:1px;}'+
+      '.meta{font-size:12px;margin-bottom:10px;line-height:1.6;}'+
+      'table{width:100%;border-collapse:collapse;margin-bottom:10px;}'+
+      'th{font-size:11px;text-align:left;padding:4px 0;border-bottom:2px solid #000;}'+
+      'th:nth-child(2){text-align:center;}'+
+      'th:last-child{text-align:right;}'+
+      '.total-row{font-size:14px;font-weight:800;text-align:right;border-top:2px solid #000;padding-top:6px;margin-bottom:12px;}'+
+      '.validez{background:#f0fdf4;border:2px solid #16a34a;border-radius:6px;padding:10px;text-align:center;margin:12px 0;}'+
+      '.validez .lbl{font-size:10px;font-weight:700;color:#166534;letter-spacing:.5px;}'+
+      '.validez .fecha{font-size:20px;font-weight:900;color:#16a34a;}'+
+      '.condiciones{font-size:10px;color:#555;line-height:1.5;border-top:1px dashed #ccc;padding-top:10px;margin-top:10px;}'+
+      '.firma{margin-top:20px;border-top:1px solid #000;padding-top:6px;font-size:11px;text-align:center;color:#888;}'+
+      '@media print{body{padding:0;}button{display:none!important;}}'+
+    '</style></head><body>'+
+    '<div class="ticket">'+
+      '<div class="header">'+
+        '<div class="tienda">PRÍMULA</div>'+
+        '<div class="local">'+localNom+'</div>'+
+        '<div style="font-size:11px;color:#888;margin-top:4px;">Ropa infantil y juvenil</div>'+
+      '</div>'+
+      '<div class="titulo">🔄 TICKET DE CAMBIO</div>'+
+      '<div class="meta">'+
+        '<strong>N° Venta:</strong> #'+d.id+'<br>'+
+        '<strong>Fecha:</strong> '+fechaStr+'<br>'+
+        (d.cliente?'<strong>Cliente:</strong> '+d.cliente+'<br>':'')+
+        '<strong>Pago:</strong> '+d.metodo+
+        (d.conDescuento?' <span style="color:#16a34a;">(20% dto. efectivo)</span>':'')+
+      '</div>'+
+      '<table>'+
+        '<thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th></tr></thead>'+
+        '<tbody>'+itemsRows+'</tbody>'+
+      '</table>'+
+      '<div class="total-row">TOTAL PAGADO: '+$p(d.total)+'</div>'+
+      '<div class="validez">'+
+        '<div class="lbl">VÁLIDO PARA CAMBIO HASTA</div>'+
+        '<div class="fecha">'+vencStr+'</div>'+
+        '<div style="font-size:10px;color:#166534;margin-top:2px;">'+DIAS_VALIDEZ+' días desde la compra</div>'+
+      '</div>'+
+      '<div class="condiciones">'+
+        '<strong>Condiciones de cambio:</strong><br>'+
+        '• Presentar este ticket al momento del cambio.<br>'+
+        '• El artículo debe estar sin uso, sin lavar y con etiquetas.<br>'+
+        '• Un solo cambio por compra. Sujeto a stock disponible.<br>'+
+        '• No aplica en artículos en oferta o liquidación.'+
+      '</div>'+
+      '<div class="firma">Firma del vendedor: ___________________</div>'+
+    '</div>'+
+    '<div style="text-align:center;margin-top:14px;">'+
+      '<button onclick="window.print()" style="padding:10px 28px;background:#000;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;margin-right:8px;">🖨️ Imprimir</button>'+
+      '<button onclick="window.close()" style="padding:10px 18px;background:#f3f4f6;color:#374151;border:1.5px solid #e5e7eb;border-radius:6px;font-size:14px;cursor:pointer;">Cerrar</button>'+
+    '</div>'+
+    '</body></html>';
+  var win=window.open('','_blank','width=420,height=680,toolbar=0,menubar=0,scrollbars=1');
+  if(win){win.document.write(html);win.document.close();}
+  else{toast('Activá los popups del navegador para imprimir el ticket','info');}
 }
 
 // ══════════════════════════════════════════════
@@ -7755,16 +7927,22 @@ function renderPersonal(){
   makeSortThead('per-thead',PER_COLS,perSort,renderPersonal);
   list=sortArr(list,perSort,function(p,col){
     if(col==='estado')return p.activo?'activo':'inactivo';
+    if(col==='anual'){var m=Math.round(p.sueldo_semanal*4.33);return m*12+m+Math.round(m*14/30);}
     return p[col]!=null?p[col]:'';
   });
   var tb=document.getElementById('per-tbody');
-  if(!list.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><p>Sin empleados registrados</p></div></td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><p>Sin empleados registrados</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(p){
+    var mensual=Math.round(p.sueldo_semanal*4.33);
+    var aguinaldo=mensual;
+    var vacaciones=Math.round(mensual*14/30);
+    var anual=mensual*12+aguinaldo+vacaciones;
     return '<tr>'+
       '<td style="font-weight:700;">'+p.nombre+'</td>'+
       '<td style="font-size:12px;color:#9ca3af;">'+(p.cargo||'—')+'</td>'+
       '<td style="text-align:right;font-weight:700;color:#6c7ae0;">'+$p(p.sueldo_semanal)+'</td>'+
-      '<td style="text-align:right;color:#9ca3af;">'+$p(Math.round(p.sueldo_semanal*4.33))+'</td>'+
+      '<td style="text-align:right;color:#9ca3af;">'+$p(mensual)+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:#7c3aed;" title="12 meses + aguinaldo ('+$p(aguinaldo)+') + vacaciones 14 días ('+$p(vacaciones)+')">'+$p(anual)+'</td>'+
       '<td style="font-size:12px;color:#9ca3af;">'+(p.telefono||'—')+'</td>'+
       '<td><span class="badge '+(p.activo?'b-green':'b-red')+'">'+(p.activo?'Activo':'Inactivo')+'</span></td>'+
       '<td><div class="actions">'+
