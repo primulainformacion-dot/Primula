@@ -2812,12 +2812,22 @@ var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // ── ESTADO GLOBAL ──
 var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[];
-var PRENDAS_LIST=[
-  'Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal',
-  'Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre',
-  'Chaleco Polar','Campera Polar','Campera Friza','Campera canguro','Sudadera',
-  'Joggins','Pantalón común','Cuellos','Bufandas / Cuellos','Reflectivo','Cofia','Arreglo'
-];
+var CONCEPTOS_POR_TIPO={
+  'CONFESIÓN':['Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal','Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre','Chaleco Polar','Campera Polar','Campera Friza','Campera canguro','Sudadera','Joggins','Pantalón común','Cuellos','Bufandas / Cuellos','Reflectivo','Cofia','Arreglo'],
+  'BORDADO':[],
+  'ESTAMPADO':[],
+  'DTF':[]
+};
+var talPrecioPendingPrendas=[];
+function _getPrendasParaTipo(tipo){
+  var defaults=(CONCEPTOS_POR_TIPO[tipo]||[]).slice();
+  var talIds=TALLERISTAS.filter(function(t){return t.activo&&(t.tipo||'CONFESIÓN')===tipo;}).map(function(t){return t.id;});
+  TAL_PRECIOS_PRENDA.forEach(function(p){
+    if(talIds.indexOf(p.tallerista_id)!==-1&&defaults.indexOf(p.prenda)===-1)defaults.push(p.prenda);
+  });
+  talPrecioPendingPrendas.forEach(function(p){if(defaults.indexOf(p)===-1)defaults.push(p);});
+  return defaults;
+}
 var editCliId=null, editProvId=null, editPresId=null;
 var mvItems=[], presItems=[];
 var currentLocal='llavallol'; // local activo en el módulo POS
@@ -8336,6 +8346,7 @@ function renderTalleristas(){
 
 function setTalPreciosTipo(tipo,el){
   talPreciosTipo=tipo;
+  talPrecioPendingPrendas=[];
   document.querySelectorAll('#tal-precios-tipo-tabs .tab').forEach(function(b){b.classList.remove('active');});
   if(el)el.classList.add('active');
   renderTalPrecios();
@@ -8439,56 +8450,83 @@ function renderTalPrecios(){
   var cont=document.getElementById('tal-precios-cont');
   var talActivos=TALLERISTAS.filter(function(t){return t.activo&&(t.tipo||'CONFESIÓN')===talPreciosTipo;})
     .sort(function(a,b){return a.nombre.localeCompare(b.nombre);});
-  if(!talActivos.length){cont.innerHTML='<p style="color:#9ca3af;">Sin talleristas activos</p>';return;}
+  var prendas=_getPrendasParaTipo(talPreciosTipo);
+  var conceptoLbl=talPreciosTipo==='CONFESIÓN'?'PRENDA':'CONCEPTO';
 
-  // Lookup: "tallerista_id_prenda" → precio
+  if(!talActivos.length){
+    cont.innerHTML='<p style="color:#9ca3af;padding:16px;">Sin talleristas activos de tipo '+talPreciosTipo+
+      '. Dales de alta en la pestaña Lista.</p>';return;
+  }
+
   var lookup={};
   TAL_PRECIOS_PRENDA.forEach(function(p){lookup[p.tallerista_id+'_'+p.prenda]=Number(p.precio);});
 
   var thStyle='padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;border-right:1px solid #e5e7eb;font-size:11px;white-space:nowrap;background:#f9fafb;';
-  var thFirst='position:sticky;left:0;z-index:2;padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;border-right:2px solid #d1d5db;background:#f9fafb;font-size:11px;min-width:160px;';
+  var thFirst='position:sticky;left:0;z-index:2;padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;border-right:2px solid #d1d5db;background:#f9fafb;font-size:11px;min-width:190px;';
 
   var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'+
-    '<span style="font-size:12px;color:#9ca3af;">Celda vacía = sin precio asignado</span>'+
+    '<span style="font-size:12px;color:#9ca3af;">Editá nombres y precios · <strong>Guardar</strong> aplica todo</span>'+
     '<button class="btn" onclick="saveTalPrecios()">Guardar todos los precios</button>'+
   '</div>';
 
   html+='<div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;"><table style="border-collapse:collapse;font-size:13px;">';
-
-  // Encabezado: col prenda + col por tallerista
   html+='<thead><tr>';
-  html+='<th style="'+thFirst+'">PRENDA</th>';
+  html+='<th style="'+thFirst+'">'+conceptoLbl+'</th>';
   talActivos.forEach(function(t){
     html+='<th style="'+thStyle+'min-width:95px;">'+t.nombre+'</th>';
   });
   html+='</tr></thead><tbody>';
 
-  // Una fila por prenda
-  PRENDAS_LIST.forEach(function(prenda,idx){
+  if(!prendas.length){
+    html+='<tr><td colspan="'+(talActivos.length+1)+'" style="padding:16px;color:#9ca3af;text-align:center;">'+
+      'Sin conceptos — agregá el primero abajo ↓</td></tr>';
+  }
+
+  prendas.forEach(function(prenda,idx){
     var bg=idx%2===0?'#ffffff':'#f9fafb';
-    var tdBorder='border-bottom:1px solid #e5e7eb;border-right:1px solid #e5e7eb;';
+    var td='border-bottom:1px solid #e5e7eb;border-right:1px solid #e5e7eb;';
     html+='<tr>';
-    html+='<td style="position:sticky;left:0;z-index:1;background:'+bg+';padding:5px 12px;font-weight:500;'+tdBorder+'border-right:2px solid #d1d5db;">'+prenda+'</td>';
+    // Nombre editable
+    var esc=prenda.replace(/"/g,'&quot;');
+    html+='<td style="position:sticky;left:0;z-index:1;background:'+bg+';padding:2px 6px;'+td+'border-right:2px solid #d1d5db;">'+
+      '<input id="pn_'+idx+'" type="text" data-orig="'+esc+'" value="'+esc+'" '+
+      'style="width:100%;border:1px solid transparent;border-radius:4px;padding:4px 6px;font-size:12px;font-weight:500;background:transparent;color:#1f2937;" '+
+      'onfocus="this.style.borderColor=\'#6c7ae0\';this.style.background=\'#f0f4ff\';" '+
+      'onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\';">'+
+    '</td>';
+    // Precios por tallerista
     talActivos.forEach(function(t){
       var precio=lookup[t.id+'_'+prenda]||'';
-      html+='<td style="padding:3px 5px;'+tdBorder+'background:'+bg+';">'+
+      html+='<td style="padding:3px 5px;'+td+'background:'+bg+';">'+
         '<input type="number" id="pp_'+t.id+'_'+idx+'" value="'+(precio||'')+'" placeholder="—" '+
         'style="width:84px;text-align:right;border:1px solid #e5e7eb;border-radius:4px;padding:3px 5px;font-size:12px;background:transparent;">'+
-        '</td>';
+      '</td>';
     });
     html+='</tr>';
   });
 
   html+='</tbody></table></div>';
 
+  // Agregar concepto
+  html+='<div style="display:flex;gap:8px;align-items:center;margin-top:10px;padding:10px 12px;background:#f9fafb;border:1.5px dashed #d1d5db;border-radius:8px;">'+
+    '<span style="font-size:12px;font-weight:600;color:#6b7280;white-space:nowrap;">+ '+conceptoLbl+':</span>'+
+    '<input id="tal-add-prenda-inp" placeholder="Nombre del concepto..." '+
+    'style="flex:1;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:13px;" '+
+    'onkeydown="if(event.key===\'Enter\')addTalPrenda()">'+
+    '<button class="btn btn-sm" onclick="addTalPrenda()">Agregar</button>'+
+  '</div>';
+
   // Historial
-  var hist=TAL_PRECIOS_PRENDA_HIST.slice(0,40);
-  html+='<div style="margin-top:20px;"><span style="font-size:11px;color:#9ca3af;font-weight:700;letter-spacing:.5px;">HISTORIAL DE CAMBIOS</span>';
+  var hist=TAL_PRECIOS_PRENDA_HIST.filter(function(h){
+    var t=TALLERISTAS.find(function(x){return x.id===h.tallerista_id;});
+    return t&&(t.tipo||'CONFESIÓN')===talPreciosTipo;
+  }).slice(0,40);
+  html+='<div style="margin-top:20px;"><span style="font-size:11px;color:#9ca3af;font-weight:700;letter-spacing:.5px;">HISTORIAL DE CAMBIOS · '+talPreciosTipo+'</span>';
   if(!hist.length){
     html+='<p style="color:#9ca3af;font-size:12px;margin-top:6px;">Sin cambios registrados</p>';
   } else {
     html+='<div class="tbl" style="margin-top:8px;"><table><thead><tr>'+
-      '<th>Fecha</th><th>Tallerista</th><th>Prenda</th>'+
+      '<th>Fecha</th><th>Tallerista</th><th>'+conceptoLbl+'</th>'+
       '<th style="text-align:right">Anterior</th><th style="text-align:right">Nuevo</th>'+
     '</tr></thead><tbody>';
     hist.forEach(function(h){
@@ -8510,26 +8548,57 @@ function renderTalPrecios(){
 
 async function saveTalPrecios(){
   var talActivos=TALLERISTAS.filter(function(t){return t.activo&&(t.tipo||'CONFESIÓN')===talPreciosTipo;});
+  var talIds=talActivos.map(function(t){return t.id;});
   var lookup={};
   TAL_PRECIOS_PRENDA.forEach(function(p){lookup[p.tallerista_id+'_'+p.prenda]=Number(p.precio);});
+  var prendas=_getPrendasParaTipo(talPreciosTipo);
+  var now=new Date().toISOString();
 
-  var upserts=[], changes=[];
-  PRENDAS_LIST.forEach(function(prenda,idx){
+  // ── 1. Detectar renames ──
+  var renames={};
+  prendas.forEach(function(prenda,idx){
+    var inp=document.getElementById('pn_'+idx);
+    if(!inp)return;
+    var orig=inp.dataset.orig;
+    var nuevo=inp.value.trim();
+    if(orig&&nuevo&&orig!==nuevo)renames[orig]=nuevo;
+  });
+
+  // Aplicar renames en DB
+  if(Object.keys(renames).length){
+    for(var oldN in renames){
+      var newN=renames[oldN];
+      var {error:re}=await sb.from('tallerista_precios_prenda')
+        .update({prenda:newN,updated_at:now})
+        .eq('prenda',oldN).in('tallerista_id',talIds);
+      if(re){toast('Error al renombrar: '+re.message,'err');return;}
+      // Actualizar lookup
+      talIds.forEach(function(id){
+        if(lookup[id+'_'+oldN]!==undefined){
+          lookup[id+'_'+newN]=lookup[id+'_'+oldN];
+          delete lookup[id+'_'+oldN];
+        }
+      });
+    }
+    await loadTalPreciosPrenda();
+  }
+
+  // ── 2. Guardar precios ──
+  var upserts=[],changes=[];
+  prendas.forEach(function(prenda,idx){
+    var nameInp=document.getElementById('pn_'+idx);
+    var actualName=nameInp?(renames[nameInp.dataset.orig]||nameInp.dataset.orig):prenda;
     talActivos.forEach(function(t){
       var el=document.getElementById('pp_'+t.id+'_'+idx);
       if(!el)return;
       var nuevo=parseFloat(el.value)||0;
-      var anterior=lookup[t.id+'_'+prenda]||0;
-      if(nuevo>0){
-        upserts.push({tallerista_id:t.id,prenda:prenda,precio:nuevo,updated_at:new Date().toISOString()});
-      }
-      if(nuevo!==anterior){
-        changes.push({tallerista_id:t.id,prenda:prenda,precio_anterior:anterior,precio_nuevo:nuevo,fecha_cambio:today()});
-      }
+      var anterior=lookup[t.id+'_'+actualName]||0;
+      if(nuevo>0)upserts.push({tallerista_id:t.id,prenda:actualName,precio:nuevo,updated_at:now});
+      if(nuevo!==anterior)changes.push({tallerista_id:t.id,prenda:actualName,precio_anterior:anterior,precio_nuevo:nuevo,fecha_cambio:today()});
     });
   });
 
-  if(!upserts.length&&!changes.length){toast('Sin cambios','info');return;}
+  if(!upserts.length&&!changes.length&&!Object.keys(renames).length){toast('Sin cambios','info');return;}
 
   if(upserts.length){
     var {error:e1}=await sb.from('tallerista_precios_prenda').upsert(upserts,{onConflict:'tallerista_id,prenda'});
@@ -8540,10 +8609,27 @@ async function saveTalPrecios(){
     if(e2){toast('Error al guardar historial: '+e2.message,'err');return;}
   }
 
+  talPrecioPendingPrendas=[];
   await loadTalPreciosPrenda();
   await loadTalPreciosPrendaHist();
   renderTalPrecios();
-  toast('Precios guardados — '+changes.length+' cambio'+(changes.length!==1?'s':''));
+  var msgs=[];
+  if(Object.keys(renames).length)msgs.push(Object.keys(renames).length+' renombre'+(Object.keys(renames).length!==1?'s':''));
+  if(changes.length)msgs.push(changes.length+' precio'+(changes.length!==1?'s':'')+'  actualizados');
+  toast('Guardado · '+(msgs.join(' · ')||'sin cambios de precio'));
+}
+
+function addTalPrenda(){
+  var inp=document.getElementById('tal-add-prenda-inp');
+  var nombre=(inp?inp.value:'').trim();
+  if(!nombre){toast('Ingresá un nombre','err');return;}
+  var existe=_getPrendasParaTipo(talPreciosTipo).indexOf(nombre)!==-1;
+  if(existe){toast('Ya existe ese concepto','err');return;}
+  talPrecioPendingPrendas.push(nombre);
+  renderTalPrecios();
+  // refocus en el input vacío
+  var nuevoInp=document.getElementById('tal-add-prenda-inp');
+  if(nuevoInp)nuevoInp.focus();
 }
 
 function openTalModal(id){
