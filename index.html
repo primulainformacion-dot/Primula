@@ -631,6 +631,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="tabs" style="margin-bottom:16px;" id="tal-tabs">
       <button class="tab active" onclick="setTalTab('lista',this)">🧵 Talleristas</button>
       <button class="tab" onclick="setTalTab('produccion',this)">📦 Producción</button>
+      <button class="tab" onclick="setTalTab('historial',this)">📋 Historial</button>
       <button class="tab" onclick="setTalTab('precios',this)">💲 Precios</button>
     </div>
 
@@ -640,13 +641,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <div class="panel-hdr">
           <input id="tal-q" placeholder="Buscar tallerista..." oninput="renderTalleristas()" style="max-width:280px"/>
           <button class="btn" onclick="openTalModal()">+ Nuevo tallerista</button>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="tal-tipo-tabs">
-          <button class="tab active" onclick="setTalTipoFiltro('TODOS',this)">Todos</button>
-          <button class="tab" onclick="setTalTipoFiltro('CONFESIÓN',this)">🧵 Confesión</button>
-          <button class="tab" onclick="setTalTipoFiltro('BORDADO',this)">🎨 Bordado</button>
-          <button class="tab" onclick="setTalTipoFiltro('ESTAMPADO',this)">🖨️ Estampado</button>
-          <button class="tab" onclick="setTalTipoFiltro('DTF',this)">🖼️ DTF</button>
         </div>
         <div class="tbl"><table>
           <thead id="tal-thead"></thead>
@@ -681,16 +675,48 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
     <!-- Sub-tab 3: Precios -->
     <div id="tal-tab-precios" style="display:none;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;" id="tal-precios-tipo-tabs">
+        <button class="tab active" onclick="setTalPreciosTipo('CONFESIÓN',this)">🧵 Confesión</button>
+        <button class="tab" onclick="setTalPreciosTipo('BORDADO',this)">🎨 Bordado</button>
+        <button class="tab" onclick="setTalPreciosTipo('ESTAMPADO',this)">🖨️ Estampado</button>
+        <button class="tab" onclick="setTalPreciosTipo('DTF',this)">🖼️ DTF</button>
+      </div>
       <div id="tal-precios-cont"></div>
+    </div>
+
+    <!-- Sub-tab 4: Historial -->
+    <div id="tal-tab-historial" style="display:none;">
+      <div class="panel">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+          <select id="tal-hist-tal" onchange="renderTalHistorial()" style="min-width:200px;">
+            <option value="">Todos los talleristas</option>
+          </select>
+          <select id="tal-hist-prenda" onchange="renderTalHistorial()" style="min-width:160px;">
+            <option value="">Todos los conceptos</option>
+          </select>
+        </div>
+        <div class="tbl"><table>
+          <thead>
+            <tr>
+              <th>Fecha</th><th>Tallerista</th><th>Concepto</th>
+              <th style="text-align:right">Precio anterior</th>
+              <th style="text-align:right">Precio nuevo</th>
+              <th style="text-align:right">Variación</th>
+            </tr>
+          </thead>
+          <tbody id="tal-hist-tbody"></tbody>
+        </table></div>
+      </div>
     </div>
   </div>
 
   <!-- ════════════ PERSONAL ════════════ -->
   <div class="section" id="sec-personal">
-    <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px;">
+    <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
       <div class="stat"><div class="stat-icon" style="background:#dbeafe;">👤</div><h3 id="per-total">0</h3><p>Empleados activos</p></div>
       <div class="stat"><div class="stat-icon" style="background:#ede9fe;">💰</div><h3 id="per-masa-salarial">$0</h3><p>Masa salarial semanal</p></div>
       <div class="stat"><div class="stat-icon" style="background:#fef3c7;">📅</div><h3 id="per-masa-mensual">$0</h3><p>Equivalente mensual (×4.33)</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#f3e8ff;">📆</div><h3 id="per-masa-anual" style="color:#7c3aed;">$0</h3><p>Equiv. anual c/aguinaldo</p></div>
     </div>
 
     <!-- Sub-pestañas -->
@@ -2791,7 +2817,7 @@ async function loadCategorias(){ var {data}=await sb.from('categorias').select('
 async function loadTalleristas(){ var {data}=await sb.from('talleristas').select('*').order('nombre'); TALLERISTAS=data||[]; }
 async function loadTalHistorial(){ var {data}=await sb.from('tallerista_precios_historial').select('*').order('created_at',{ascending:false}); TAL_PRECIOS_HIST=data||[]; }
 async function loadTalPreciosPrenda(){ var {data}=await sb.from('tallerista_precios_prenda').select('*'); TAL_PRECIOS_PRENDA=data||[]; }
-async function loadTalPreciosPrendaHist(){ var {data}=await sb.from('tallerista_precios_prenda_hist').select('*').order('created_at',{ascending:false}).limit(100); TAL_PRECIOS_PRENDA_HIST=data||[]; }
+async function loadTalPreciosPrendaHist(){ var {data}=await sb.from('tallerista_precios_prenda_hist').select('*').order('created_at',{ascending:false}); TAL_PRECIOS_PRENDA_HIST=data||[]; }
 async function loadChequesPropios(){ var {data}=await sb.from('cheques_propios').select('*').order('fecha_pago',{ascending:true}); CHEQUES_PROPIOS=data||[]; }
 async function loadChequesCartera(){ var {data}=await sb.from('cheques_cartera').select('*').order('fecha_cobro',{ascending:true}); CHEQUES_CARTERA=data||[]; }
 async function loadChequeUsos(){ var {data}=await sb.from('cheque_usos').select('*'); CHEQUE_USOS=data||[]; }
@@ -5991,7 +6017,7 @@ var perSort={col:null,dir:'asc'};
 var PER_COLS=[{col:'nombre',label:'Nombre'},{col:'cargo',label:'Cargo'},{col:'sueldo_semanal',label:'Sueldo semanal',r:true},{col:null,label:'Equiv. mensual',r:true},{col:'anual',label:'Equiv. anual',r:true},{col:'telefono',label:'Teléfono'},{col:'estado',label:'Estado'},{col:null,label:''}];
 
 var talSort={col:null,dir:'asc'};
-var talTipoFiltro='TODOS';
+var talPreciosTipo='CONFESIÓN';
 var TAL_COLS=[{col:'nombre',label:'Nombre'},{col:'tipo',label:'Tipo'},{col:'precio_prenda',label:'Precio/prenda',r:true},{col:'telefono',label:'Teléfono'},{col:'nota',label:'Nota'},{col:'estado',label:'Estado'},{col:null,label:''}];
 
 var finSort={col:null,dir:'asc'};
@@ -7601,11 +7627,7 @@ var editTalId=null;
 
 function renderTalleristas(){
   var q=(document.getElementById('tal-q').value||'').toLowerCase();
-  var list=TALLERISTAS.filter(function(t){
-    return t.activo&&
-      (!q||t.nombre.toLowerCase().includes(q))&&
-      (talTipoFiltro==='TODOS'||(t.tipo||'CONFESIÓN')===talTipoFiltro);
-  });
+  var list=TALLERISTAS.filter(function(t){return t.activo&&(!q||t.nombre.toLowerCase().includes(q));});
   var total=list.length;
   var prom=total?Math.round(list.reduce(function(s,t){return s+Number(t.precio_prenda_default);},0)/total):0;
   var totalPrendas=MOVS.filter(function(m){return m.tallerista_id&&m.prendas_cantidad;}).reduce(function(s,m){return s+Number(m.prendas_cantidad);},0);
@@ -7640,21 +7662,64 @@ function renderTalleristas(){
   }).join('');
 }
 
-function setTalTipoFiltro(tipo,el){
-  talTipoFiltro=tipo;
-  document.querySelectorAll('#tal-tipo-tabs .tab').forEach(function(b){b.classList.remove('active');});
+function setTalPreciosTipo(tipo,el){
+  talPreciosTipo=tipo;
+  document.querySelectorAll('#tal-precios-tipo-tabs .tab').forEach(function(b){b.classList.remove('active');});
   if(el)el.classList.add('active');
-  renderTalleristas();
+  renderTalPrecios();
 }
 
 function setTalTab(tab, el){
-  ['lista','produccion','precios'].forEach(function(t){
+  ['lista','produccion','precios','historial'].forEach(function(t){
     document.getElementById('tal-tab-'+t).style.display=t===tab?'block':'none';
   });
   document.querySelectorAll('#tal-tabs .tab').forEach(function(b){b.classList.remove('active');});
   if(el) el.classList.add('active');
   if(tab==='produccion') renderTalProduccion();
   if(tab==='precios') renderTalPrecios();
+  if(tab==='historial') renderTalHistorial();
+}
+
+function renderTalHistorial(){
+  var selTal=document.getElementById('tal-hist-tal');
+  var selPrenda=document.getElementById('tal-hist-prenda');
+  if(!selTal||!selPrenda)return;
+  var talFil=selTal.value;
+  var prendaFil=selPrenda.value;
+  // Populate tallerista select on first call
+  if(selTal.options.length<=1){
+    TALLERISTAS.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre);}).forEach(function(t){
+      var o=document.createElement('option');o.value=t.id;o.textContent=t.nombre;selTal.appendChild(o);
+    });
+  }
+  // Rebuild prenda options from live data
+  var allPrendas=[...new Set(TAL_PRECIOS_PRENDA_HIST.map(function(h){return h.prenda;}))].sort();
+  selPrenda.innerHTML='<option value="">Todos los conceptos</option>';
+  allPrendas.forEach(function(p){
+    var o=document.createElement('option');o.value=p;o.textContent=p;
+    if(p===prendaFil)o.selected=true;
+    selPrenda.appendChild(o);
+  });
+  var list=TAL_PRECIOS_PRENDA_HIST.slice();
+  if(talFil)list=list.filter(function(h){return String(h.tallerista_id)===String(talFil);});
+  if(prendaFil)list=list.filter(function(h){return h.prenda===prendaFil;});
+  var tb=document.getElementById('tal-hist-tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><p>Sin registros de cambios de precio</p></div></td></tr>';return;}
+  tb.innerHTML=list.map(function(h){
+    var talNombre=(TALLERISTAS.find(function(t){return t.id===h.tallerista_id;})||{}).nombre||'—';
+    var diff=Number(h.precio_nuevo)-Number(h.precio_anterior);
+    var diffStr=(diff>=0?'+':'')+$p(Math.abs(diff));
+    var diffColor=diff>0?'#16a34a':diff<0?'#dc2626':'#9ca3af';
+    var esPrecioBase=h.prenda==='PRECIO BASE';
+    return '<tr>'+
+      '<td style="font-size:12px;color:#9ca3af;white-space:nowrap;">'+h.fecha_cambio+'</td>'+
+      '<td style="font-weight:600;">'+talNombre+'</td>'+
+      '<td>'+(esPrecioBase?'<span style="font-size:11px;padding:2px 6px;border-radius:10px;background:#f3f4f6;color:#6b7280;">Precio base</span>':h.prenda)+'</td>'+
+      '<td style="text-align:right;color:#9ca3af;text-decoration:line-through;">'+$p(h.precio_anterior)+'</td>'+
+      '<td style="text-align:right;font-weight:700;">'+$p(h.precio_nuevo)+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:'+diffColor+';">'+(diff===0?'—':(diff>0?'▲ ':'▼ ')+diffStr)+'</td>'+
+    '</tr>';
+  }).join('');
 }
 
 function renderTalProduccion(){
@@ -7700,7 +7765,7 @@ function renderTalProduccion(){
 
 function renderTalPrecios(){
   var cont=document.getElementById('tal-precios-cont');
-  var talActivos=TALLERISTAS.filter(function(t){return t.activo;})
+  var talActivos=TALLERISTAS.filter(function(t){return t.activo&&(t.tipo||'CONFESIÓN')===talPreciosTipo;})
     .sort(function(a,b){return a.nombre.localeCompare(b.nombre);});
   if(!talActivos.length){cont.innerHTML='<p style="color:#9ca3af;">Sin talleristas activos</p>';return;}
 
@@ -7772,7 +7837,7 @@ function renderTalPrecios(){
 }
 
 async function saveTalPrecios(){
-  var talActivos=TALLERISTAS.filter(function(t){return t.activo;});
+  var talActivos=TALLERISTAS.filter(function(t){return t.activo&&(t.tipo||'CONFESIÓN')===talPreciosTipo;});
   var lookup={};
   TAL_PRECIOS_PRENDA.forEach(function(p){lookup[p.tallerista_id+'_'+p.prenda]=Number(p.precio);});
 
@@ -7827,6 +7892,8 @@ async function saveTal(){
   var nombre=document.getElementById('mtal-nombre').value.trim();
   var precio=parseFloat(document.getElementById('mtal-precio').value)||0;
   if(!nombre){toast('El nombre es obligatorio','err');return;}
+  var talAnterior=editTalId?TALLERISTAS.find(function(x){return x.id===editTalId;}):null;
+  var precioAnterior=talAnterior?Number(talAnterior.precio_prenda_default):null;
   var d={nombre,precio_prenda_default:precio,
     tipo:document.getElementById('mtal-tipo').value||'CONFESIÓN',
     telefono:document.getElementById('mtal-tel').value.trim()||null,
@@ -7835,6 +7902,13 @@ async function saveTal(){
     updated_at:new Date().toISOString()};
   var r=editTalId?await sb.from('talleristas').update(d).eq('id',editTalId):await sb.from('talleristas').insert(d);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
+  if(editTalId&&precioAnterior!==null&&precioAnterior!==precio){
+    await sb.from('tallerista_precios_prenda_hist').insert({
+      tallerista_id:editTalId,prenda:'PRECIO BASE',
+      precio_anterior:precioAnterior,precio_nuevo:precio,fecha_cambio:today()
+    });
+    await loadTalPreciosPrendaHist();
+  }
   toast(editTalId?'Tallerista actualizado':'Tallerista registrado');
   closeM('m-tal');
   await loadTalleristas();renderTalleristas();
@@ -7954,9 +8028,12 @@ function renderPersonal(){
   var q=(document.getElementById('per-q').value||'').toLowerCase();
   var list=PERSONAL.filter(function(p){return p.activo&&(!q||p.nombre.toLowerCase().includes(q));});
   var masaSemanal=list.reduce(function(s,p){return s+Number(p.sueldo_semanal);},0);
+  var masaMensual=Math.round(masaSemanal*4.33);
+  var masaAnual=masaMensual*12+masaMensual+Math.round(masaMensual*14/30);
   document.getElementById('per-total').textContent=list.length;
   document.getElementById('per-masa-salarial').textContent=$p(masaSemanal);
-  document.getElementById('per-masa-mensual').textContent=$p(Math.round(masaSemanal*4.33));
+  document.getElementById('per-masa-mensual').textContent=$p(masaMensual);
+  document.getElementById('per-masa-anual').textContent=$p(masaAnual);
   makeSortThead('per-thead',PER_COLS,perSort,renderPersonal);
   list=sortArr(list,perSort,function(p,col){
     if(col==='estado')return p.activo?'activo':'inactivo';
