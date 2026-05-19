@@ -920,10 +920,11 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div id="pan-tab-objetivos" style="display:none;">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
         <div class="tabs" id="obj-subtabs" style="margin-bottom:0;">
-          <div class="tab active" onclick="setObjTab('mensual',this)">📅 Mensual</div>
-          <div class="tab" onclick="setObjTab('anual',this)">📆 Anual</div>
+          <div class="tab active" onclick="setObjTab('anual',this)">📆 Anual</div>
+          <div class="tab" onclick="setObjTab('mensual',this)">📅 Mensual</div>
         </div>
-        <div id="obj-mes-wrap" style="display:contents;">
+        <select id="obj-anio" onchange="renderObjetivos()" style="width:90px;"></select>
+        <div id="obj-mes-wrap" style="display:none;">
           <select id="obj-mes" onchange="renderObjetivos()" style="width:150px;">
             <option value="">Todo el año</option>
             <option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option>
@@ -931,7 +932,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <option>SEPTIEMBRE</option><option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option>
           </select>
         </div>
-        <select id="obj-anio" onchange="renderObjetivos()" style="width:90px;"></select>
       </div>
       <div id="obj-content"></div>
     </div>
@@ -5206,7 +5206,7 @@ function renderVentasPanel(anio,mes){
 }
 
 // ── OBJETIVOS ──
-var currentObjTab='mensual';
+var currentObjTab='anual';
 var OBJ_CANALES=[
   {key:'ROPA MAYORISTA',icon:'🏭',color:'#6c7ae0'},
   {key:'LOCAL LLAVALLOL',icon:'🏪',color:'#f59e0b'},
@@ -5216,7 +5216,7 @@ var OBJ_CANALES=[
 function setObjTab(tab,el){
   currentObjTab=tab;
   var mw=document.getElementById('obj-mes-wrap');
-  if(mw)mw.style.display=tab==='mensual'?'contents':'none';
+  if(mw)mw.style.display=tab==='mensual'?'block':'none';
   document.querySelectorAll('#obj-subtabs .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
   renderObjetivos();
@@ -5945,7 +5945,10 @@ function renderChqResumen(){
 
   // ── Fila superior: columna izquierda (cartera + total cupo) + buckets de cupo ──
   // ── Fila superior: solo 2 cards resumen ──
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">';
+  var CUPO_TOTAL=40000000;
+  var cupoLibre=CUPO_TOTAL-totalCupoOcupado;
+  var cupoLibrePos=cupoLibre>=0;
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">';
   html+='<div class="stat" style="border-top:3px solid #7c3aed;">'+
     '<div class="stat-icon" style="background:#ede9fe;">🧾</div>'+
     '<h3 style="color:#7c3aed;">'+$p(totalDisp)+'</h3>'+
@@ -5957,6 +5960,12 @@ function renderChqResumen(){
     '<h3 style="color:#0284c7;">'+$p(totalCupoOcupado)+'</h3>'+
     '<p style="color:#0369a1;font-weight:700;">Total cupo a liberar</p>'+
     '<div style="font-size:11px;color:#0369a1;">'+cupoOcupado.length+' cheque'+(cupoOcupado.length!==1?'s':'')+' pendiente'+(cupoOcupado.length!==1?'s':'')+'</div>'+
+  '</div>';
+  html+='<div class="stat" style="border-top:3px solid '+(cupoLibrePos?'#10b981':'#ef4444')+';background:'+(cupoLibrePos?'#f0fdf4':'#fff5f5')+';">'+
+    '<div class="stat-icon" style="background:'+(cupoLibrePos?'#dcfce7':'#fee2e2')+';font-size:20px;">'+(cupoLibrePos?'✅':'⚠️')+'</div>'+
+    '<h3 style="color:'+(cupoLibrePos?'#059669':'#dc2626')+';">'+(cupoLibrePos?'':'-')+$p(Math.abs(cupoLibre))+'</h3>'+
+    '<p style="color:'+(cupoLibrePos?'#065f46':'#991b1b')+';font-weight:700;">Cupo libre</p>'+
+    '<div style="font-size:11px;color:'+(cupoLibrePos?'#16a34a':'#dc2626')+';margin-top:4px;">de '+$p(CUPO_TOTAL)+' totales</div>'+
   '</div>';
   html+='</div>';
 
