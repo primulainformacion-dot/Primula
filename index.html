@@ -769,6 +769,9 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <span style="font-size:12px;color:#9ca3af;">← período activo del panel</span>
     </div>
 
+    <!-- Panel de alertas -->
+    <div id="pan-alertas" style="margin-bottom:16px;"></div>
+
     <!-- Tabs -->
     <div class="tabs" id="pan-tabs">
       <div class="tab active" onclick="setPanTab('resumen',this)">📊 Resumen financiero</div>
@@ -3061,7 +3064,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 // ── LOAD ──
 async function loadAll(){
   await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos()]);
-  renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
+  renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderAlertas(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
 async function loadCierresCaja(){ var {data}=await sb.from('cierres_caja').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false}); CIERRES_CAJA=data||[]; }
@@ -3113,7 +3116,7 @@ function nav(sec, el){
   if(el) el.classList.add('active');
   document.getElementById('pg-title').textContent=el?el.textContent.trim():sec;
   document.getElementById('pg-sub').textContent='';
-  if(sec==='panel'){renderPanelGeneral();}
+  if(sec==='panel'){renderAlertas();renderPanelGeneral();}
   if(sec==='finanzas'){renderFinCajas();renderFin();}
   if(sec==='cheques'){renderChqResumen();renderChqCartera();renderChqPropios();}
   if(sec==='productos'){renderResumenColegios();}
@@ -5429,6 +5432,109 @@ function calcStockValue(local,precio){
 }
 function calcStockUnidades(local){
   return STOCK.filter(function(s){return !local||s.local===local;}).reduce(function(sum,s){return sum+s.cantidad;},0);
+}
+
+function renderAlertas(){
+  var el=document.getElementById('pan-alertas');
+  if(!el)return;
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+  var en7=new Date(hoy.getTime()+7*86400000);
+  var en10=new Date(hoy.getTime()+10*86400000);
+  var alerts=[];
+
+  // ── Cheques propios venciendo en ≤7 días ──
+  CHEQUES_PROPIOS.filter(function(c){
+    if(c.estado!=='pendiente'||!c.fecha_vencimiento)return false;
+    var fv=new Date(c.fecha_vencimiento+'T12:00:00');
+    return fv<=en7;
+  }).forEach(function(c){
+    var fv=new Date(c.fecha_vencimiento+'T12:00:00');
+    var vencido=fv<hoy;
+    alerts.push({
+      nivel:vencido?'rojo':'rojo',
+      icono:'📋',
+      texto:'Cheque propio '+(vencido?'<strong>vencido</strong>':'vence el <strong>'+fmtF(c.fecha_vencimiento)+'</strong>')+' · '+$p(c.monto)+(c.beneficiario?' — '+c.beneficiario:''),
+      accion:"setFinTab('chequespropios',null);nav('fin',null);",
+      etiqueta:'Ver cheques'
+    });
+  });
+
+  // ── Moratorias vencidas o venciendo en ≤10 días ──
+  MORATORIAS.filter(function(m){
+    if(m.estado==='finalizada'||m.estado==='suspendida'||!m.prox_vencimiento)return false;
+    var fv=new Date(m.prox_vencimiento+'T12:00:00');
+    return fv<=en10;
+  }).forEach(function(m){
+    var fv=new Date(m.prox_vencimiento+'T12:00:00');
+    var vencida=fv<hoy;
+    var enMenos5=fv<=new Date(hoy.getTime()+5*86400000);
+    alerts.push({
+      nivel:vencida||enMenos5?'rojo':'amarillo',
+      icono:'⚠️',
+      texto:'Moratoria '+(vencida?'<strong>vencida</strong>':'vence el <strong>'+fmtF(m.prox_vencimiento)+'</strong>')+' · '+m.nombre+(m.acreedor?' ('+m.acreedor+')':'')+' · Cuota '+$p(m.monto_cuota),
+      accion:"nav('moratorias',null);",
+      etiqueta:'Ver moratorias'
+    });
+  });
+
+  // ── Gastos fijos activos sin pago en el mes actual ──
+  var mesActual=MESES_ARR[hoy.getMonth()];
+  var anioActual=hoy.getFullYear();
+  var gfActivos=GASTOS_FIJOS.filter(function(g){return g.activo;});
+  var gfSinPagar=gfActivos.filter(function(g){
+    return !GF_PAGOS.some(function(p){return p.gasto_fijo_id===g.id&&p.anio===anioActual&&p.mes===mesActual;});
+  });
+  if(gfSinPagar.length){
+    alerts.push({
+      nivel:'amarillo',
+      icono:'💸',
+      texto:'<strong>'+gfSinPagar.length+'</strong> gasto'+(gfSinPagar.length>1?'s fijos sin':'fijo sin')+' pagar en '+mesActual+' '+anioActual+': '+gfSinPagar.slice(0,3).map(function(g){return g.nombre;}).join(', ')+(gfSinPagar.length>3?' y '+(gfSinPagar.length-3)+' más':''),
+      accion:"setFinTab('gastosfijos',null);nav('fin',null);",
+      etiqueta:'Ver gastos fijos'
+    });
+  }
+
+  // ── Cajas líquidas con saldo negativo ──
+  var cajasLiq=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','LOCAL LLAVALLOL','LOCAL MONTE GRANDE'];
+  cajasLiq.forEach(function(caja){
+    var s=saldoCaja(caja);
+    if(s<0){
+      alerts.push({
+        nivel:'rojo',
+        icono:'🔴',
+        texto:'Saldo negativo en <strong>'+caja+'</strong>: '+$p(s),
+        accion:"setFinTab('cajas',null);nav('fin',null);",
+        etiqueta:'Ver cajas'
+      });
+    }
+  });
+
+  if(!alerts.length){
+    el.innerHTML='<div style="display:flex;align-items:center;gap:8px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:10px 16px;font-size:13px;color:#166534;font-weight:600;">✅ Sin alertas pendientes — todo en orden</div>';
+    return;
+  }
+
+  var rojos=alerts.filter(function(a){return a.nivel==='rojo';});
+  var amarillos=alerts.filter(function(a){return a.nivel==='amarillo';});
+  var titulo='⚠️ '+alerts.length+' alerta'+(alerts.length>1?'s':'')+
+    (rojos.length?' &nbsp;<span style="background:#fee2e2;color:#dc2626;border-radius:20px;padding:1px 10px;font-size:11px;font-weight:800;">'+rojos.length+' urgente'+(rojos.length>1?'s':'')+'</span>':'')+
+    (amarillos.length?' &nbsp;<span style="background:#fef9c3;color:#ca8a04;border-radius:20px;padding:1px 10px;font-size:11px;font-weight:800;">'+amarillos.length+' atención</span>':'');
+
+  var rows=alerts.map(function(a){
+    var bg=a.nivel==='rojo'?'#fff1f2':'#fefce8';
+    var border=a.nivel==='rojo'?'#fecaca':'#fef08a';
+    var col=a.nivel==='rojo'?'#991b1b':'#854d0e';
+    return '<div style="display:flex;align-items:center;gap:12px;background:'+bg+';border:1.5px solid '+border+';border-radius:9px;padding:10px 14px;margin-top:8px;">'+
+      '<span style="font-size:18px;flex-shrink:0;">'+a.icono+'</span>'+
+      '<span style="flex:1;font-size:13px;color:'+col+';">'+a.texto+'</span>'+
+      '<button class="btn btn-sm btn-gray" style="flex-shrink:0;font-size:12px;" onclick="'+a.accion+'">'+a.etiqueta+' →</button>'+
+    '</div>';
+  }).join('');
+
+  el.innerHTML='<div style="background:#fff;border:2px solid #e5e7eb;border-radius:12px;padding:14px 16px;">'+
+    '<div style="font-size:13px;font-weight:800;color:#374151;margin-bottom:2px;">'+titulo+'</div>'+
+    rows+
+  '</div>';
 }
 
 function renderPanelGeneral(){
