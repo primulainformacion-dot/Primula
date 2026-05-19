@@ -641,6 +641,13 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <input id="tal-q" placeholder="Buscar tallerista..." oninput="renderTalleristas()" style="max-width:280px"/>
           <button class="btn" onclick="openTalModal()">+ Nuevo tallerista</button>
         </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="tal-tipo-tabs">
+          <button class="tab active" onclick="setTalTipoFiltro('TODOS',this)">Todos</button>
+          <button class="tab" onclick="setTalTipoFiltro('CONFESIÓN',this)">🧵 Confesión</button>
+          <button class="tab" onclick="setTalTipoFiltro('BORDADO',this)">🎨 Bordado</button>
+          <button class="tab" onclick="setTalTipoFiltro('ESTAMPADO',this)">🖨️ Estampado</button>
+          <button class="tab" onclick="setTalTipoFiltro('DTF',this)">🖼️ DTF</button>
+        </div>
         <div class="tbl"><table>
           <thead id="tal-thead"></thead>
           <tbody id="tal-tbody"></tbody>
@@ -1834,6 +1841,14 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="grid2">
       <div class="field full"><label>Nombre *</label><input id="mtal-nombre" placeholder="Nombre completo"/></div>
       <div class="field"><label>Precio por prenda $ *</label><input type="number" id="mtal-precio" min="0" placeholder="0"/></div>
+      <div class="field"><label>Tipo</label>
+        <select id="mtal-tipo">
+          <option value="CONFESIÓN">Confesión</option>
+          <option value="BORDADO">Bordado</option>
+          <option value="ESTAMPADO">Estampado</option>
+          <option value="DTF">DTF</option>
+        </select>
+      </div>
       <div class="field"><label>Teléfono</label><input id="mtal-tel" placeholder="(Opcional)"/></div>
       <div class="field full"><label>Nota</label><textarea id="mtal-nota" style="min-height:52px;" placeholder="Especialidad, condiciones, etc."></textarea></div>
       <div class="field"><label>Estado</label>
@@ -5976,7 +5991,8 @@ var perSort={col:null,dir:'asc'};
 var PER_COLS=[{col:'nombre',label:'Nombre'},{col:'cargo',label:'Cargo'},{col:'sueldo_semanal',label:'Sueldo semanal',r:true},{col:null,label:'Equiv. mensual',r:true},{col:'anual',label:'Equiv. anual',r:true},{col:'telefono',label:'Teléfono'},{col:'estado',label:'Estado'},{col:null,label:''}];
 
 var talSort={col:null,dir:'asc'};
-var TAL_COLS=[{col:'nombre',label:'Nombre'},{col:'precio_prenda',label:'Precio/prenda',r:true},{col:'telefono',label:'Teléfono'},{col:'nota',label:'Nota'},{col:'estado',label:'Estado'},{col:null,label:''}];
+var talTipoFiltro='TODOS';
+var TAL_COLS=[{col:'nombre',label:'Nombre'},{col:'tipo',label:'Tipo'},{col:'precio_prenda',label:'Precio/prenda',r:true},{col:'telefono',label:'Teléfono'},{col:'nota',label:'Nota'},{col:'estado',label:'Estado'},{col:null,label:''}];
 
 var finSort={col:null,dir:'asc'};
 var FIN_COLS=[{col:'fecha',label:'Fecha'},{col:'caja',label:'Caja'},{col:'tipo',label:'Tipo'},{col:'concepto',label:'Concepto'},{col:'detalle',label:'Detalle'},{col:'ingreso',label:'Ingreso',r:true},{col:'egreso',label:'Egreso',r:true},{col:'referencia',label:'Referencia'},{col:'fecha_vencimiento',label:'Vto.'},{col:null,label:''}];
@@ -7585,7 +7601,11 @@ var editTalId=null;
 
 function renderTalleristas(){
   var q=(document.getElementById('tal-q').value||'').toLowerCase();
-  var list=TALLERISTAS.filter(function(t){return t.activo&&(!q||t.nombre.toLowerCase().includes(q));});
+  var list=TALLERISTAS.filter(function(t){
+    return t.activo&&
+      (!q||t.nombre.toLowerCase().includes(q))&&
+      (talTipoFiltro==='TODOS'||(t.tipo||'CONFESIÓN')===talTipoFiltro);
+  });
   var total=list.length;
   var prom=total?Math.round(list.reduce(function(s,t){return s+Number(t.precio_prenda_default);},0)/total):0;
   var totalPrendas=MOVS.filter(function(m){return m.tallerista_id&&m.prendas_cantidad;}).reduce(function(s,m){return s+Number(m.prendas_cantidad);},0);
@@ -7599,11 +7619,15 @@ function renderTalleristas(){
     return t[col]!=null?t[col]:'';
   });
   var tb=document.getElementById('tal-tbody');
-  if(!list.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><p>Sin talleristas registrados</p></div></td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><p>Sin talleristas registrados</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(t){
     var pagado=MOVS.filter(function(m){return m.tallerista_id===t.id;}).reduce(function(s,m){return s+Number(m.egreso);},0);
+    var tipoLabel=t.tipo||'CONFESIÓN';
+    var tipoBg={CONFESIÓN:'#f3e8ff',BORDADO:'#fce7f3',ESTAMPADO:'#e0f2fe',DTF:'#fef3c7'}[tipoLabel]||'#f3f4f6';
+    var tipoColor={CONFESIÓN:'#7c3aed',BORDADO:'#be185d',ESTAMPADO:'#0369a1',DTF:'#92400e'}[tipoLabel]||'#374151';
     return '<tr>'+
       '<td style="font-weight:700;">'+t.nombre+'</td>'+
+      '<td><span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:'+tipoBg+';color:'+tipoColor+';">'+tipoLabel+'</span></td>'+
       '<td style="text-align:right;font-weight:700;color:#6c7ae0;">'+$p(t.precio_prenda_default)+'</td>'+
       '<td style="font-size:12px;color:#9ca3af;">'+(t.telefono||'—')+'</td>'+
       '<td style="font-size:12px;color:#9ca3af;">'+(t.nota||'—')+'</td>'+
@@ -7614,6 +7638,13 @@ function renderTalleristas(){
       '</div></td>'+
     '</tr>';
   }).join('');
+}
+
+function setTalTipoFiltro(tipo,el){
+  talTipoFiltro=tipo;
+  document.querySelectorAll('#tal-tipo-tabs .tab').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  renderTalleristas();
 }
 
 function setTalTab(tab, el){
@@ -7788,6 +7819,7 @@ function openTalModal(id){
   document.getElementById('mtal-tel').value=t?t.telefono||'':'';
   document.getElementById('mtal-nota').value=t?t.nota||'':'';
   document.getElementById('mtal-activo').value=t?(t.activo?'true':'false'):'true';
+  document.getElementById('mtal-tipo').value=t?(t.tipo||'CONFESIÓN'):'CONFESIÓN';
   openM('m-tal');
 }
 
@@ -7796,6 +7828,7 @@ async function saveTal(){
   var precio=parseFloat(document.getElementById('mtal-precio').value)||0;
   if(!nombre){toast('El nombre es obligatorio','err');return;}
   var d={nombre,precio_prenda_default:precio,
+    tipo:document.getElementById('mtal-tipo').value||'CONFESIÓN',
     telefono:document.getElementById('mtal-tel').value.trim()||null,
     nota:document.getElementById('mtal-nota').value.trim()||null,
     activo:document.getElementById('mtal-activo').value==='true',
