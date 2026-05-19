@@ -1291,12 +1291,17 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <!-- Tabs -->
     <div class="tabs" style="margin-bottom:16px;" id="mat-tabs">
       <button class="tab active" onclick="setMatTab('resumen',this)">📊 Resumen</button>
+      <button class="tab" onclick="setMatTab('telas',this)">🧵 Telas</button>
       <button class="tab" onclick="setMatTab('prima',this)">🧶 Materia Prima</button>
       <button class="tab" onclick="setMatTab('precios',this)">💲 Precio Unitario</button>
     </div>
     <!-- Sub-tab 1: Resumen -->
     <div id="mat-tab-resumen">
       <div id="mat-resumen-cont"></div>
+    </div>
+    <!-- Sub-tab Telas: matriz color × tipo -->
+    <div id="mat-tab-telas" style="display:none;">
+      <div id="mat-telas-cont"></div>
     </div>
     <!-- Sub-tab 2: Materia Prima -->
     <div id="mat-tab-prima" style="display:none;">
@@ -2775,7 +2780,7 @@ var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], MATERIALES=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[];
 var PRENDAS_LIST=[
   'Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal',
   'Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre',
@@ -2884,7 +2889,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadMateriales()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadMateriales(),loadTelasStock(),loadTelasTipos()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -6093,6 +6098,10 @@ var CHQP_COLS=[{col:'numero',label:'N° Cheque'},{col:'banco',label:'Banco'},{co
 
 // ── MATERIALES ──
 async function loadMateriales(){ var {data}=await sb.from('materiales').select('*').order('nombre'); MATERIALES=data||[]; }
+async function loadTelasStock(){ var {data}=await sb.from('telas_stock').select('*'); TELAS_STOCK=data||[]; }
+async function loadTelasTipos(){ var {data}=await sb.from('telas_tipos').select('*').order('orden'); TELAS_TIPOS=data||[]; }
+
+var COLORES_TELAS=['MARINO','NEGRO','GRIS MELANGE','GRIS TOPO','GRIS PERLA','BLANCO','ROJO','BORDO','FRANCIA','AMARILLO','NARANJA','BEIGE','CELESTE','VERDE'];
 
 var matSort={col:null,dir:'asc'};
 var matCatFiltro='TODOS';
@@ -6103,14 +6112,182 @@ var MAT_CAT_COLOR={PIQUE:'#be185d',JERSEY:'#0369a1',POLAR:'#92400e',FRIZA:'#7c3a
 var MAT_CAT_ICON={PIQUE:'🧶',JERSEY:'👕',POLAR:'🧥',FRIZA:'🧣',LYCRA:'🩱',ALGODÓN:'🌿',POLIÉSTER:'⚗️',OTRO:'📦'};
 
 function setMatTab(tab,el){
-  ['resumen','prima','precios'].forEach(function(t){
+  ['resumen','telas','prima','precios'].forEach(function(t){
     document.getElementById('mat-tab-'+t).style.display=t===tab?'block':'none';
   });
   document.querySelectorAll('#mat-tabs .tab').forEach(function(b){b.classList.remove('active');});
   if(el)el.classList.add('active');
   if(tab==='resumen')renderMatResumen();
+  if(tab==='telas')renderTelaStock();
   if(tab==='prima')renderMatPrima();
   if(tab==='precios')renderMatPrecios();
+}
+
+function renderTelaStock(){
+  var tipos=TELAS_TIPOS;
+  var colores=COLORES_TELAS;
+  var cont=document.getElementById('mat-telas-cont');
+  if(!tipos.length){cont.innerHTML='<div class="panel"><div class="empty"><p>Ejecutá el patch_36 en Supabase primero</p></div></div>';return;}
+
+  // Lookup: matrix[color][tipo] = rollos
+  var mx={};
+  TELAS_STOCK.forEach(function(r){
+    if(!mx[r.color])mx[r.color]={};
+    mx[r.color][r.tipo_tela]=Number(r.rollos)||0;
+  });
+
+  var thS='padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;border-right:1px solid #e5e7eb;font-size:11px;white-space:nowrap;background:#f9fafb;font-weight:700;';
+  var th1='position:sticky;left:0;z-index:2;padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;border-right:2px solid #d1d5db;background:#f9fafb;font-size:11px;min-width:140px;font-weight:700;';
+  var fS='padding:6px 10px;border-right:1px solid #e5e7eb;border-top:2px solid #e5e7eb;font-size:12px;';
+  var f1='position:sticky;left:0;z-index:1;padding:6px 12px;font-weight:700;font-size:11px;letter-spacing:.5px;border-right:2px solid #d1d5db;border-top:2px solid #e5e7eb;';
+
+  var html='<div class="panel">'+
+    '<div class="panel-hdr"><span style="font-size:12px;color:#9ca3af;">Rollos por color y tipo · editá y guardá</span>'+
+    '<button class="btn" onclick="saveTelaStock()">Guardar stock</button></div>'+
+    '<div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;">'+
+    '<table style="border-collapse:collapse;font-size:13px;width:100%;">'+
+    '<thead><tr>'+
+    '<th style="'+th1+'">COLOR / TELA</th>';
+  tipos.forEach(function(t,ti){
+    html+='<th style="'+thS+'">'+(ti===5?'DEP<br>S/FRIZA':t.nombre)+'</th>';
+  });
+  html+='<th style="'+thS+'">TOTAL</th></tr></thead><tbody>';
+
+  colores.forEach(function(color,ci){
+    var bg=ci%2===0?'#ffffff':'#f9fafb';
+    var td='border-bottom:1px solid #e5e7eb;border-right:1px solid #e5e7eb;';
+    html+='<tr>';
+    html+='<td style="position:sticky;left:0;z-index:1;background:'+bg+';padding:5px 12px;font-weight:600;'+td+'border-right:2px solid #d1d5db;">'+color+'</td>';
+    tipos.forEach(function(t,ti){
+      var val=(mx[color]&&mx[color][t.nombre])||0;
+      html+='<td style="padding:3px 5px;'+td+'background:'+bg+';">'+
+        '<input type="number" id="ts_'+ci+'_'+ti+'" value="'+(val||'')+'" min="0" placeholder="—" '+
+        'data-color="'+color+'" data-ti="'+ti+'" oninput="calcTelasTotales()" '+
+        'style="width:56px;text-align:center;border:1px solid #e5e7eb;border-radius:4px;padding:3px 4px;font-size:12px;background:transparent;">'+
+        '</td>';
+    });
+    html+='<td id="tr_tot_'+ci+'" style="text-align:center;font-weight:700;padding:5px 10px;'+td+'background:'+bg+';color:#374151;"></td>';
+    html+='</tr>';
+  });
+
+  html+='</tbody><tfoot>';
+
+  // TOTAL rollos
+  html+='<tr style="background:#f9fafb;">';
+  html+='<td style="'+f1+'background:#f9fafb;">TOTAL</td>';
+  tipos.forEach(function(t,ti){ html+='<td id="tf_rol_'+ti+'" style="'+fS+'text-align:center;font-weight:700;"></td>'; });
+  html+='<td id="tf_rol_tot" style="'+fS+'text-align:center;font-weight:800;color:#1d4ed8;"></td>';
+  html+='</tr>';
+
+  // TOTAL EN KG
+  html+='<tr style="background:#eff6ff;">';
+  html+='<td style="'+f1+'background:#eff6ff;color:#1d4ed8;">TOTAL EN KG</td>';
+  tipos.forEach(function(t,ti){ html+='<td id="tf_kg_'+ti+'" style="'+fS+'text-align:center;color:#1d4ed8;font-weight:700;"></td>'; });
+  html+='<td id="tf_kg_tot" style="'+fS+'text-align:center;font-weight:800;color:#1d4ed8;"></td>';
+  html+='</tr>';
+
+  // PRECIO X KG (editable)
+  html+='<tr style="background:#fef3c7;">';
+  html+='<td style="'+f1+'background:#fef3c7;color:#92400e;">PRECIO X KG</td>';
+  tipos.forEach(function(t,ti){
+    html+='<td style="'+fS+'padding:3px 5px;">'+
+      '<input type="number" id="tf_precio_'+ti+'" value="'+Number(t.precio_kg)+'" min="0" '+
+      'oninput="calcTelasTotales()" '+
+      'style="width:100px;text-align:right;border:1px solid #d97706;border-radius:4px;padding:3px 5px;font-size:11px;background:#fffbeb;">'+
+      '</td>';
+  });
+  html+='<td style="'+fS+'"></td></tr>';
+
+  // TOTAL $
+  html+='<tr style="background:#f3e8ff;">';
+  html+='<td style="'+f1+'background:#f3e8ff;color:#7c3aed;">TOTAL $</td>';
+  tipos.forEach(function(t,ti){ html+='<td id="tf_val_'+ti+'" style="'+fS+'text-align:right;font-weight:700;color:#7c3aed;font-size:12px;"></td>'; });
+  html+='<td id="tf_val_tot" style="'+fS+'text-align:right;font-weight:800;color:#7c3aed;"></td>';
+  html+='</tr>';
+
+  html+='</tfoot></table></div></div>';
+  cont.innerHTML=html;
+  calcTelasTotales();
+}
+
+function calcTelasTotales(){
+  var tipos=TELAS_TIPOS;
+  var colores=COLORES_TELAS;
+  var grandRol=0, grandKg=0, grandVal=0;
+
+  tipos.forEach(function(t,ti){
+    var colRol=0;
+    colores.forEach(function(c,ci){
+      var inp=document.getElementById('ts_'+ci+'_'+ti);
+      if(inp)colRol+=parseInt(inp.value)||0;
+    });
+    var kg=colRol*(Number(t.kg_por_rollo)||20);
+    var precioInp=document.getElementById('tf_precio_'+ti);
+    var precio=precioInp?parseFloat(precioInp.value)||0:Number(t.precio_kg);
+    var val=kg*precio;
+    var eRol=document.getElementById('tf_rol_'+ti);
+    var eKg=document.getElementById('tf_kg_'+ti);
+    var eVal=document.getElementById('tf_val_'+ti);
+    if(eRol)eRol.textContent=colRol||'—';
+    if(eKg)eKg.textContent=colRol?colRol*(Number(t.kg_por_rollo)||20):'—';
+    if(eVal)eVal.textContent=val?$p(Math.round(val)):'—';
+    grandRol+=colRol; grandKg+=kg; grandVal+=val;
+  });
+
+  colores.forEach(function(c,ci){
+    var rowTot=0;
+    tipos.forEach(function(t,ti){
+      var inp=document.getElementById('ts_'+ci+'_'+ti);
+      if(inp)rowTot+=parseInt(inp.value)||0;
+    });
+    var el=document.getElementById('tr_tot_'+ci);
+    if(el)el.textContent=rowTot||'—';
+  });
+
+  var eRT=document.getElementById('tf_rol_tot');
+  var eKT=document.getElementById('tf_kg_tot');
+  var eVT=document.getElementById('tf_val_tot');
+  if(eRT)eRT.textContent=grandRol||'—';
+  if(eKT)eKT.textContent=grandKg?grandKg.toLocaleString('es-AR'):'—';
+  if(eVT)eVT.textContent=grandVal?$p(Math.round(grandVal)):'—';
+}
+
+async function saveTelaStock(){
+  var tipos=TELAS_TIPOS;
+  var colores=COLORES_TELAS;
+  var upserts=[], zeros=[], priceUpdates=[];
+
+  colores.forEach(function(color,ci){
+    tipos.forEach(function(t,ti){
+      var inp=document.getElementById('ts_'+ci+'_'+ti);
+      if(!inp)return;
+      var rollos=parseInt(inp.value)||0;
+      if(rollos>0) upserts.push({color,tipo_tela:t.nombre,rollos,updated_at:new Date().toISOString()});
+      else zeros.push({color,tipo:t.nombre});
+    });
+  });
+
+  tipos.forEach(function(t,ti){
+    var inp=document.getElementById('tf_precio_'+ti);
+    if(!inp)return;
+    var precio=parseFloat(inp.value)||0;
+    if(precio!==Number(t.precio_kg)) priceUpdates.push({nombre:t.nombre,precio_kg:precio});
+  });
+
+  if(upserts.length){
+    var {error:e1}=await sb.from('telas_stock').upsert(upserts,{onConflict:'color,tipo_tela'});
+    if(e1){toast('Error: '+e1.message,'err');return;}
+  }
+  for(var z of zeros){
+    await sb.from('telas_stock').delete().eq('color',z.color).eq('tipo_tela',z.tipo);
+  }
+  for(var pu of priceUpdates){
+    await sb.from('telas_tipos').update({precio_kg:pu.precio_kg}).eq('nombre',pu.nombre);
+  }
+
+  await Promise.all([loadTelasStock(),loadTelasTipos()]);
+  renderTelaStock();
+  toast('Stock de telas guardado');
 }
 
 function setMatCatFiltro(cat,el){
