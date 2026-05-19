@@ -6940,6 +6940,7 @@ function renderCheques(){ renderChqCartera(); }
 // ══════════════════════════════════════════════
 // POS DE VENTA
 // ══════════════════════════════════════════════
+function posQ(v){return "'"+String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'";}
 var posItems=[];
 var posClienteId=null, posClienteNombre='';
 var posView='root', posL2Type='', posL2Value='', posL2Label='';
@@ -7045,7 +7046,7 @@ function posGoLevel2(type, value, label){
       '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
     talles.sort(function(a,b){return(a.talle||'')>(b.talle||'')?1:-1;}).forEach(function(s){
       var talleLabel=(s.talle||'Único')+(s.color&&s.color!==s.talle?' '+s.color:'');
-      html+='<button onclick="posAddItem('+p.id+','+JSON.stringify(p.nombre)+','+JSON.stringify(s.talle||'')+','+JSON.stringify(s.color||'')+','+precio+','+s.cantidad+')" '+
+      html+='<button onclick="posAddItem('+p.id+','+posQ(p.nombre)+','+posQ(s.talle||'')+','+posQ(s.color||'')+','+precio+','+s.cantidad+')" '+
         'style="padding:8px 12px;background:#f9fafb;border:2px solid #e5e7eb;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151;" '+
         'onmouseover="this.style.borderColor=\'#6c7ae0\';this.style.background=\'#ede9fe\'" onmouseout="this.style.borderColor=\'#e5e7eb\';this.style.background=\'#f9fafb\'">'+
         talleLabel+
@@ -7119,7 +7120,8 @@ function posBuscarCliente(){
   if(!matches.length){sugg.style.display='none';return;}
   sugg.style.display='block';
   sugg.innerHTML=matches.map(function(c){
-    return '<div onclick="posSelectCliente('+c.id+','+JSON.stringify(c.nombre)+')" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'\'">'+c.nombre+'</div>';
+    var esc=c.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return '<div onclick="posSelectCliente('+c.id+',\''+esc+'\')" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'\'">'+c.nombre+'</div>';
   }).join('');
 }
 
