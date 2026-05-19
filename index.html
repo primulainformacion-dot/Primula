@@ -645,7 +645,8 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <!-- Sub-pestañas -->
     <div class="tabs" style="margin-bottom:16px;" id="tal-tabs">
       <button class="tab active" onclick="setTalTab('lista',this)">🧵 Talleristas</button>
-      <button class="tab" onclick="setTalTab('produccion',this)">📦 Producción</button>
+      <button class="tab" onclick="setTalTab('ordenes',this)">📦 Órdenes</button>
+      <button class="tab" onclick="setTalTab('produccion',this)">📊 Producción</button>
       <button class="tab" onclick="setTalTab('historial',this)">📋 Historial</button>
       <button class="tab" onclick="setTalTab('precios',this)">💲 Precios</button>
     </div>
@@ -662,6 +663,27 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <tbody id="tal-tbody"></tbody>
         </table></div>
       </div>
+    </div>
+
+    <!-- Sub-tab: Órdenes de confección -->
+    <div id="tal-tab-ordenes" style="display:none;">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+        <select id="ord-fil-tal" onchange="renderOrdenes()" style="min-width:180px;">
+          <option value="">Todos los talleristas</option>
+        </select>
+        <select id="ord-fil-estado" onchange="renderOrdenes()" style="min-width:160px;">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="en_proceso">En proceso</option>
+          <option value="parcial">Entrega parcial</option>
+          <option value="entregado">Entregado</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+        <button class="btn btn-gray btn-sm" onclick="renderOrdenes()">↻ Actualizar</button>
+        <button class="btn" style="margin-left:auto;" onclick="openOrdenModal()">+ Nueva orden</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;" id="ord-stats"></div>
+      <div id="ord-lista"></div>
     </div>
 
     <!-- Sub-tab 2: Producción -->
@@ -1796,6 +1818,56 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="field full"><label>Nota</label><input id="mcob-nota" placeholder="N° transferencia, referencia..."/></div>
     </div>
     <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-cobro')">Cancelar</button><button class="btn btn-green" onclick="saveCobro()">Registrar cobro</button></div>
+  </div>
+</div>
+
+<!-- Orden de confección -->
+<div class="modal-bg" id="m-orden">
+  <div class="modal" style="max-width:680px;">
+    <h3 id="m-orden-title">Nueva orden de confección</h3>
+    <input type="hidden" id="mord-id"/>
+    <div class="grid2">
+      <div class="field"><label>Tallerista *</label>
+        <select id="mord-tal"></select>
+      </div>
+      <div class="field"><label>Estado</label>
+        <select id="mord-estado">
+          <option value="pendiente">Pendiente</option>
+          <option value="en_proceso">En proceso</option>
+          <option value="parcial">Entrega parcial</option>
+          <option value="entregado">Entregado</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </div>
+      <div class="field"><label>Fecha de envío *</label><input type="date" id="mord-envio"/></div>
+      <div class="field"><label>Fecha entrega esperada</label><input type="date" id="mord-esperada"/></div>
+      <div class="field" id="mord-real-wrap"><label>Fecha entrega real</label><input type="date" id="mord-real"/></div>
+      <div class="field full"><label>Nota</label><input id="mord-nota" placeholder="Observaciones, instrucciones, referencia de diseño..."/></div>
+    </div>
+
+    <!-- Items -->
+    <div style="margin-top:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.5px;">Prendas encargadas</div>
+        <button class="btn btn-sm btn-gray" onclick="ordAgregarFila()">+ Agregar fila</button>
+      </div>
+      <div style="background:#f9fafb;border-radius:10px;padding:12px;">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 80px 36px;gap:8px;margin-bottom:6px;">
+          <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;">Prenda</div>
+          <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;">Talle</div>
+          <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;">Color</div>
+          <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;text-align:center;">Cant.</div>
+          <div></div>
+        </div>
+        <div id="mord-items"></div>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:#9ca3af;">Total: <strong id="mord-total-prendas">0</strong> prendas</div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-orden')">Cancelar</button>
+      <button class="btn btn-green" onclick="saveOrden()">Guardar orden</button>
+    </div>
   </div>
 </div>
 
@@ -2977,7 +3049,7 @@ var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[];
 var CONCEPTOS_POR_TIPO={
   'CONFESIÓN':['Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal','Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre','Chaleco Polar','Campera Polar','Campera Friza','Campera canguro','Sudadera','Joggins','Pantalón común','Cuellos','Bufandas / Cuellos','Reflectivo','Cofia','Arreglo'],
   'BORDADO':[],
@@ -3096,7 +3168,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderAlertas(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -7027,6 +7099,8 @@ var CHQP_COLS=[{col:'numero',label:'N° Cheque'},{col:'banco',label:'Banco'},{co
 async function loadMateriales(){ var {data}=await sb.from('materiales').select('*').order('nombre'); MATERIALES=data||[]; }
 async function loadTelasStock(){ var {data}=await sb.from('telas_stock').select('*'); TELAS_STOCK=data||[]; }
 async function loadTelasTipos(){ var {data}=await sb.from('telas_tipos').select('*').order('orden'); TELAS_TIPOS=data||[]; }
+async function loadOrdenes(){ var {data}=await sb.from('ordenes_confeccion').select('*').order('fecha_entrega_esperada',{ascending:true}); ORDENES=data||[]; }
+async function loadOrdenesItems(){ var {data}=await sb.from('ordenes_confeccion_items').select('*'); ORDENES_ITEMS=data||[]; }
 
 var COLORES_TELAS=['MARINO','NEGRO','GRIS MELANGE','GRIS TOPO','GRIS PERLA','BLANCO','ROJO','BORDO','FRANCIA','AMARILLO','NARANJA','BEIGE','CELESTE','VERDE'];
 
@@ -9318,14 +9392,295 @@ function setTalPreciosTipo(tipo,el){
 }
 
 function setTalTab(tab, el){
-  ['lista','produccion','precios','historial'].forEach(function(t){
+  ['lista','ordenes','produccion','precios','historial'].forEach(function(t){
     document.getElementById('tal-tab-'+t).style.display=t===tab?'block':'none';
   });
   document.querySelectorAll('#tal-tabs .tab').forEach(function(b){b.classList.remove('active');});
   if(el) el.classList.add('active');
+  if(tab==='ordenes')    renderOrdenes();
   if(tab==='produccion') renderTalProduccion();
-  if(tab==='precios') renderTalPrecios();
-  if(tab==='historial') renderTalHistorial();
+  if(tab==='precios')    renderTalPrecios();
+  if(tab==='historial')  renderTalHistorial();
+}
+
+// ════════════════════════════════════
+// ÓRDENES DE CONFECCIÓN
+// ════════════════════════════════════
+var editOrdenId=null;
+var _ordenFilas=[];
+
+var ORD_ESTADOS={
+  pendiente:  {label:'Pendiente',   cls:'b-yellow'},
+  en_proceso: {label:'En proceso',  cls:'b-blue'},
+  parcial:    {label:'Parcial',     cls:'b-purple'},
+  entregado:  {label:'Entregado',   cls:'b-green'},
+  cancelado:  {label:'Cancelado',   cls:'b-gray'}
+};
+
+function renderOrdenes(){
+  var cont=document.getElementById('ord-lista');
+  var statsEl=document.getElementById('ord-stats');
+  if(!cont)return;
+
+  // Poblar selector talleristas
+  var selTal=document.getElementById('ord-fil-tal');
+  if(selTal&&selTal.options.length<=1){
+    TALLERISTAS.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre);}).forEach(function(t){
+      var o=document.createElement('option');o.value=t.id;o.textContent=t.nombre;selTal.appendChild(o);
+    });
+  }
+
+  var filTal=document.getElementById('ord-fil-tal').value;
+  var filEst=document.getElementById('ord-fil-estado').value;
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+
+  var lista=ORDENES.filter(function(o){
+    if(filTal&&String(o.tallerista_id)!==filTal)return false;
+    if(filEst&&o.estado!==filEst)return false;
+    return true;
+  });
+
+  // Stats
+  var pendientes=ORDENES.filter(function(o){return o.estado==='pendiente'||o.estado==='en_proceso'||o.estado==='parcial';});
+  var vencidas=pendientes.filter(function(o){return o.fecha_entrega_esperada&&new Date(o.fecha_entrega_esperada+'T12:00:00')<hoy;});
+  var prendasEnProd=pendientes.reduce(function(s,o){
+    return s+ORDENES_ITEMS.filter(function(i){return i.orden_id===o.id;}).reduce(function(ss,i){return ss+Number(i.cantidad||0);},0);
+  },0);
+
+  if(statsEl)statsEl.innerHTML=
+    '<div style="background:#fef3c7;border-radius:12px;padding:12px 18px;flex:1;min-width:130px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#92400e;letter-spacing:.5px;">EN PRODUCCIÓN</div>'+
+      '<div style="font-size:22px;font-weight:900;color:#92400e;margin-top:4px;">'+pendientes.length+'</div>'+
+      '<div style="font-size:11px;color:#b45309;margin-top:2px;">órdenes activas</div></div>'+
+    '<div style="background:#eff6ff;border-radius:12px;padding:12px 18px;flex:1;min-width:130px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#1e40af;letter-spacing:.5px;">PRENDAS EN PROCESO</div>'+
+      '<div style="font-size:22px;font-weight:900;color:#1e40af;margin-top:4px;">'+prendasEnProd+'</div>'+
+      '<div style="font-size:11px;color:#3b82f6;margin-top:2px;">prendas encargadas</div></div>'+
+    (vencidas.length?'<div style="background:#fee2e2;border-radius:12px;padding:12px 18px;flex:1;min-width:130px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#991b1b;letter-spacing:.5px;">VENCIDAS</div>'+
+      '<div style="font-size:22px;font-weight:900;color:#dc2626;margin-top:4px;">'+vencidas.length+'</div>'+
+      '<div style="font-size:11px;color:#b91c1c;margin-top:2px;">fecha de entrega superada</div></div>':'');
+
+  if(!lista.length){
+    cont.innerHTML='<div class="empty"><p>No hay órdenes'+(filTal||filEst?' con los filtros aplicados':'')+'</p></div>';
+    return;
+  }
+
+  cont.innerHTML=lista.map(function(o){
+    var tal=TALLERISTAS.find(function(t){return t.id===o.tallerista_id;})||{nombre:'—'};
+    var items=ORDENES_ITEMS.filter(function(i){return i.orden_id===o.id;});
+    var totalPrendas=items.reduce(function(s,i){return s+Number(i.cantidad||0);},0);
+    var est=ORD_ESTADOS[o.estado]||{label:o.estado,cls:'b-gray'};
+
+    var fEsp=o.fecha_entrega_esperada?new Date(o.fecha_entrega_esperada+'T12:00:00'):null;
+    var activa=o.estado!=='entregado'&&o.estado!=='cancelado';
+    var vencida=activa&&fEsp&&fEsp<hoy;
+    var proxima=activa&&fEsp&&!vencida&&(fEsp-hoy)<=5*86400000;
+    var diasRestantes=fEsp?Math.ceil((fEsp-hoy)/86400000):null;
+
+    var borderColor=vencida?'#fecaca':proxima?'#fde68a':'#e5e7eb';
+    var bgHeader=vencida?'#fff1f2':proxima?'#fffbeb':'#f9fafb';
+
+    var itemsHtml=items.length?
+      '<div style="margin-top:10px;border-top:1px solid #f3f4f6;padding-top:10px;">'+
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+          '<thead><tr>'+
+            '<th style="text-align:left;padding:3px 8px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Prenda</th>'+
+            '<th style="text-align:left;padding:3px 8px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Talle</th>'+
+            '<th style="text-align:left;padding:3px 8px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Color</th>'+
+            '<th style="text-align:right;padding:3px 8px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Cant.</th>'+
+          '</tr></thead><tbody>'+
+          items.map(function(i){
+            return '<tr style="border-top:1px solid #f9fafb;">'+
+              '<td style="padding:5px 8px;font-weight:600;color:#374151;">'+esc(i.prenda)+'</td>'+
+              '<td style="padding:5px 8px;color:#6b7280;">'+(i.talle||'—')+'</td>'+
+              '<td style="padding:5px 8px;color:#6b7280;">'+(i.color||'—')+'</td>'+
+              '<td style="padding:5px 8px;text-align:right;font-weight:700;color:#1a1f36;">'+i.cantidad+'</td>'+
+            '</tr>';
+          }).join('')+
+          '<tr style="border-top:2px solid #e5e7eb;">'+
+            '<td colspan="3" style="padding:6px 8px;font-size:11px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.4px;">Total</td>'+
+            '<td style="padding:6px 8px;text-align:right;font-weight:900;color:#1a1f36;">'+totalPrendas+'</td>'+
+          '</tr>'+
+        '</tbody></table></div>':
+      '<div style="font-size:12px;color:#9ca3af;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;">Sin ítems cargados</div>';
+
+    return '<div style="margin-bottom:12px;border:2px solid '+borderColor+';border-radius:12px;overflow:hidden;">'+
+      '<div style="background:'+bgHeader+';padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">'+
+        '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'+
+          '<div>'+
+            '<div style="font-weight:800;font-size:14px;color:#1a1f36;">'+esc(tal.nombre)+'</div>'+
+            '<div style="font-size:12px;color:#6b7280;margin-top:2px;">'+
+              'Envío: '+fmtF(o.fecha_envio)+
+              (o.fecha_entrega_esperada?' &nbsp;·&nbsp; Entrega esperada: <strong style="color:'+(vencida?'#dc2626':proxima?'#d97706':'#374151')+';">'+fmtF(o.fecha_entrega_esperada)+'</strong>':'')+
+              (activa&&diasRestantes!==null?' <span style="font-size:11px;color:'+(vencida?'#dc2626':proxima?'#d97706':'#9ca3af')+';">('+
+                (vencida?'venció hace '+Math.abs(diasRestantes)+' día'+(Math.abs(diasRestantes)!==1?'s':''):
+                 diasRestantes===0?'vence hoy':
+                 'faltan '+diasRestantes+' día'+(diasRestantes!==1?'s':''))+')</span>':'')+
+              (o.fecha_entrega_real?' &nbsp;·&nbsp; Entregado: <strong style="color:#16a34a;">'+fmtF(o.fecha_entrega_real)+'</strong>':'')+
+            '</div>'+
+          '</div>'+
+          '<span class="badge '+est.cls+'">'+est.label+'</span>'+
+          '<span style="background:#f3f4f6;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;color:#374151;">'+totalPrendas+' prenda'+(totalPrendas!==1?'s':'')+'</span>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px;flex-shrink:0;">'+
+          (o.estado!=='entregado'&&o.estado!=='cancelado'?
+            '<button class="btn btn-sm btn-green" onclick="marcarOrdenEntregada('+o.id+')" title="Marcar como entregada">✅ Entregada</button>':'')+
+          '<button class="btn btn-sm btn-gray" onclick="openOrdenModal('+o.id+')" title="Editar">✏️</button>'+
+          '<button class="btn btn-sm btn-red" onclick="deleteOrden('+o.id+')" title="Eliminar">🗑️</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="padding:0 18px 14px;">'+
+        (o.nota?'<div style="margin-top:10px;font-size:12px;color:#6b7280;background:#f9fafb;border-radius:8px;padding:8px 12px;">📝 '+esc(o.nota)+'</div>':'')+
+        itemsHtml+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ── Modal nueva/editar orden ──
+var _ordFilaId=0;
+function ordAgregarFila(prenda,talle,color,cantidad){
+  var id='orf-'+(_ordFilaId++);
+  var prendas=['Remera','Pantalón','Short','Vestido','Campera','Buzo','Camisa','Pollera','Calza','Otro'];
+  var div=document.createElement('div');
+  div.id=id;
+  div.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr 80px 36px;gap:8px;margin-bottom:6px;align-items:center;';
+  div.innerHTML=
+    '<select style="padding:6px 8px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="ordActualizarTotal()">'+
+      prendas.map(function(p){return '<option value="'+p+'"'+(p===(prenda||'Remera')?' selected':'')+'>'+p+'</option>';}).join('')+
+    '</select>'+
+    '<input style="padding:6px 8px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;" placeholder="S/M/L/XL..." value="'+esc(talle||'')+'"/>'+
+    '<input style="padding:6px 8px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;" placeholder="Color" value="'+esc(color||'')+'"/>'+
+    '<input type="number" min="1" style="padding:6px 8px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;text-align:center;" value="'+(cantidad||1)+'" oninput="ordActualizarTotal()"/>'+
+    '<button onclick="document.getElementById(\''+id+'\').remove();ordActualizarTotal();" style="width:32px;height:32px;border:none;border-radius:8px;background:#fee2e2;color:#dc2626;cursor:pointer;font-size:16px;line-height:1;">✕</button>';
+  document.getElementById('mord-items').appendChild(div);
+  ordActualizarTotal();
+}
+
+function ordActualizarTotal(){
+  var total=0;
+  document.querySelectorAll('#mord-items > div').forEach(function(row){
+    var inp=row.querySelectorAll('input[type="number"]')[0];
+    if(inp)total+=parseInt(inp.value)||0;
+  });
+  var el=document.getElementById('mord-total-prendas');
+  if(el)el.textContent=total;
+}
+
+function openOrdenModal(id){
+  editOrdenId=id||null;
+  document.getElementById('m-orden-title').textContent=id?'Editar orden':'Nueva orden de confección';
+  document.getElementById('mord-items').innerHTML='';
+  _ordFilaId=0;
+
+  // Poblar selector talleristas
+  var s=document.getElementById('mord-tal');
+  s.innerHTML='<option value="">— Seleccionar —</option>';
+  TALLERISTAS.filter(function(t){return t.activo;}).forEach(function(t){
+    var o=document.createElement('option');o.value=t.id;o.textContent=t.nombre;s.appendChild(o);
+  });
+
+  if(id){
+    var orden=ORDENES.find(function(o){return o.id===id;});
+    if(!orden)return;
+    document.getElementById('mord-tal').value=orden.tallerista_id;
+    document.getElementById('mord-estado').value=orden.estado||'pendiente';
+    document.getElementById('mord-envio').value=orden.fecha_envio||'';
+    document.getElementById('mord-esperada').value=orden.fecha_entrega_esperada||'';
+    document.getElementById('mord-real').value=orden.fecha_entrega_real||'';
+    document.getElementById('mord-nota').value=orden.nota||'';
+    // Items existentes
+    var items=ORDENES_ITEMS.filter(function(i){return i.orden_id===id;});
+    if(items.length)items.forEach(function(i){ordAgregarFila(i.prenda,i.talle,i.color,i.cantidad);});
+    else ordAgregarFila();
+  } else {
+    document.getElementById('mord-envio').value=today();
+    document.getElementById('mord-esperada').value='';
+    document.getElementById('mord-real').value='';
+    document.getElementById('mord-nota').value='';
+    document.getElementById('mord-estado').value='pendiente';
+    ordAgregarFila();
+  }
+  ordActualizarTotal();
+  openM('m-orden');
+}
+
+async function saveOrden(){
+  var talId=parseInt(document.getElementById('mord-tal').value)||null;
+  var envio=document.getElementById('mord-envio').value;
+  if(!talId||!envio){toast('Seleccioná tallerista y fecha de envío','err');return;}
+
+  var rows=[];
+  document.querySelectorAll('#mord-items > div').forEach(function(row){
+    var inputs=row.querySelectorAll('input');
+    var sel=row.querySelector('select');
+    var prenda=sel?sel.value:'';
+    var talle=inputs[0]?inputs[0].value.trim():'';
+    var color=inputs[1]?inputs[1].value.trim():'';
+    var cantidad=parseInt(inputs[2]?inputs[2].value:1)||1;
+    if(prenda)rows.push({prenda,talle:talle||null,color:color||null,cantidad});
+  });
+  if(!rows.length){toast('Agregá al menos una prenda','err');return;}
+
+  var d={
+    tallerista_id:talId,
+    fecha_envio:envio,
+    fecha_entrega_esperada:document.getElementById('mord-esperada').value||null,
+    fecha_entrega_real:document.getElementById('mord-real').value||null,
+    estado:document.getElementById('mord-estado').value,
+    nota:document.getElementById('mord-nota').value.trim()||null,
+    updated_at:new Date().toISOString()
+  };
+
+  var ordId;
+  if(editOrdenId){
+    var rU=await sb.from('ordenes_confeccion').update(d).eq('id',editOrdenId);
+    if(rU.error){toast('Error: '+rU.error.message,'err');return;}
+    // Borrar items viejos y re-insertar
+    await sb.from('ordenes_confeccion_items').delete().eq('orden_id',editOrdenId);
+    ordId=editOrdenId;
+  } else {
+    var rI=await sb.from('ordenes_confeccion').insert(d).select().single();
+    if(rI.error){toast('Error: '+rI.error.message,'err');return;}
+    ordId=rI.data.id;
+  }
+
+  // Insertar items
+  var itemsConOrden=rows.map(function(r){return Object.assign({},r,{orden_id:ordId});});
+  var rIt=await sb.from('ordenes_confeccion_items').insert(itemsConOrden);
+  if(rIt.error){toast('Error al guardar ítems: '+rIt.error.message,'err');return;}
+
+  toast(editOrdenId?'Orden actualizada':'Orden creada — '+rows.reduce(function(s,r){return s+r.cantidad;},0)+' prendas');
+  closeM('m-orden');
+  await Promise.all([loadOrdenes(),loadOrdenesItems()]);
+  renderOrdenes();
+}
+
+async function marcarOrdenEntregada(id){
+  var orden=ORDENES.find(function(o){return o.id===id;});
+  if(!orden)return;
+  var tal=(TALLERISTAS.find(function(t){return t.id===orden.tallerista_id;})||{}).nombre||'';
+  if(!confirm('¿Marcar la orden de '+tal+' como entregada?'))return;
+  var r=await sb.from('ordenes_confeccion').update({estado:'entregado',fecha_entrega_real:today(),updated_at:new Date().toISOString()}).eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Orden marcada como entregada');
+  await Promise.all([loadOrdenes(),loadOrdenesItems()]);
+  renderOrdenes();
+}
+
+async function deleteOrden(id){
+  var orden=ORDENES.find(function(o){return o.id===id;});
+  if(!orden)return;
+  var tal=(TALLERISTAS.find(function(t){return t.id===orden.tallerista_id;})||{}).nombre||'';
+  var items=ORDENES_ITEMS.filter(function(i){return i.orden_id===id;});
+  var total=items.reduce(function(s,i){return s+Number(i.cantidad||0);},0);
+  if(!confirm('¿Eliminar la orden de '+tal+' ('+total+' prendas)?'))return;
+  var r=await sb.from('ordenes_confeccion').delete().eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Orden eliminada','info');
+  await Promise.all([loadOrdenes(),loadOrdenesItems()]);
+  renderOrdenes();
 }
 
 function renderTalHistorial(){
