@@ -1282,9 +1282,41 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     </div>
   </div>
   <div class="section" id="sec-materiales">
-    <div class="panel">
-      <div class="panel-hdr"><h4>Materiales</h4></div>
-      <div class="empty"><div class="ei">🎨</div><p>Módulo en construcción</p></div>
+    <!-- Stats -->
+    <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px;">
+      <div class="stat"><div class="stat-icon" style="background:#fce7f3;">🎨</div><h3 id="mat-total">0</h3><p>Materiales activos</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#e0f2fe;">📦</div><h3 id="mat-stock-total">0</h3><p>Unidades en stock</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#fef3c7;">💰</div><h3 id="mat-valor-total">$0</h3><p>Valor total del stock</p></div>
+    </div>
+    <!-- Tabs -->
+    <div class="tabs" style="margin-bottom:16px;" id="mat-tabs">
+      <button class="tab active" onclick="setMatTab('resumen',this)">📊 Resumen</button>
+      <button class="tab" onclick="setMatTab('prima',this)">🧶 Materia Prima</button>
+      <button class="tab" onclick="setMatTab('precios',this)">💲 Precio Unitario</button>
+    </div>
+    <!-- Sub-tab 1: Resumen -->
+    <div id="mat-tab-resumen">
+      <div id="mat-resumen-cont"></div>
+    </div>
+    <!-- Sub-tab 2: Materia Prima -->
+    <div id="mat-tab-prima" style="display:none;">
+      <div class="panel">
+        <div class="panel-hdr">
+          <input id="mat-q" placeholder="Buscar material..." oninput="renderMatPrima()" style="max-width:280px"/>
+          <button class="btn" onclick="openMatModal()">+ Nuevo material</button>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="mat-cat-tabs">
+          <button class="tab active" onclick="setMatCatFiltro('TODOS',this)">Todos</button>
+        </div>
+        <div class="tbl"><table>
+          <thead id="mat-thead"></thead>
+          <tbody id="mat-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+    <!-- Sub-tab 3: Precio Unitario -->
+    <div id="mat-tab-precios" style="display:none;">
+      <div id="mat-precios-cont"></div>
     </div>
   </div>
 
@@ -1887,6 +1919,51 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-tal')">Cancelar</button>
       <button class="btn" onclick="saveTal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Material (alta / edición) -->
+<div class="modal-bg" id="m-mat">
+  <div class="modal">
+    <h3 id="m-mat-title">Nuevo material</h3>
+    <input type="hidden" id="mmat-id"/>
+    <div class="grid2">
+      <div class="field full"><label>Nombre *</label><input id="mmat-nombre" placeholder="Ej: Piqué Rojo"/></div>
+      <div class="field"><label>Categoría *</label>
+        <select id="mmat-categoria">
+          <option value="PIQUE">Piqué</option>
+          <option value="JERSEY">Jersey</option>
+          <option value="POLAR">Polar</option>
+          <option value="FRIZA">Friza</option>
+          <option value="LYCRA">Lycra</option>
+          <option value="ALGODÓN">Algodón</option>
+          <option value="POLIÉSTER">Poliéster</option>
+          <option value="OTRO">Otro</option>
+        </select>
+      </div>
+      <div class="field"><label>Color</label><input id="mmat-color" placeholder="Ej: Rojo, Azul marino..."/></div>
+      <div class="field"><label>Cantidad *</label><input type="number" id="mmat-cantidad" min="0" placeholder="0"/></div>
+      <div class="field"><label>Unidad</label>
+        <select id="mmat-unidad">
+          <option value="rollos">Rollos</option>
+          <option value="metros">Metros</option>
+          <option value="kg">Kg</option>
+          <option value="unidades">Unidades</option>
+        </select>
+      </div>
+      <div class="field"><label>Precio por unidad $</label><input type="number" id="mmat-precio" min="0" placeholder="0"/></div>
+      <div class="field full"><label>Nota</label><textarea id="mmat-nota" style="min-height:52px;" placeholder="Observaciones, proveedor, etc."></textarea></div>
+      <div class="field"><label>Estado</label>
+        <select id="mmat-activo">
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-mat')">Cancelar</button>
+      <button class="btn" onclick="saveMat()">Guardar</button>
     </div>
   </div>
 </div>
@@ -2698,7 +2775,7 @@ var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], MATERIALES=[];
 var PRENDAS_LIST=[
   'Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal',
   'Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre',
@@ -2807,7 +2884,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadMateriales()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -2863,6 +2940,7 @@ function nav(sec, el){
   if(sec==='finanzas'){renderFinCajas();renderFin();}
   if(sec==='cheques'){renderChqResumen();renderChqCartera();renderChqPropios();}
   if(sec==='productos'){renderResumenColegios();}
+  if(sec==='materiales'){renderMateriales();}
 }
 
 function navLocal(local, tab, el){
@@ -6013,6 +6091,232 @@ var FACCLI_COLS=[{col:'nro_factura',label:'N° FAC'},{col:'tipo_comprobante',lab
 var chqpSort={col:null,dir:'asc'};
 var CHQP_COLS=[{col:'numero',label:'N° Cheque'},{col:'banco',label:'Banco'},{col:'destinatario',label:'Destinatario'},{col:'concepto',label:'Concepto'},{col:'monto',label:'Monto',r:true},{col:'fecha_emision',label:'Emisión'},{col:'fecha_pago',label:'Fecha pago'},{col:'estado',label:'Estado'},{col:null,label:''}];
 
+// ── MATERIALES ──
+async function loadMateriales(){ var {data}=await sb.from('materiales').select('*').order('nombre'); MATERIALES=data||[]; }
+
+var matSort={col:null,dir:'asc'};
+var matCatFiltro='TODOS';
+var MAT_COLS=[{col:'nombre',label:'Nombre'},{col:'categoria',label:'Categoría'},{col:'color',label:'Color'},{col:'cantidad',label:'Cantidad',r:true},{col:'unidad',label:'Unidad'},{col:'precio_unitario',label:'Precio/unidad',r:true},{col:'estado',label:'Estado'},{col:null,label:''}];
+
+var MAT_CAT_BG={PIQUE:'#fce7f3',JERSEY:'#e0f2fe',POLAR:'#fef3c7',FRIZA:'#f3e8ff',LYCRA:'#ecfdf5',ALGODÓN:'#fef9c3',POLIÉSTER:'#f0f9ff',OTRO:'#f3f4f6'};
+var MAT_CAT_COLOR={PIQUE:'#be185d',JERSEY:'#0369a1',POLAR:'#92400e',FRIZA:'#7c3aed',LYCRA:'#065f46',ALGODÓN:'#713f12',POLIÉSTER:'#0c4a6e',OTRO:'#374151'};
+var MAT_CAT_ICON={PIQUE:'🧶',JERSEY:'👕',POLAR:'🧥',FRIZA:'🧣',LYCRA:'🩱',ALGODÓN:'🌿',POLIÉSTER:'⚗️',OTRO:'📦'};
+
+function setMatTab(tab,el){
+  ['resumen','prima','precios'].forEach(function(t){
+    document.getElementById('mat-tab-'+t).style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('#mat-tabs .tab').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  if(tab==='resumen')renderMatResumen();
+  if(tab==='prima')renderMatPrima();
+  if(tab==='precios')renderMatPrecios();
+}
+
+function setMatCatFiltro(cat,el){
+  matCatFiltro=cat;
+  document.querySelectorAll('#mat-cat-tabs .tab').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  renderMatPrima();
+}
+
+function renderMateriales(){
+  var activos=MATERIALES.filter(function(m){return m.activo;});
+  var stockTotal=activos.reduce(function(s,m){return s+Number(m.cantidad);},0);
+  var valorTotal=activos.reduce(function(s,m){return s+Number(m.cantidad)*Number(m.precio_unitario);},0);
+  document.getElementById('mat-total').textContent=activos.length;
+  document.getElementById('mat-stock-total').textContent=stockTotal.toLocaleString('es-AR');
+  document.getElementById('mat-valor-total').textContent=$p(valorTotal);
+  renderMatResumen();
+}
+
+function renderMatResumen(){
+  var activos=MATERIALES.filter(function(m){return m.activo;});
+  var cats={};
+  activos.forEach(function(m){
+    var cat=m.categoria||'OTRO';
+    if(!cats[cat])cats[cat]={items:0,cantidad:0,valor:0};
+    cats[cat].items++;
+    cats[cat].cantidad+=Number(m.cantidad);
+    cats[cat].valor+=Number(m.cantidad)*Number(m.precio_unitario);
+  });
+  var catArr=Object.entries(cats).sort(function(a,b){return b[1].valor-a[1].valor;});
+  var cont=document.getElementById('mat-resumen-cont');
+  if(!catArr.length){
+    cont.innerHTML='<div class="panel"><div class="empty"><div class="ei">🎨</div><p>Sin materiales cargados — añadí el primero desde la pestaña Materia Prima</p></div></div>';
+    return;
+  }
+  var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:20px;">';
+  catArr.forEach(function(e){
+    var cat=e[0]; var d=e[1];
+    var bg=MAT_CAT_BG[cat]||'#f9fafb';
+    var icon=MAT_CAT_ICON[cat]||'📦';
+    html+='<div class="stat" style="background:'+bg+';border:none;text-align:left;">'+
+      '<div style="font-size:22px;margin-bottom:4px;">'+icon+'</div>'+
+      '<div style="font-size:11px;font-weight:700;color:#6b7280;letter-spacing:.5px;">'+cat+'</div>'+
+      '<div style="font-size:20px;font-weight:800;margin:4px 0;">'+Number(d.cantidad).toLocaleString('es-AR')+'<span style="font-size:11px;font-weight:400;color:#9ca3af;margin-left:3px;">unid.</span></div>'+
+      '<div style="font-size:12px;color:#6b7280;">'+d.items+' material'+(d.items!==1?'es':'')+'</div>'+
+      (d.valor>0?'<div style="font-size:13px;font-weight:700;color:#7c3aed;margin-top:4px;">'+$p(d.valor)+'</div>':'')+
+    '</div>';
+  });
+  html+='</div>';
+  var totCant=activos.reduce(function(s,m){return s+Number(m.cantidad);},0);
+  var totVal=activos.reduce(function(s,m){return s+Number(m.cantidad)*Number(m.precio_unitario);},0);
+  html+='<div class="panel"><div class="panel-hdr"><h4>Detalle por categoría</h4></div>'+
+    '<div class="tbl"><table><thead><tr>'+
+    '<th>Categoría</th><th>Materiales</th><th style="text-align:right">Cantidad</th><th style="text-align:right">Valor stock</th>'+
+    '</tr></thead><tbody>';
+  catArr.forEach(function(e){
+    var cat=e[0]; var d=e[1];
+    var bg=MAT_CAT_BG[cat]||'#f3f4f6'; var clr=MAT_CAT_COLOR[cat]||'#374151';
+    html+='<tr>'+
+      '<td><span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:'+bg+';color:'+clr+';">'+cat+'</span></td>'+
+      '<td>'+d.items+'</td>'+
+      '<td style="text-align:right;font-weight:600;">'+Number(d.cantidad).toLocaleString('es-AR')+'</td>'+
+      '<td style="text-align:right;font-weight:700;">'+$p(d.valor)+'</td>'+
+    '</tr>';
+  });
+  html+='<tr style="border-top:2px solid #e5e7eb;font-weight:700;"><td>TOTAL</td><td>'+activos.length+'</td>'+
+    '<td style="text-align:right;">'+Number(totCant).toLocaleString('es-AR')+'</td>'+
+    '<td style="text-align:right;">'+$p(totVal)+'</td></tr>';
+  html+='</tbody></table></div></div>';
+  cont.innerHTML=html;
+}
+
+function renderMatPrima(){
+  var q=(document.getElementById('mat-q').value||'').toLowerCase();
+  var activos=MATERIALES.filter(function(m){return m.activo;});
+  var cats=[...new Set(activos.map(function(m){return m.categoria||'OTRO';}))].sort();
+  var tabsDiv=document.getElementById('mat-cat-tabs');
+  tabsDiv.innerHTML='<button class="tab'+(matCatFiltro==='TODOS'?' active':'')+'" onclick="setMatCatFiltro(\'TODOS\',this)">Todos</button>';
+  cats.forEach(function(c){
+    tabsDiv.innerHTML+='<button class="tab'+(matCatFiltro===c?' active':'')+'" onclick="setMatCatFiltro(\''+c+'\',this)">'+c+'</button>';
+  });
+  var list=activos.filter(function(m){
+    return (!q||m.nombre.toLowerCase().includes(q)||(m.color||'').toLowerCase().includes(q))&&
+      (matCatFiltro==='TODOS'||m.categoria===matCatFiltro);
+  });
+  makeSortThead('mat-thead',MAT_COLS,matSort,renderMatPrima);
+  list=sortArr(list,matSort,function(m,col){
+    if(col==='precio_unitario')return Number(m.precio_unitario);
+    if(col==='cantidad')return Number(m.cantidad);
+    if(col==='estado')return m.activo?'activo':'inactivo';
+    return m[col]!=null?m[col]:'';
+  });
+  var tb=document.getElementById('mat-tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><p>Sin materiales en esta categoría</p></div></td></tr>';return;}
+  tb.innerHTML=list.map(function(m){
+    var bg=MAT_CAT_BG[m.categoria]||'#f3f4f6'; var clr=MAT_CAT_COLOR[m.categoria]||'#374151';
+    return '<tr>'+
+      '<td style="font-weight:700;">'+m.nombre+'</td>'+
+      '<td><span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:'+bg+';color:'+clr+';">'+m.categoria+'</span></td>'+
+      '<td style="font-size:13px;">'+(m.color||'—')+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:#0369a1;">'+Number(m.cantidad).toLocaleString('es-AR')+'</td>'+
+      '<td style="font-size:12px;color:#9ca3af;">'+m.unidad+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:#6c7ae0;">'+$p(m.precio_unitario)+'</td>'+
+      '<td><span class="badge '+(m.activo?'b-green':'b-red')+'">'+(m.activo?'Activo':'Inactivo')+'</span></td>'+
+      '<td><div class="actions">'+
+        '<button class="btn btn-sm btn-gray btn-icon" onclick="openMatModal('+m.id+')">✏️</button>'+
+        '<button class="btn btn-sm btn-red btn-icon" onclick="deleteMat('+m.id+')">🗑️</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function renderMatPrecios(){
+  var activos=MATERIALES.filter(function(m){return m.activo;})
+    .sort(function(a,b){return (a.categoria+a.nombre).localeCompare(b.categoria+b.nombre);});
+  var cont=document.getElementById('mat-precios-cont');
+  if(!activos.length){cont.innerHTML='<div class="panel"><div class="empty"><p>Sin materiales activos</p></div></div>';return;}
+  var html='<div class="panel">'+
+    '<div class="panel-hdr"><span style="font-size:13px;color:#9ca3af;">Editá el precio por unidad y guardá</span>'+
+    '<button class="btn" onclick="saveMatPrecios()">Guardar precios</button></div>'+
+    '<div class="tbl"><table><thead><tr>'+
+    '<th>Material</th><th>Categoría</th><th>Color</th>'+
+    '<th style="text-align:right">Cantidad</th><th>Unidad</th>'+
+    '<th style="text-align:right">Precio / unidad</th>'+
+    '</tr></thead><tbody>';
+  activos.forEach(function(m){
+    var bg=MAT_CAT_BG[m.categoria]||'#f3f4f6'; var clr=MAT_CAT_COLOR[m.categoria]||'#374151';
+    html+='<tr>'+
+      '<td style="font-weight:600;">'+m.nombre+'</td>'+
+      '<td><span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:'+bg+';color:'+clr+';">'+m.categoria+'</span></td>'+
+      '<td style="font-size:12px;color:#9ca3af;">'+(m.color||'—')+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:#0369a1;">'+Number(m.cantidad).toLocaleString('es-AR')+'</td>'+
+      '<td style="font-size:12px;color:#9ca3af;">'+m.unidad+'</td>'+
+      '<td style="padding:4px 8px;">'+
+        '<input type="number" id="mp_'+m.id+'" value="'+Number(m.precio_unitario)+'" min="0" '+
+        'style="width:120px;text-align:right;border:1px solid #e5e7eb;border-radius:4px;padding:4px 6px;font-size:13px;"/>'+
+      '</td>'+
+    '</tr>';
+  });
+  html+='</tbody></table></div></div>';
+  cont.innerHTML=html;
+}
+
+async function saveMatPrecios(){
+  var activos=MATERIALES.filter(function(m){return m.activo;});
+  var updates=[];
+  activos.forEach(function(m){
+    var el=document.getElementById('mp_'+m.id);
+    if(!el)return;
+    var nuevo=parseFloat(el.value)||0;
+    if(nuevo!==Number(m.precio_unitario))updates.push({id:m.id,precio_unitario:nuevo});
+  });
+  if(!updates.length){toast('Sin cambios','info');return;}
+  for(var u of updates){
+    await sb.from('materiales').update({precio_unitario:u.precio_unitario,updated_at:new Date().toISOString()}).eq('id',u.id);
+  }
+  await loadMateriales();renderMateriales();renderMatPrecios();
+  toast(updates.length+' precio'+(updates.length!==1?'s':'')+' actualizado'+(updates.length!==1?'s':''));
+}
+
+var editMatId=null;
+function openMatModal(id){
+  editMatId=id||null;
+  document.getElementById('m-mat-title').textContent=id?'Editar material':'Nuevo material';
+  var m=id?MATERIALES.find(function(x){return x.id===id;}):null;
+  document.getElementById('mmat-id').value=id||'';
+  document.getElementById('mmat-nombre').value=m?m.nombre:'';
+  document.getElementById('mmat-categoria').value=m?m.categoria:'PIQUE';
+  document.getElementById('mmat-color').value=m?m.color||'':'';
+  document.getElementById('mmat-cantidad').value=m?m.cantidad:'';
+  document.getElementById('mmat-unidad').value=m?m.unidad:'rollos';
+  document.getElementById('mmat-precio').value=m?m.precio_unitario:'';
+  document.getElementById('mmat-nota').value=m?m.nota||'':'';
+  document.getElementById('mmat-activo').value=m?(m.activo?'true':'false'):'true';
+  openM('m-mat');
+}
+
+async function saveMat(){
+  var nombre=document.getElementById('mmat-nombre').value.trim();
+  if(!nombre){toast('El nombre es obligatorio','err');return;}
+  var d={nombre,
+    categoria:document.getElementById('mmat-categoria').value||'PIQUE',
+    color:document.getElementById('mmat-color').value.trim()||null,
+    cantidad:parseFloat(document.getElementById('mmat-cantidad').value)||0,
+    unidad:document.getElementById('mmat-unidad').value||'rollos',
+    precio_unitario:parseFloat(document.getElementById('mmat-precio').value)||0,
+    nota:document.getElementById('mmat-nota').value.trim()||null,
+    activo:document.getElementById('mmat-activo').value==='true',
+    updated_at:new Date().toISOString()};
+  var r=editMatId?await sb.from('materiales').update(d).eq('id',editMatId):await sb.from('materiales').insert(d);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast(editMatId?'Material actualizado':'Material registrado');
+  closeM('m-mat');
+  await loadMateriales();renderMateriales();renderMatPrima();
+}
+
+async function deleteMat(id){
+  var m=MATERIALES.find(function(x){return x.id===id;});
+  if(!confirm('¿Eliminar '+m.nombre+'?'))return;
+  var r=await sb.from('materiales').delete().eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Material eliminado','info');
+  await loadMateriales();renderMateriales();renderMatPrima();
+}
+
+// ── PERSONAL ──
 var perSort={col:null,dir:'asc'};
 var PER_COLS=[{col:'nombre',label:'Nombre'},{col:'cargo',label:'Cargo'},{col:'sueldo_semanal',label:'Sueldo semanal',r:true},{col:null,label:'Equiv. mensual',r:true},{col:'anual',label:'Equiv. anual',r:true},{col:'telefono',label:'Teléfono'},{col:'estado',label:'Estado'},{col:null,label:''}];
 
