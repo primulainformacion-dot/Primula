@@ -112,6 +112,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
 .modal-bg.open{display:flex;}
 .modal{background:#fff;border-radius:18px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;}
+.modal-wide .modal{max-width:740px;}
 .modal h3{font-size:16px;font-weight:800;color:#1a1f36;margin-bottom:20px;}
 .modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -237,6 +238,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="nav-item" onclick="nav('costura',this)"><span class="ni">🧵</span> Costura</div>
     <div class="nav-item" onclick="nav('entregas',this)"><span class="ni">📦</span> Entregas</div>
     <div class="nav-item" onclick="nav('materiales',this)"><span class="ni">🎨</span> Materia Prima</div>
+    <div class="nav-item" onclick="nav('costos',this)"><span class="ni">💰</span> Costos</div>
   </div>
 
   <div class="sidebar-footer">
@@ -1536,6 +1538,63 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     </div>
   </div>
 
+  <!-- ════════════ COSTOS ════════════ -->
+  <div class="section" id="sec-costos">
+    <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
+      <div class="stat"><div class="stat-icon" style="background:#d1fae5;">📊</div><h3 id="cos-stat-fichas">0</h3><p>Fichas de costo</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#fef3c7;">🪢</div><h3 id="cos-stat-avios">0</h3><p>Avíos cargados</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#fce7f3;">📉</div><h3 id="cos-stat-margin-min">—</h3><p>Margen prom. minorista</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#ede9fe;">📈</div><h3 id="cos-stat-margin-may">—</h3><p>Margen prom. mayorista</p></div>
+    </div>
+    <div class="tabs" style="margin-bottom:16px;" id="cos-tabs">
+      <button class="tab active" onclick="setCosTab('fichas',this)">📊 Fichas de Costo</button>
+      <button class="tab" onclick="setCosTab('avios',this)">🪢 Avíos</button>
+      <button class="tab" onclick="setCosTab('analisis',this)">📈 Rentabilidad</button>
+    </div>
+    <!-- Tab Fichas -->
+    <div id="cos-tab-fichas">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <input id="cos-fic-q" placeholder="Buscar modelo..." oninput="renderCostosFichas()" style="max-width:280px;"/>
+        <button class="btn btn-gray btn-sm" onclick="renderCostosFichas()">↻</button>
+        <button class="btn" style="margin-left:auto;" onclick="openFichaModal()">+ Nueva ficha</button>
+      </div>
+      <div id="cos-fichas-lista"></div>
+    </div>
+    <!-- Tab Avíos -->
+    <div id="cos-tab-avios" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <input id="cos-avi-q" placeholder="Buscar avío..." oninput="renderCostosAvios()" style="max-width:240px;"/>
+        <select id="cos-avi-tipo" onchange="renderCostosAvios()" style="width:150px;">
+          <option value="">Todos los tipos</option>
+          <option value="hilo">Hilo</option>
+          <option value="boton">Botón</option>
+          <option value="cierre">Cierre</option>
+          <option value="etiqueta">Etiqueta</option>
+          <option value="entretela">Entretela</option>
+          <option value="ribete">Ribete/Vivo</option>
+          <option value="otro">Otro</option>
+        </select>
+        <button class="btn btn-gray btn-sm" onclick="renderCostosAvios()">↻</button>
+        <button class="btn" style="margin-left:auto;" onclick="openAvioModal()">+ Nuevo avío</button>
+      </div>
+      <div class="tbl"><table>
+        <thead><tr>
+          <th>Nombre</th><th>Tipo</th><th>Unidad</th>
+          <th style="text-align:right;">Costo unit.</th>
+          <th style="text-align:right;">Stock actual</th>
+          <th style="text-align:right;">Stock mín.</th>
+          <th style="text-align:right;">Valor stock</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="cos-avios-tbody"></tbody>
+      </table></div>
+    </div>
+    <!-- Tab Análisis -->
+    <div id="cos-tab-analisis" style="display:none;">
+      <div id="cos-analisis-cont"></div>
+    </div>
+  </div>
+
   <!-- ════════════ FINANZAS ════════════ -->
   <div class="section" id="sec-finanzas">
 
@@ -2634,6 +2693,80 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Avío (alta / edición) -->
+<div class="modal-bg" id="m-avio">
+  <div class="modal">
+    <h3 id="m-avio-title">Nuevo avío</h3>
+    <input type="hidden" id="mavi-id"/>
+    <div class="grid2">
+      <div class="field full"><label>Nombre *</label><input id="mavi-nombre" placeholder="Ej: Hilo negro, Botón 4 huecos, Cierre YKK..."/></div>
+      <div class="field"><label>Tipo *</label>
+        <select id="mavi-tipo">
+          <option value="hilo">Hilo</option>
+          <option value="boton">Botón</option>
+          <option value="cierre">Cierre</option>
+          <option value="etiqueta">Etiqueta</option>
+          <option value="entretela">Entretela</option>
+          <option value="ribete">Ribete / Vivo</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="field"><label>Unidad</label>
+        <select id="mavi-unidad">
+          <option value="unidades">Unidades</option>
+          <option value="metros">Metros</option>
+          <option value="kg">Kg</option>
+          <option value="pares">Pares</option>
+          <option value="rollos">Rollos</option>
+        </select>
+      </div>
+      <div class="field"><label>Costo por unidad $</label><input type="number" id="mavi-costo" min="0" step="0.01" placeholder="0"/></div>
+      <div class="field"><label>Stock actual</label><input type="number" id="mavi-stock" min="0" step="0.01" placeholder="0"/></div>
+      <div class="field"><label>Stock mínimo</label><input type="number" id="mavi-stock-min" min="0" step="0.01" placeholder="0"/></div>
+      <div class="field full"><label>Nota</label><textarea id="mavi-nota" style="min-height:48px;" placeholder="Proveedor, especificaciones, etc."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-avio')">Cancelar</button>
+      <button class="btn" onclick="saveAvio()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ficha de costo (alta / edición) -->
+<div class="modal-bg modal-wide" id="m-ficha">
+  <div class="modal">
+    <h3 id="m-ficha-title">Nueva ficha de costo</h3>
+    <input type="hidden" id="mfic-id"/>
+    <div style="font-size:11px;font-weight:800;color:#6c7ae0;text-transform:uppercase;letter-spacing:1px;margin:0 0 10px;">Modelo</div>
+    <div class="grid2" style="margin-bottom:16px;">
+      <div class="field full"><label>Nombre del modelo *</label><input id="mfic-nombre" placeholder="Ej: Pantalón cargo talle S"/></div>
+      <div class="field full"><label>Descripción</label><input id="mfic-desc" placeholder="Colores, temporada, etc."/></div>
+      <div class="field"><label>Precio venta minorista $</label><input type="number" id="mfic-precio-min" min="0" placeholder="0" oninput="renderFichaResumen()"/></div>
+      <div class="field"><label>Precio venta mayorista $</label><input type="number" id="mfic-precio-may" min="0" placeholder="0" oninput="renderFichaResumen()"/></div>
+    </div>
+    <div style="font-size:11px;font-weight:800;color:#6c7ae0;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Mano de obra (por unidad)</div>
+    <div class="grid2" style="margin-bottom:16px;">
+      <div class="field"><label>Costo confección $</label><input type="number" id="mfic-conf" min="0" placeholder="0" oninput="renderFichaResumen()"/></div>
+      <div class="field"><label>Costo bordado $</label><input type="number" id="mfic-bord" min="0" placeholder="0" oninput="renderFichaResumen()"/></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:800;color:#6c7ae0;text-transform:uppercase;letter-spacing:1px;">Telas (por unidad)</div>
+      <button class="btn btn-sm btn-gray" type="button" onclick="fichaAddTela()">+ Tela</button>
+    </div>
+    <div id="mfic-telas-cont" style="margin-bottom:16px;"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:800;color:#6c7ae0;text-transform:uppercase;letter-spacing:1px;">Avíos (por unidad)</div>
+      <button class="btn btn-sm btn-gray" type="button" onclick="fichaAddAvio()">+ Avío</button>
+    </div>
+    <div id="mfic-avios-cont" style="margin-bottom:14px;"></div>
+    <div id="mfic-resumen" style="background:#f0f2f5;border-radius:10px;padding:12px 16px;font-size:13px;min-height:48px;"></div>
+    <div class="modal-foot" style="margin-top:16px;">
+      <button class="btn btn-gray" onclick="closeM('m-ficha')">Cancelar</button>
+      <button class="btn" onclick="saveFicha()">Guardar ficha</button>
+    </div>
+  </div>
+</div>
+
 <!-- Personal (alta / edición) -->
 <div class="modal-bg" id="m-per">
   <div class="modal">
@@ -3500,7 +3633,7 @@ var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[], AVIOS=[], FICHAS_COSTO=[], FICHAS_COSTO_TELAS=[], FICHAS_COSTO_AVIOS=[];
 var CONCEPTOS_POR_TIPO={
   'CONFESIÓN':['Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal','Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre','Chaleco Polar','Campera Polar','Campera Friza','Campera canguro','Sudadera','Joggins','Pantalón común','Cuellos','Bufandas / Cuellos','Reflectivo','Cofia','Arreglo'],
   'BORDADO':[],
@@ -3622,7 +3755,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems(),loadAvios(),loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderAlertas(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -3685,6 +3818,7 @@ function nav(sec, el){
   if(sec==='tizada'){renderTizadas();}
   if(sec==='costura'){renderCostura();}
   if(sec==='entregas'){renderEntregas();}
+  if(sec==='costos'){renderCostos();}
 }
 
 function navLocal(local, tab, el){
@@ -13077,6 +13211,442 @@ async function deletePedido(id){
   toast('Pedido eliminado','info');
   await Promise.all([loadPedidos(),loadPedidosItems()]);
   renderPedidos();
+}
+
+// ═══════════════════════════════════════════════════════
+//  COSTOS — Load
+// ═══════════════════════════════════════════════════════
+async function loadAvios(){var {data}=await sb.from('avios').select('*').order('nombre');AVIOS=data||[];}
+async function loadFichasCosto(){var {data}=await sb.from('fichas_costo').select('*').order('nombre_modelo');FICHAS_COSTO=data||[];}
+async function loadFichasCostoTelas(){var {data}=await sb.from('fichas_costo_telas').select('*');FICHAS_COSTO_TELAS=data||[];}
+async function loadFichasCostoAvios(){var {data}=await sb.from('fichas_costo_avios').select('*');FICHAS_COSTO_AVIOS=data||[];}
+
+// ═══════════════════════════════════════════════════════
+//  COSTOS — Helpers de cálculo
+// ═══════════════════════════════════════════════════════
+function fichaCalcCosto(ficha){
+  var telas=FICHAS_COSTO_TELAS.filter(function(t){return t.ficha_id===ficha.id;})
+    .reduce(function(s,t){return s+Number(t.cantidad)*Number(t.costo_unit);},0);
+  var avios=FICHAS_COSTO_AVIOS.filter(function(a){return a.ficha_id===ficha.id;})
+    .reduce(function(s,a){var av=AVIOS.find(function(x){return x.id===a.avio_id;});return s+(av?Number(a.cantidad)*Number(av.costo_unit):0);},0);
+  var conf=Number(ficha.costo_confeccion)||0;
+  var bord=Number(ficha.costo_bordado)||0;
+  return {telas:telas,avios:avios,conf:conf,bord:bord,total:telas+avios+conf+bord};
+}
+function fichaMargenes(ficha,tipo){
+  var c=fichaCalcCosto(ficha);
+  var precio=tipo==='may'?Number(ficha.precio_venta_may):Number(ficha.precio_venta_min);
+  var margen=precio-c.total;
+  var pct=precio>0?Math.round(margen/precio*100):0;
+  return {costo:c.total,precio:precio,margen:margen,pct:pct,c:c};
+}
+function cosMargenColor(pct){return pct>=40?'#16a34a':pct>=20?'#f59e0b':'#dc2626';}
+
+// ═══════════════════════════════════════════════════════
+//  COSTOS — Render principal
+// ═══════════════════════════════════════════════════════
+function renderCostos(){
+  var fichasActivas=FICHAS_COSTO.filter(function(f){return f.activo;});
+  document.getElementById('cos-stat-fichas').textContent=fichasActivas.length;
+  document.getElementById('cos-stat-avios').textContent=AVIOS.length;
+  var mMin=fichasActivas.map(function(f){return fichaMargenes(f,'min').pct;}).filter(function(p){return p>0;});
+  var mMay=fichasActivas.map(function(f){return fichaMargenes(f,'may').pct;}).filter(function(p){return p>0;});
+  document.getElementById('cos-stat-margin-min').textContent=mMin.length?Math.round(mMin.reduce(function(s,p){return s+p;},0)/mMin.length)+'%':'—';
+  document.getElementById('cos-stat-margin-may').textContent=mMay.length?Math.round(mMay.reduce(function(s,p){return s+p;},0)/mMay.length)+'%':'—';
+  renderCostosFichas();
+}
+
+// ── Tab toggle ──
+function setCosTab(tab,btn){
+  ['fichas','avios','analisis'].forEach(function(t){
+    document.getElementById('cos-tab-'+t).style.display=t===tab?'':'none';
+  });
+  document.querySelectorAll('#cos-tabs .tab').forEach(function(b){b.classList.remove('active');});
+  if(btn)btn.classList.add('active');
+  if(tab==='avios')renderCostosAvios();
+  if(tab==='analisis')renderCostosAnalisis();
+}
+
+// ─────────────────────────────────────────────────────
+//  AVÍOS — Render tabla
+// ─────────────────────────────────────────────────────
+function renderCostosAvios(){
+  var q=(document.getElementById('cos-avi-q').value||'').toLowerCase();
+  var tipo=document.getElementById('cos-avi-tipo').value;
+  var list=AVIOS.filter(function(a){return(!q||a.nombre.toLowerCase().includes(q))&&(!tipo||a.tipo===tipo);});
+  var tipoLabel={hilo:'Hilo',boton:'Botón',cierre:'Cierre',etiqueta:'Etiqueta',entretela:'Entretela',ribete:'Ribete/Vivo',otro:'Otro'};
+  var tbody=document.getElementById('cos-avios-tbody');
+  if(!list.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><p>Sin avíos cargados. Hacé clic en "+ Nuevo avío".</p></div></td></tr>';return;}
+  tbody.innerHTML=list.map(function(a){
+    var bajo=Number(a.stock_actual)<Number(a.stock_minimo);
+    var valor=Number(a.stock_actual)*Number(a.costo_unit);
+    return '<tr style="'+(bajo?'background:#fff1f2;':'')+'">'+
+      '<td style="font-weight:700;">'+(bajo?'⚠️ ':'')+a.nombre+'</td>'+
+      '<td><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;background:#ede9fe;color:#5b21b6;">'+(tipoLabel[a.tipo]||a.tipo)+'</span></td>'+
+      '<td style="font-size:12px;color:#6b7280;">'+a.unidad+'</td>'+
+      '<td style="text-align:right;font-weight:700;'+(bajo?'color:#dc2626;':'')+'">'+Number(a.stock_actual).toLocaleString('es-AR')+'</td>'+
+      '<td style="text-align:right;font-size:12px;color:#6b7280;">'+Number(a.stock_minimo).toLocaleString('es-AR')+'</td>'+
+      '<td style="text-align:right;">'+$p(a.costo_unit)+'</td>'+
+      '<td style="text-align:right;font-weight:700;">'+$p(valor)+'</td>'+
+      '<td><div class="actions">'+
+        '<button class="btn btn-sm btn-gray btn-icon" onclick="openAvioModal('+a.id+')">✏️</button>'+
+        '<button class="btn btn-sm btn-red btn-icon" onclick="deleteAvio('+a.id+')">🗑️</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────
+//  FICHAS — Render cards
+// ─────────────────────────────────────────────────────
+function renderCostosFichas(){
+  var q=(document.getElementById('cos-fic-q').value||'').toLowerCase();
+  var list=FICHAS_COSTO.filter(function(f){return f.activo&&(!q||f.nombre_modelo.toLowerCase().includes(q));});
+  var cont=document.getElementById('cos-fichas-lista');
+  if(!list.length){
+    cont.innerHTML='<div class="empty"><p>Sin fichas de costo. Hacé clic en "+ Nueva ficha" para crear una.</p></div>';
+    return;
+  }
+  cont.innerHTML=list.map(function(f){
+    var c=fichaCalcCosto(f);
+    var mMin=fichaMargenes(f,'min');
+    var mMay=fichaMargenes(f,'may');
+    var borderCol=cosMargenColor(mMin.pct);
+    var nTelas=FICHAS_COSTO_TELAS.filter(function(t){return t.ficha_id===f.id;}).length;
+    var nAvios=FICHAS_COSTO_AVIOS.filter(function(a){return a.ficha_id===f.id;}).length;
+    return '<div class="panel" style="margin-bottom:12px;border-left:4px solid '+borderCol+';">'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">'+
+        '<div>'+
+          '<div style="font-size:16px;font-weight:800;color:#1a1f36;">'+f.nombre_modelo+'</div>'+
+          (f.descripcion?'<div style="font-size:12px;color:#9ca3af;margin-top:2px;">'+f.descripcion+'</div>':'')+
+        '</div>'+
+        '<div class="actions">'+
+          '<button class="btn btn-sm btn-gray btn-icon" onclick="openFichaModal('+f.id+')">✏️</button>'+
+          '<button class="btn btn-sm btn-red btn-icon" onclick="deleteFicha('+f.id+')">🗑️</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+        '<div style="background:#f8f9fa;border-radius:8px;padding:13px;">'+
+          '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Estructura de costo</div>'+
+          (c.telas>0?'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>🧵 Telas ('+nTelas+')</span><span>'+$p(c.telas)+'</span></div>':'')+
+          (c.avios>0?'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>🪢 Avíos ('+nAvios+')</span><span>'+$p(c.avios)+'</span></div>':'')+
+          (c.conf>0?'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>✂️ Confección</span><span>'+$p(c.conf)+'</span></div>':'')+
+          (c.bord>0?'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>🪡 Bordado</span><span>'+$p(c.bord)+'</span></div>':'')+
+          '<div style="border-top:1px solid #e5e7eb;margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;font-size:13px;font-weight:800;"><span>Costo total</span><span style="color:#dc2626;">'+$p(c.total)+'</span></div>'+
+        '</div>'+
+        '<div style="background:#f8f9fa;border-radius:8px;padding:13px;">'+
+          '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Rentabilidad</div>'+
+          '<div style="margin-bottom:10px;">'+
+            '<div style="font-size:11px;color:#9ca3af;">Precio minorista · '+$p(mMin.precio)+'</div>'+
+            '<div style="display:flex;align-items:baseline;gap:8px;margin-top:2px;">'+
+              '<span style="font-size:22px;font-weight:900;color:'+cosMargenColor(mMin.pct)+';">'+mMin.pct+'%</span>'+
+              '<span style="font-size:12px;color:#6b7280;">ganancia · '+$p(mMin.margen)+' / prenda</span>'+
+            '</div>'+
+          '</div>'+
+          '<div>'+
+            '<div style="font-size:11px;color:#9ca3af;">Precio mayorista · '+$p(mMay.precio)+'</div>'+
+            '<div style="display:flex;align-items:baseline;gap:8px;margin-top:2px;">'+
+              '<span style="font-size:22px;font-weight:900;color:'+cosMargenColor(mMay.pct)+';">'+mMay.pct+'%</span>'+
+              '<span style="font-size:12px;color:#6b7280;">ganancia · '+$p(mMay.margen)+' / prenda</span>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────
+//  ANÁLISIS — Ranking de rentabilidad
+// ─────────────────────────────────────────────────────
+function renderCostosAnalisis(){
+  var fichas=FICHAS_COSTO.filter(function(f){return f.activo;});
+  var cont=document.getElementById('cos-analisis-cont');
+  if(!fichas.length){cont.innerHTML='<div class="empty"><p>Cargá fichas de costo para ver el análisis de rentabilidad.</p></div>';return;}
+  var filas=fichas.map(function(f){return{f:f,mMin:fichaMargenes(f,'min'),mMay:fichaMargenes(f,'may')};})
+    .sort(function(a,b){return b.mMin.pct-a.mMin.pct;});
+  var html='<div class="panel">'+
+    '<div style="font-size:14px;font-weight:800;color:#1a1f36;margin-bottom:4px;">Ranking de rentabilidad</div>'+
+    '<div style="font-size:12px;color:#9ca3af;margin-bottom:16px;">Ordenado de mayor a menor margen minorista. 🟢 ≥40% · 🟡 20-39% · 🔴 &lt;20%</div>'+
+    '<div class="tbl"><table>'+
+    '<thead><tr>'+
+      '<th>Modelo</th><th style="text-align:right;">Costo total</th>'+
+      '<th style="text-align:right;">P. Minorista</th><th style="text-align:right;">Margen min.</th>'+
+      '<th style="text-align:right;">P. Mayorista</th><th style="text-align:right;">Margen may.</th>'+
+    '</tr></thead><tbody>'+
+    filas.map(function(row){
+      var f=row.f; var mMin=row.mMin; var mMay=row.mMay;
+      var c=fichaCalcCosto(f);
+      return '<tr>'+
+        '<td><strong>'+f.nombre_modelo+'</strong>'+(f.descripcion?'<br><span style="font-size:11px;color:#9ca3af;">'+f.descripcion+'</span>':'')+
+        '</td>'+
+        '<td style="text-align:right;font-weight:700;color:#dc2626;">'+$p(c.total)+'</td>'+
+        '<td style="text-align:right;">'+$p(mMin.precio)+'</td>'+
+        '<td style="text-align:right;"><span style="font-weight:900;font-size:15px;color:'+cosMargenColor(mMin.pct)+';">'+mMin.pct+'%</span><br><span style="font-size:11px;color:#9ca3af;">'+$p(mMin.margen)+'</span></td>'+
+        '<td style="text-align:right;">'+$p(mMay.precio)+'</td>'+
+        '<td style="text-align:right;"><span style="font-weight:900;font-size:15px;color:'+cosMargenColor(mMay.pct)+';">'+mMay.pct+'%</span><br><span style="font-size:11px;color:#9ca3af;">'+$p(mMay.margen)+'</span></td>'+
+      '</tr>';
+    }).join('')+
+    '</tbody></table></div></div>'+
+    // Avíos bajo mínimo
+    (AVIOS.filter(function(a){return Number(a.stock_actual)<Number(a.stock_minimo);}).length?
+    '<div class="panel" style="margin-top:14px;border-left:4px solid #dc2626;">'+
+      '<div style="font-size:14px;font-weight:800;color:#dc2626;margin-bottom:10px;">⚠️ Avíos con stock bajo el mínimo</div>'+
+      AVIOS.filter(function(a){return Number(a.stock_actual)<Number(a.stock_minimo);}).map(function(a){
+        return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid #fee2e2;">'+
+          '<span style="font-weight:700;">'+a.nombre+'</span>'+
+          '<span style="color:#dc2626;">Stock: '+Number(a.stock_actual).toLocaleString('es-AR')+' '+a.unidad+' (mín. '+Number(a.stock_minimo).toLocaleString('es-AR')+')</span>'+
+        '</div>';
+      }).join('')+
+    '</div>':'');
+  cont.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════
+//  AVÍOS — CRUD
+// ═══════════════════════════════════════════════════════
+var editAvioId=null;
+function openAvioModal(id){
+  editAvioId=id||null;
+  document.getElementById('m-avio-title').textContent=id?'Editar avío':'Nuevo avío';
+  var a=id?AVIOS.find(function(x){return x.id===id;}):null;
+  document.getElementById('mavi-id').value=id||'';
+  document.getElementById('mavi-nombre').value=a?a.nombre:'';
+  document.getElementById('mavi-tipo').value=a?a.tipo:'hilo';
+  document.getElementById('mavi-unidad').value=a?a.unidad:'unidades';
+  document.getElementById('mavi-costo').value=a?a.costo_unit:'';
+  document.getElementById('mavi-stock').value=a?a.stock_actual:'';
+  document.getElementById('mavi-stock-min').value=a?a.stock_minimo:'';
+  document.getElementById('mavi-nota').value=a?a.nota||'':'';
+  openM('m-avio');
+}
+async function saveAvio(){
+  var nombre=document.getElementById('mavi-nombre').value.trim();
+  if(!nombre){toast('El nombre es obligatorio','err');return;}
+  var d={nombre:nombre,
+    tipo:document.getElementById('mavi-tipo').value||'otro',
+    unidad:document.getElementById('mavi-unidad').value||'unidades',
+    costo_unit:parseFloat(document.getElementById('mavi-costo').value)||0,
+    stock_actual:parseFloat(document.getElementById('mavi-stock').value)||0,
+    stock_minimo:parseFloat(document.getElementById('mavi-stock-min').value)||0,
+    nota:document.getElementById('mavi-nota').value.trim()||null,
+    updated_at:new Date().toISOString()};
+  var r=editAvioId?await sb.from('avios').update(d).eq('id',editAvioId):await sb.from('avios').insert(d);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast(editAvioId?'Avío actualizado':'Avío registrado');
+  closeM('m-avio');
+  await loadAvios();
+  renderCostos();renderCostosAvios();
+}
+async function deleteAvio(id){
+  var a=AVIOS.find(function(x){return x.id===id;});
+  if(!confirm('¿Eliminar "'+a.nombre+'"?\n\nSe quitará también de las fichas de costo donde esté incluido.'))return;
+  var r=await sb.from('avios').delete().eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Avío eliminado','info');
+  await Promise.all([loadAvios(),loadFichasCostoAvios()]);
+  renderCostos();renderCostosAvios();
+}
+
+// ═══════════════════════════════════════════════════════
+//  FICHAS DE COSTO — CRUD
+// ═══════════════════════════════════════════════════════
+var editFichaId=null, fichaTelasTemp=[], fichaAviosTemp=[];
+
+function openFichaModal(id){
+  editFichaId=id||null;
+  document.getElementById('m-ficha-title').textContent=id?'Editar ficha de costo':'Nueva ficha de costo';
+  var f=id?FICHAS_COSTO.find(function(x){return x.id===id;}):null;
+  document.getElementById('mfic-id').value=id||'';
+  document.getElementById('mfic-nombre').value=f?f.nombre_modelo:'';
+  document.getElementById('mfic-desc').value=f?f.descripcion||'':'';
+  document.getElementById('mfic-precio-min').value=f?f.precio_venta_min:'';
+  document.getElementById('mfic-precio-may').value=f?f.precio_venta_may:'';
+  document.getElementById('mfic-conf').value=f?f.costo_confeccion:'';
+  document.getElementById('mfic-bord').value=f?f.costo_bordado:'';
+  fichaTelasTemp=id?FICHAS_COSTO_TELAS.filter(function(t){return t.ficha_id===id;}).map(function(t){return Object.assign({},t);}):[];
+  fichaAviosTemp=id?FICHAS_COSTO_AVIOS.filter(function(a){return a.ficha_id===id;}).map(function(a){return Object.assign({},a);}):[];
+  renderFichaItemsModal();
+  openM('m-ficha');
+}
+
+function fichaAddTela(){
+  fichaTelasTemp.push({nombre_tela:'',unidad:'metros',cantidad:0,costo_unit:0});
+  renderFichaItemsModal();
+}
+function fichaRemTela(i){
+  fichaTelasTemp.splice(i,1);
+  renderFichaItemsModal();
+}
+function fichaAddAvio(){
+  if(!AVIOS.length){toast('Primero cargá avíos en el tab Avíos','err');return;}
+  fichaAviosTemp.push({avio_id:AVIOS[0].id,cantidad:1});
+  renderFichaItemsModal();
+}
+function fichaRemAvio(i){
+  fichaAviosTemp.splice(i,1);
+  renderFichaItemsModal();
+}
+
+function fichaReadDOM(){
+  fichaTelasTemp=Array.from(document.querySelectorAll('#mfic-telas-cont .fic-tela-row')).map(function(row){
+    return{nombre_tela:row.querySelector('.ft-nombre').value.trim(),
+      unidad:row.querySelector('.ft-unidad').value,
+      cantidad:parseFloat(row.querySelector('.ft-cant').value)||0,
+      costo_unit:parseFloat(row.querySelector('.ft-costo').value)||0};
+  });
+  fichaAviosTemp=Array.from(document.querySelectorAll('#mfic-avios-cont .fic-avio-row')).map(function(row){
+    return{avio_id:parseInt(row.querySelector('.fa-select').value)||null,
+      cantidad:parseFloat(row.querySelector('.fa-cant').value)||0};
+  });
+}
+
+function fichaCalcFromModal(){
+  var telas=Array.from(document.querySelectorAll('#mfic-telas-cont .fic-tela-row')).reduce(function(s,row){
+    return s+(parseFloat(row.querySelector('.ft-cant').value)||0)*(parseFloat(row.querySelector('.ft-costo').value)||0);
+  },0);
+  var avios=Array.from(document.querySelectorAll('#mfic-avios-cont .fic-avio-row')).reduce(function(s,row){
+    var avId=parseInt(row.querySelector('.fa-select').value)||0;
+    var av=AVIOS.find(function(x){return x.id===avId;});
+    var cant=parseFloat(row.querySelector('.fa-cant').value)||0;
+    return s+(av?cant*Number(av.costo_unit):0);
+  },0);
+  var conf=parseFloat(document.getElementById('mfic-conf').value)||0;
+  var bord=parseFloat(document.getElementById('mfic-bord').value)||0;
+  return{telas:telas,avios:avios,conf:conf,bord:bord,total:telas+avios+conf+bord};
+}
+
+function renderFichaResumen(){
+  var c=fichaCalcFromModal();
+  var pMin=parseFloat(document.getElementById('mfic-precio-min').value)||0;
+  var pMay=parseFloat(document.getElementById('mfic-precio-may').value)||0;
+  var mMin=pMin>0?Math.round((pMin-c.total)/pMin*100):null;
+  var mMay=pMay>0?Math.round((pMay-c.total)/pMay*100):null;
+  document.getElementById('mfic-resumen').innerHTML=
+    '<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;">'+
+    '<div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;">Costo total</div>'+
+      '<div style="font-size:20px;font-weight:900;color:#dc2626;">'+$p(c.total)+'</div>'+
+      '<div style="font-size:10px;color:#9ca3af;">Telas:'+$p(c.telas)+' · Avíos:'+$p(c.avios)+' · Conf.:'+$p(c.conf)+' · Bord.:'+$p(c.bord)+'</div></div>'+
+    (mMin!==null?'<div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;">Margen min.</div>'+
+      '<div style="font-size:20px;font-weight:900;color:'+cosMargenColor(mMin)+';">'+mMin+'%</div>'+
+      '<div style="font-size:10px;color:#9ca3af;">'+$p(pMin-c.total)+' / prenda</div></div>':'')+
+    (mMay!==null?'<div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;">Margen may.</div>'+
+      '<div style="font-size:20px;font-weight:900;color:'+cosMargenColor(mMay)+';">'+mMay+'%</div>'+
+      '<div style="font-size:10px;color:#9ca3af;">'+$p(pMay-c.total)+' / prenda</div></div>':'')+
+    '</div>';
+}
+
+function renderFichaItemsModal(){
+  // Telas
+  var tc=document.getElementById('mfic-telas-cont');
+  if(!fichaTelasTemp.length){
+    tc.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px 0;">Sin telas — hacé clic en "+ Tela" para agregar.</div>';
+  } else {
+    tc.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+      '<thead><tr>'+
+        '<th style="text-align:left;padding:4px 6px;color:#6b7280;font-weight:700;">Tela / tejido</th>'+
+        '<th style="text-align:left;padding:4px 6px;color:#6b7280;font-weight:700;">Unidad</th>'+
+        '<th style="text-align:right;padding:4px 6px;color:#6b7280;font-weight:700;">Cant.</th>'+
+        '<th style="text-align:right;padding:4px 6px;color:#6b7280;font-weight:700;">$ / unidad</th>'+
+        '<th style="text-align:right;padding:4px 6px;color:#6b7280;font-weight:700;">Subtotal</th>'+
+        '<th></th>'+
+      '</tr></thead><tbody>'+
+      fichaTelasTemp.map(function(t,i){
+        var sub=Number(t.cantidad)*Number(t.costo_unit);
+        return '<tr class="fic-tela-row">'+
+          '<td style="padding:3px 4px;"><input class="ft-nombre" value="'+t.nombre_tela.replace(/"/g,'&quot;')+'" placeholder="Ej: Friza negra" oninput="renderFichaResumen()" style="width:100%;padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;"/></td>'+
+          '<td style="padding:3px 4px;"><select class="ft-unidad" onchange="renderFichaResumen()" style="padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;">'+
+            ['metros','kg','rollos','unidades'].map(function(u){return'<option value="'+u+'"'+(t.unidad===u?' selected':'')+'>'+u+'</option>';}).join('')+
+          '</select></td>'+
+          '<td style="padding:3px 4px;"><input type="number" class="ft-cant" value="'+t.cantidad+'" min="0" step="0.01" oninput="renderFichaResumen()" style="width:74px;padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:right;"/></td>'+
+          '<td style="padding:3px 4px;"><input type="number" class="ft-costo" value="'+t.costo_unit+'" min="0" step="0.01" oninput="renderFichaResumen()" style="width:90px;padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:right;"/></td>'+
+          '<td style="padding:3px 4px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">'+$p(sub)+'</td>'+
+          '<td style="padding:3px 4px;"><button type="button" onclick="fichaRemTela('+i+')" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:15px;line-height:1;">✕</button></td>'+
+        '</tr>';
+      }).join('')+
+      '</tbody></table>';
+  }
+  // Avíos
+  var ac=document.getElementById('mfic-avios-cont');
+  if(!fichaAviosTemp.length){
+    ac.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px 0;">Sin avíos — hacé clic en "+ Avío" para agregar.</div>';
+  } else {
+    var avioOpts=AVIOS.map(function(a){return'<option value="'+a.id+'">'+a.nombre+' ('+$p(a.costo_unit)+'/'+a.unidad+')</option>';}).join('');
+    ac.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+      '<thead><tr>'+
+        '<th style="text-align:left;padding:4px 6px;color:#6b7280;font-weight:700;">Avío</th>'+
+        '<th style="text-align:right;padding:4px 6px;color:#6b7280;font-weight:700;">Cant.</th>'+
+        '<th style="text-align:right;padding:4px 6px;color:#6b7280;font-weight:700;">Costo unit.</th>'+
+        '<th style="text-align:right;padding:4px 6px;color:#6b7280;font-weight:700;">Subtotal</th>'+
+        '<th></th>'+
+      '</tr></thead><tbody>'+
+      fichaAviosTemp.map(function(a,i){
+        var av=AVIOS.find(function(x){return x.id===a.avio_id;});
+        var sub=av?Number(a.cantidad)*Number(av.costo_unit):0;
+        return '<tr class="fic-avio-row">'+
+          '<td style="padding:3px 4px;"><select class="fa-select" onchange="renderFichaResumen()" style="width:100%;padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;">'+
+            AVIOS.map(function(x){return'<option value="'+x.id+'"'+(x.id===a.avio_id?' selected':'')+'>'+x.nombre+' ('+$p(x.costo_unit)+'/'+x.unidad+')</option>';}).join('')+
+          '</select></td>'+
+          '<td style="padding:3px 4px;"><input type="number" class="fa-cant" value="'+a.cantidad+'" min="0" step="0.01" oninput="renderFichaResumen()" style="width:74px;padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;text-align:right;"/></td>'+
+          '<td style="padding:3px 4px;text-align:right;font-size:12px;color:#6b7280;">'+(av?$p(av.costo_unit):'—')+'</td>'+
+          '<td style="padding:3px 4px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">'+$p(sub)+'</td>'+
+          '<td style="padding:3px 4px;"><button type="button" onclick="fichaRemAvio('+i+')" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:15px;line-height:1;">✕</button></td>'+
+        '</tr>';
+      }).join('')+
+      '</tbody></table>';
+  }
+  renderFichaResumen();
+}
+
+async function saveFicha(){
+  var nombre=document.getElementById('mfic-nombre').value.trim();
+  if(!nombre){toast('El nombre del modelo es obligatorio','err');return;}
+  fichaReadDOM();
+  var d={nombre_modelo:nombre,
+    descripcion:document.getElementById('mfic-desc').value.trim()||null,
+    precio_venta_min:parseFloat(document.getElementById('mfic-precio-min').value)||0,
+    precio_venta_may:parseFloat(document.getElementById('mfic-precio-may').value)||0,
+    costo_confeccion:parseFloat(document.getElementById('mfic-conf').value)||0,
+    costo_bordado:parseFloat(document.getElementById('mfic-bord').value)||0,
+    activo:true,updated_at:new Date().toISOString()};
+  var r;
+  if(editFichaId){
+    r=await sb.from('fichas_costo').update(d).eq('id',editFichaId);
+  } else {
+    r=await sb.from('fichas_costo').insert(d).select();
+  }
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  var fichaId=editFichaId||(r.data&&r.data[0]&&r.data[0].id);
+  if(!fichaId){toast('Error al obtener ID de ficha','err');return;}
+  // Reemplazar items hijos
+  await sb.from('fichas_costo_telas').delete().eq('ficha_id',fichaId);
+  await sb.from('fichas_costo_avios').delete().eq('ficha_id',fichaId);
+  var telasFiltradas=fichaTelasTemp.filter(function(t){return t.nombre_tela;});
+  if(telasFiltradas.length){
+    await sb.from('fichas_costo_telas').insert(telasFiltradas.map(function(t){
+      return{ficha_id:fichaId,nombre_tela:t.nombre_tela,unidad:t.unidad||'metros',cantidad:Number(t.cantidad)||0,costo_unit:Number(t.costo_unit)||0};
+    }));
+  }
+  var aviosFiltrados=fichaAviosTemp.filter(function(a){return a.avio_id;});
+  if(aviosFiltrados.length){
+    await sb.from('fichas_costo_avios').insert(aviosFiltrados.map(function(a){
+      return{ficha_id:fichaId,avio_id:a.avio_id,cantidad:Number(a.cantidad)||0};
+    }));
+  }
+  toast(editFichaId?'Ficha actualizada':'Ficha guardada');
+  closeM('m-ficha');
+  await Promise.all([loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios()]);
+  renderCostos();renderCostosFichas();
+}
+
+async function deleteFicha(id){
+  var f=FICHAS_COSTO.find(function(x){return x.id===id;});
+  if(!confirm('¿Eliminar la ficha "'+f.nombre_modelo+'"?\n\nSe eliminarán también las telas y avíos de esta ficha.'))return;
+  var r=await sb.from('fichas_costo').delete().eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Ficha eliminada','info');
+  await Promise.all([loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios()]);
+  renderCostos();renderCostosFichas();
 }
 </script>
 
