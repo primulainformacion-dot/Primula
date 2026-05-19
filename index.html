@@ -1470,11 +1470,23 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div id="bor-lista"></div>
     </div>
   </div>
+  <!-- ════════════ ENTREGAS ════════════ -->
   <div class="section" id="sec-entregas">
-    <div class="panel">
-      <div class="panel-hdr"><h4>Entregas</h4></div>
-      <div class="empty"><div class="ei">📦</div><p>Módulo en construcción</p></div>
+    <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
+      <div class="stat"><div class="stat-icon" style="background:#d1fae5;">📦</div><h3 id="ent-stat-total">0</h3><p>Entregas del mes</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#dbeafe;">👕</div><h3 id="ent-stat-prendas">0</h3><p>Prendas entregadas</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#fef3c7;">⏳</div><h3 id="ent-stat-pendientes">0</h3><p>Prendas listas p/ entregar</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#ede9fe;">✅</div><h3 id="ent-stat-completados">0</h3><p>Pedidos completados</p></div>
     </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+      <select id="ent-fil-cli" onchange="renderEntregas()" style="min-width:200px;">
+        <option value="">Todos los clientes</option>
+      </select>
+      <input type="month" id="ent-fil-mes" onchange="renderEntregas()" style="width:160px;"/>
+      <button class="btn btn-gray btn-sm" onclick="renderEntregas()">↻</button>
+      <button class="btn" style="margin-left:auto;" onclick="openEntregaModal()">+ Nueva entrega</button>
+    </div>
+    <div id="ent-lista"></div>
   </div>
   <div class="section" id="sec-materiales">
     <!-- Stats -->
@@ -2031,6 +2043,57 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-tizada')">Cancelar</button>
       <button class="btn" onclick="saveTizada()">💾 Guardar tizada</button>
+    </div>
+  </div>
+</div>
+
+<!-- Entrega a cliente -->
+<div class="modal-bg" id="m-entrega">
+  <div class="modal" style="max-width:920px;width:98%;">
+    <h3 id="m-entrega-title">Nueva entrega</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div class="field"><label>Nº Entrega</label>
+        <input type="text" id="ment-nro" placeholder="E-001"/>
+      </div>
+      <div class="field"><label>Fecha *</label>
+        <input type="date" id="ment-fecha"/>
+      </div>
+      <div class="field"><label>Filtrar por cliente</label>
+        <select id="ment-cli-fil" onchange="entPoblarSelector()" style="width:100%;">
+          <option value="">Todos los clientes</option>
+        </select>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:16px;">
+      <label>Nota</label>
+      <input type="text" id="ment-nota" placeholder="Observaciones..."/>
+    </div>
+    <div style="font-size:12px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Ítems a entregar</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#f9fafb;border-radius:10px;padding:10px;margin-bottom:10px;">
+      <select id="ent-sel-item" style="flex:1;min-width:240px;font-size:13px;">
+        <option value="">— Elegir ítem recibido pendiente de entrega —</option>
+      </select>
+      <input type="number" id="ent-sel-cant" min="1" placeholder="Cant." style="width:80px;font-size:13px;"/>
+      <button class="btn btn-sm btn-gray" onclick="entAgregarItem()">+ Agregar</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:700px;">
+        <thead>
+          <tr style="background:#f3f4f6;">
+            <th style="padding:6px 8px;text-align:left;">Pedido · Cliente</th>
+            <th style="padding:6px 8px;text-align:left;">Prenda</th>
+            <th style="padding:6px 8px;">Tela</th><th style="padding:6px 8px;">Color</th><th style="padding:6px 8px;">Talle</th>
+            <th style="padding:6px 8px;text-align:right;color:#6c7ae0;">Disponible</th>
+            <th style="padding:6px 8px;text-align:right;">A entregar</th>
+            <th style="padding:6px 8px;"></th>
+          </tr>
+        </thead>
+        <tbody id="ent-items-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-entrega')">Cancelar</button>
+      <button class="btn" style="background:#16a34a;" onclick="saveEntrega()">📦 Confirmar entrega</button>
     </div>
   </div>
 </div>
@@ -3392,7 +3455,7 @@ var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[];
 var CONCEPTOS_POR_TIPO={
   'CONFESIÓN':['Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal','Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre','Chaleco Polar','Campera Polar','Campera Friza','Campera canguro','Sudadera','Joggins','Pantalón común','Cuellos','Bufandas / Cuellos','Reflectivo','Cofia','Arreglo'],
   'BORDADO':[],
@@ -3511,7 +3574,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderAlertas(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -3573,6 +3636,7 @@ function nav(sec, el){
   if(sec==='pedidos'){renderPedResumen();}
   if(sec==='tizada'){renderTizadas();}
   if(sec==='costura'){renderCostura();}
+  if(sec==='entregas'){renderEntregas();}
 }
 
 function navLocal(local, tab, el){
@@ -7455,6 +7519,8 @@ async function loadEnviosCostura(){ var {data}=await sb.from('envios_costura').s
 async function loadEnviosCosturaItems(){ var {data}=await sb.from('envios_costura_items').select('*'); ENVIOS_COSTURA_ITEMS=data||[]; }
 async function loadEnviosBordado(){ var {data}=await sb.from('envios_bordado').select('*').order('fecha',{ascending:false}); ENVIOS_BORDADO=data||[]; }
 async function loadEnviosBordadoItems(){ var {data}=await sb.from('envios_bordado_items').select('*'); ENVIOS_BORDADO_ITEMS=data||[]; }
+async function loadEntregas(){ var {data}=await sb.from('entregas').select('*').order('fecha',{ascending:false}); ENTREGAS=data||[]; }
+async function loadEntregasItems(){ var {data}=await sb.from('entregas_items').select('*'); ENTREGAS_ITEMS=data||[]; }
 
 var COLORES_TELAS=['MARINO','NEGRO','GRIS MELANGE','GRIS TOPO','GRIS PERLA','BLANCO','ROJO','BORDO','FRANCIA','AMARILLO','NARANJA','BEIGE','CELESTE','VERDE'];
 var TALLES_PRENDAS=['XS','S','M','L','XL','XXL','3XL','4XL','5XL','6XL','7XL','8XL','UNICO'];
@@ -11240,6 +11306,247 @@ async function confirmImport(){
 }
 
 // ══════════════════════════════════════════════════════════
+// MÓDULO ENTREGAS
+// ══════════════════════════════════════════════════════════
+
+function renderEntregas(){
+  var cont=document.getElementById('ent-lista');
+  if(!cont)return;
+
+  // Poblar filtro clientes
+  var selCli=document.getElementById('ent-fil-cli');
+  if(selCli&&selCli.options.length<=1){
+    CLIENTES.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre);}).forEach(function(c){
+      var o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;selCli.appendChild(o);
+    });
+  }
+  var filCli=(selCli||{}).value||'';
+  var filMes=(document.getElementById('ent-fil-mes')||{}).value||'';
+
+  // Inicializar mes actual si vacío
+  var mesFil=document.getElementById('ent-fil-mes');
+  if(mesFil&&!mesFil.value){var hoy=new Date();mesFil.value=hoy.getFullYear()+'-'+(String(hoy.getMonth()+1).padStart(2,'0'));}
+
+  var list=ENTREGAS.slice();
+  if(filCli)list=list.filter(function(e){return String(e.cliente_id)===filCli;});
+  if(filMes)list=list.filter(function(e){return (e.fecha||'').startsWith(filMes);});
+
+  // Stats
+  var mesActual=document.getElementById('ent-fil-mes')?document.getElementById('ent-fil-mes').value:'';
+  var entMes=ENTREGAS.filter(function(e){return mesActual?(e.fecha||'').startsWith(mesActual):true;});
+  var prendasMes=entMes.reduce(function(s,e){
+    return s+ENTREGAS_ITEMS.filter(function(i){return i.entrega_id===e.id;}).reduce(function(ss,i){return ss+Number(i.cantidad_entregada);},0);
+  },0);
+  var prendasListas=PEDIDOS_ITEMS.filter(function(pi){
+    var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+    return ped&&ped.estado==='en_proceso'&&Number(pi.recibido)>Number(pi.entregado);
+  }).reduce(function(s,pi){return s+Number(pi.recibido)-Number(pi.entregado);},0);
+  var pedCompletados=PEDIDOS.filter(function(p){return p.estado==='completado';}).length;
+  var setEl=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
+  setEl('ent-stat-total',entMes.length);
+  setEl('ent-stat-prendas',prendasMes);
+  setEl('ent-stat-pendientes',prendasListas);
+  setEl('ent-stat-completados',pedCompletados);
+
+  if(!list.length){
+    cont.innerHTML='<div class="empty"><div class="ei">📦</div><p>No hay entregas'+(filMes?' en '+filMes:'')+'</p></div>';
+    return;
+  }
+
+  cont.innerHTML=list.map(function(e){
+    var items=ENTREGAS_ITEMS.filter(function(i){return i.entrega_id===e.id;});
+    var cli=CLIENTES.find(function(c){return c.id===e.cliente_id;});
+    var totEnt=items.reduce(function(s,i){return s+Number(i.cantidad_entregada);},0);
+    var itemsHTML='';
+    if(items.length){
+      itemsHTML='<div style="overflow-x:auto;margin-top:12px;">'
+        +'<table style="width:100%;font-size:12px;border-collapse:collapse;min-width:640px;">'
+        +'<thead><tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">'
+        +'<th style="padding:5px 8px;text-align:left;">Pedido</th>'
+        +'<th style="padding:5px 8px;text-align:left;">Prenda</th>'
+        +'<th style="padding:5px 8px;">Tela</th><th style="padding:5px 8px;">Color</th><th style="padding:5px 8px;">Talle</th>'
+        +'<th style="padding:5px 8px;text-align:right;color:#16a34a;font-weight:700;">Entregado</th>'
+        +'</tr></thead><tbody>'
+        +items.map(function(ei){
+          var pi=PEDIDOS_ITEMS.find(function(x){return x.id===ei.pedido_item_id;});
+          if(!pi)return '';
+          var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+          return '<tr style="border-bottom:1px solid #f3f4f6;">'
+            +'<td style="padding:5px 8px;font-size:11px;color:#9ca3af;">#'+(ped?ped.nro_pedido:'?')+'</td>'
+            +'<td style="padding:5px 8px;font-weight:600;">'+pi.prenda+'</td>'
+            +'<td style="padding:5px 8px;text-align:center;">'+(pi.tela||'—')+'</td>'
+            +'<td style="padding:5px 8px;text-align:center;">'+(pi.color||'—')+'</td>'
+            +'<td style="padding:5px 8px;text-align:center;">'+(pi.talle||'—')+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;color:#16a34a;font-weight:700;">'+ei.cantidad_entregada+'</td>'
+            +'</tr>';
+        }).join('')
+        +'<tr style="background:#f9fafb;font-weight:700;border-top:2px solid #e5e7eb;">'
+        +'<td colspan="5" style="padding:5px 8px;">TOTAL</td>'
+        +'<td style="padding:5px 8px;text-align:right;color:#16a34a;">'+totEnt+'</td>'
+        +'</tr></tbody></table></div>';
+    }
+    return '<div class="panel" style="margin-bottom:12px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">'
+      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+      +(e.nro_entrega?'<span style="font-size:18px;font-weight:800;color:#1f2937;">#'+e.nro_entrega+'</span>':'')
+      +'<span style="font-weight:600;font-size:15px;">📦 '+(cli?cli.nombre:'Sin cliente')+'</span>'
+      +'<span style="color:#9ca3af;font-size:13px;">'+fmtF(e.fecha)+'</span>'
+      +(e.nota?'<span style="color:#9ca3af;font-size:12px;">📝 '+e.nota+'</span>':'')
+      +'<span style="font-size:12px;color:#16a34a;font-weight:700;">'+totEnt+' prendas</span>'
+      +'</div>'
+      +'<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;" onclick="deleteEntrega('+e.id+')">🗑️</button>'
+      +'</div>'+itemsHTML+'</div>';
+  }).join('');
+}
+
+function openEntregaModal(){
+  document.getElementById('m-entrega-title').textContent='Nueva entrega';
+  document.getElementById('ment-nro').value='';
+  document.getElementById('ment-fecha').value=today();
+  document.getElementById('ment-nota').value='';
+  document.getElementById('ent-items-tbody').innerHTML='';
+  var sel=document.getElementById('ment-cli-fil');
+  sel.innerHTML='<option value="">Todos los clientes</option>';
+  CLIENTES.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre);}).forEach(function(c){
+    var o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;sel.appendChild(o);
+  });
+  entPoblarSelector();
+  openM('m-entrega');
+}
+
+function entPoblarSelector(){
+  var sel=document.getElementById('ent-sel-item');
+  if(!sel)return;
+  var filCli=(document.getElementById('ment-cli-fil')||{}).value||'';
+  var usados=Array.from(document.querySelectorAll('#ent-items-tbody tr')).map(function(r){return parseInt(r.getAttribute('data-pid'));});
+  // Ítems con recibido > entregado (listos para entregar)
+  var disponibles=PEDIDOS_ITEMS.filter(function(pi){
+    if(usados.includes(pi.id))return false;
+    if(Number(pi.recibido)<=Number(pi.entregado))return false;
+    if(filCli){
+      var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+      if(!ped||String(ped.cliente_id)!==filCli)return false;
+    }
+    return true;
+  });
+  sel.innerHTML='<option value="">— Elegir ítem listo para entregar —</option>';
+  disponibles.forEach(function(pi){
+    var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+    var cli=ped&&CLIENTES.find(function(c){return c.id===ped.cliente_id;});
+    var disp=Number(pi.recibido)-Number(pi.entregado);
+    var label='#'+(ped?ped.nro_pedido:'?')+' '+(cli?cli.nombre:'?')+' — '+pi.prenda+(pi.color?' '+pi.color:'')+(pi.talle?' '+pi.talle:'')+' (disp: '+disp+')';
+    var o=document.createElement('option');o.value=pi.id;o.textContent=label;sel.appendChild(o);
+  });
+}
+
+function entAgregarItem(){
+  var sel=document.getElementById('ent-sel-item');
+  var cantEl=document.getElementById('ent-sel-cant');
+  var piId=parseInt(sel.value);
+  if(!piId){toast('Elegí un ítem','err');return;}
+  var pi=PEDIDOS_ITEMS.find(function(x){return x.id===piId;});
+  if(!pi)return;
+  var disp=Number(pi.recibido)-Number(pi.entregado);
+  var cant=parseInt(cantEl.value)||disp;
+  if(cant<=0){toast('Cantidad debe ser mayor a 0','err');return;}
+  if(cant>disp){toast('Máximo disponible: '+disp,'err');return;}
+  var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+  var cli=ped&&CLIENTES.find(function(c){return c.id===ped.cliente_id;});
+  var tb=document.getElementById('ent-items-tbody');
+  var tr=document.createElement('tr');
+  tr.setAttribute('data-pid',piId);
+  tr.setAttribute('data-ped-id',pi.pedido_id);
+  tr.innerHTML=
+    '<td style="padding:5px 8px;font-size:11px;">#'+(ped?ped.nro_pedido:'?')+' <span style="color:#9ca3af;">'+(cli?cli.nombre:'—')+'</span></td>'
+    +'<td style="padding:5px 8px;font-weight:600;font-size:12px;">'+pi.prenda+'</td>'
+    +'<td style="padding:5px 8px;font-size:12px;">'+(pi.tela||'—')+'</td>'
+    +'<td style="padding:5px 8px;font-size:12px;">'+(pi.color||'—')+'</td>'
+    +'<td style="padding:5px 8px;font-size:12px;">'+(pi.talle||'—')+'</td>'
+    +'<td style="padding:5px 8px;text-align:right;color:#6c7ae0;font-size:12px;">'+disp+'</td>'
+    +'<td><input type="number" value="'+cant+'" min="1" max="'+disp+'" style="width:70px;font-size:12px;text-align:right;"/></td>'
+    +'<td><button style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;" onclick="this.closest(\'tr\').remove();entPoblarSelector()">✕</button></td>';
+  tb.appendChild(tr);
+  cantEl.value='';sel.value='';
+  entPoblarSelector();
+}
+
+async function saveEntrega(){
+  var nro=document.getElementById('ment-nro').value.trim();
+  var fecha=document.getElementById('ment-fecha').value;
+  var nota=document.getElementById('ment-nota').value.trim();
+  if(!fecha){toast('La fecha es obligatoria','err');return;}
+  var rows=Array.from(document.querySelectorAll('#ent-items-tbody tr'));
+  if(!rows.length){toast('Agregá al menos un ítem','err');return;}
+  var items=rows.map(function(r){
+    var piId=parseInt(r.getAttribute('data-pid'));
+    var pedId=parseInt(r.getAttribute('data-ped-id'));
+    var inp=r.querySelector('input[type=number]');
+    return{pedido_item_id:piId,pedido_id:pedId,cantidad_entregada:parseInt(inp?inp.value:0)||0};
+  }).filter(function(i){return i.pedido_item_id&&i.cantidad_entregada>0;});
+  if(!items.length){toast('Sin ítems válidos','err');return;}
+
+  // Determinar cliente del primer ítem
+  var pi0=PEDIDOS_ITEMS.find(function(x){return x.id===items[0].pedido_item_id;});
+  var ped0=pi0&&PEDIDOS.find(function(p){return p.id===pi0.pedido_id;});
+  var clienteId=ped0?ped0.cliente_id:null;
+
+  var header={nro_entrega:nro||null,fecha:fecha,cliente_id:clienteId,nota:nota||null,updated_at:new Date().toISOString()};
+  var r=await sb.from('entregas').insert(header).select().single();
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  var entId=r.data.id;
+
+  var conEnt=items.map(function(i){return{entrega_id:entId,pedido_item_id:i.pedido_item_id,cantidad_entregada:i.cantidad_entregada};});
+  var r2=await sb.from('entregas_items').insert(conEnt);
+  if(r2.error){toast('Error ítems: '+r2.error.message,'err');return;}
+
+  // Actualizar pedidos_items.entregado
+  var updPedItems=items.map(async function(i){
+    var pi=PEDIDOS_ITEMS.find(function(x){return x.id===i.pedido_item_id;});
+    if(!pi)return;
+    return sb.from('pedidos_items').update({entregado:Number(pi.entregado)+i.cantidad_entregada}).eq('id',i.pedido_item_id);
+  });
+  await Promise.all(updPedItems);
+
+  // Recargar para verificar completitud
+  await loadPedidosItems();
+
+  // Auto-completar pedidos donde entregado >= cantidad en todos sus ítems
+  var pedidosAfectados=[...new Set(items.map(function(i){return i.pedido_id;}))];
+  var autoComplete=pedidosAfectados.map(async function(pedId){
+    var pedItems=PEDIDOS_ITEMS.filter(function(pi){return pi.pedido_id===pedId;});
+    var todoEntregado=pedItems.length>0&&pedItems.every(function(pi){return Number(pi.entregado)>=Number(pi.cantidad);});
+    if(todoEntregado){
+      return sb.from('pedidos').update({estado:'completado',updated_at:new Date().toISOString()}).eq('id',pedId);
+    }
+  });
+  await Promise.all(autoComplete);
+
+  toast('Entrega registrada ✅'+(pedidosAfectados.length?' — verificando estado de pedidos...':''));
+  closeM('m-entrega');
+  await Promise.all([loadEntregas(),loadEntregasItems(),loadPedidos(),loadPedidosItems()]);
+  renderEntregas();
+  renderPedidos();
+  renderPedResumen();
+}
+
+async function deleteEntrega(id){
+  if(!confirm('¿Eliminar esta entrega? Se revertirán los contadores de entregado.'))return;
+  var items=ENTREGAS_ITEMS.filter(function(i){return i.entrega_id===id;});
+  var reverts=items.map(async function(i){
+    var pi=PEDIDOS_ITEMS.find(function(x){return x.id===i.pedido_item_id;});
+    if(!pi)return;
+    return sb.from('pedidos_items').update({entregado:Math.max(0,Number(pi.entregado)-Number(i.cantidad_entregada))}).eq('id',i.pedido_item_id);
+  });
+  await Promise.all(reverts);
+  await sb.from('entregas').delete().eq('id',id);
+  toast('Entrega eliminada','info');
+  await Promise.all([loadEntregas(),loadEntregasItems(),loadPedidos(),loadPedidosItems()]);
+  renderEntregas();
+  renderPedidos();
+  renderPedResumen();
+}
+
+// ══════════════════════════════════════════════════════════
 // MÓDULO COSTURA / BORDADO
 // ══════════════════════════════════════════════════════════
 
@@ -12301,13 +12608,15 @@ function renderTizadasSugeridas(){
 
 function renderPedResumen(){
   // Stats globales
-  var activos=PEDIDOS.filter(function(p){return p.estado==='en_proceso';}).length;
-  var sTizada=PEDIDOS_ITEMS.reduce(function(s,i){return s+Number(i.tizada);},0);
-  var sCostura=PEDIDOS_ITEMS.reduce(function(s,i){return s+Number(i.costura);},0);
-  var sRecibido=PEDIDOS_ITEMS.reduce(function(s,i){return s+Number(i.recibido);},0);
-  var sEntregado=PEDIDOS_ITEMS.reduce(function(s,i){return s+Number(i.entregado);},0);
+  var pedActivos=PEDIDOS.filter(function(p){return p.estado==='en_proceso';});
+  var pedIds=pedActivos.map(function(p){return p.id;});
+  var allItems=PEDIDOS_ITEMS.filter(function(i){return pedIds.includes(i.pedido_id);});
+  var sTizada=allItems.reduce(function(s,i){return s+Number(i.tizada);},0);
+  var sCostura=allItems.reduce(function(s,i){return s+Number(i.costura);},0);
+  var sRecibido=allItems.reduce(function(s,i){return s+Number(i.recibido);},0);
+  var sEntregado=allItems.reduce(function(s,i){return s+Number(i.entregado);},0);
   var setEl=function(id,v){var el=document.getElementById(id);if(el)el.textContent=typeof v==='number'?v.toLocaleString('es-AR'):v;};
-  setEl('ped-stat-total',activos);
+  setEl('ped-stat-total',pedActivos.length);
   setEl('ped-stat-tizada',sTizada);
   setEl('ped-stat-costura',sCostura);
   setEl('ped-stat-recibido',sRecibido);
@@ -12315,87 +12624,71 @@ function renderPedResumen(){
 
   var cont=document.getElementById('ped-resumen-cont');
   if(!cont)return;
-  if(!PEDIDOS_ITEMS.length){
-    cont.innerHTML='<div class="empty"><div class="ei">📊</div><p>Sin datos de pedidos</p></div>';
+
+  // Incluir también pedidos completados recientes (últimos 30 días)
+  var hace30=new Date();hace30.setDate(hace30.getDate()-30);
+  var pedMostrar=PEDIDOS.filter(function(p){
+    if(p.estado==='en_proceso')return true;
+    if(p.estado==='completado'){var f=new Date(p.updated_at||p.created_at);return f>=hace30;}
+    return false;
+  }).sort(function(a,b){
+    var or={en_proceso:0,completado:1};
+    if((or[a.estado]||9)!==(or[b.estado]||9))return(or[a.estado]||9)-(or[b.estado]||9);
+    return (CAR_ORDEN[a.caracter]||9)-(CAR_ORDEN[b.caracter]||9);
+  });
+
+  if(!pedMostrar.length){
+    cont.innerHTML='<div class="empty"><div class="ei">📊</div><p>Sin pedidos activos</p></div>';
     return;
   }
 
-  // Agrupar por prenda+tela+color+talle en todos los pedidos en_proceso
-  var pedIds=PEDIDOS.filter(function(p){return p.estado==='en_proceso';}).map(function(p){return p.id;});
-  var items=PEDIDOS_ITEMS.filter(function(i){return pedIds.includes(i.pedido_id);});
+  function pipeBar(val, tot, color){
+    var p=tot>0?Math.min(Math.round(val/tot*100),100):0;
+    var bg=p===0?'#e5e7eb':color;
+    return '<div style="display:flex;align-items:center;gap:6px;">'
+      +'<div style="flex:1;background:#f3f4f6;border-radius:4px;height:8px;min-width:80px;">'
+      +'<div style="background:'+bg+';height:8px;border-radius:4px;width:'+p+'%;transition:width .3s;"></div></div>'
+      +'<span style="font-size:11px;color:#6b7280;min-width:36px;text-align:right;">'+val+'/'+tot+'</span>'
+      +'<span style="font-size:11px;font-weight:700;color:'+(p===100?color:'#9ca3af');+'min-width:32px;text-align:right;">'+p+'%</span>'
+      +'</div>';
+  }
 
-  // Tabla resumen consolidada por prenda
-  var porPrenda={};
-  items.forEach(function(i){
-    var k=i.prenda+'|'+(i.tela||'')+'|'+(i.color||'')+'|'+(i.talle||'');
-    if(!porPrenda[k])porPrenda[k]={prenda:i.prenda,tela:i.tela||'',color:i.color||'',talle:i.talle||'',cantidad:0,tizada:0,costura:0,recibido:0,entregado:0};
-    porPrenda[k].cantidad+=Number(i.cantidad);
-    porPrenda[k].tizada+=Number(i.tizada);
-    porPrenda[k].costura+=Number(i.costura);
-    porPrenda[k].recibido+=Number(i.recibido);
-    porPrenda[k].entregado+=Number(i.entregado);
-  });
-  var filas=Object.values(porPrenda).sort(function(a,b){return a.prenda.localeCompare(b.prenda)||a.tela.localeCompare(b.tela)||a.color.localeCompare(b.color)||a.talle.localeCompare(b.talle);});
+  cont.innerHTML=pedMostrar.map(function(p){
+    var items=PEDIDOS_ITEMS.filter(function(i){return i.pedido_id===p.id;});
+    var totCant=items.reduce(function(s,i){return s+Number(i.cantidad);},0);
+    var totTiz=items.reduce(function(s,i){return s+Number(i.tizada);},0);
+    var totCos=items.reduce(function(s,i){return s+Number(i.costura);},0);
+    var totRec=items.reduce(function(s,i){return s+Number(i.recibido);},0);
+    var totEnt=items.reduce(function(s,i){return s+Number(i.entregado);},0);
+    var cli=CLIENTES.find(function(c){return c.id===p.cliente_id;});
+    var pctEnt=totCant>0?Math.round(totEnt/totCant*100):0;
+    var esCompleto=p.estado==='completado';
 
-  var totCant=filas.reduce(function(s,f){return s+f.cantidad;},0);
-  var totTiz=filas.reduce(function(s,f){return s+f.tizada;},0);
-  var totCos=filas.reduce(function(s,f){return s+f.costura;},0);
-  var totRec=filas.reduce(function(s,f){return s+f.recibido;},0);
-  var totEnt=filas.reduce(function(s,f){return s+f.entregado;},0);
+    var borderColor=p.caracter==='URGENTE'?'#dc2626':p.caracter==='IMPORTANTE'?'#f59e0b':'#6c7ae0';
+    if(esCompleto)borderColor='#16a34a';
 
-  var pct=function(val,tot){return tot>0?Math.round(val/tot*100)+'%':'—';};
-  var barColor=function(val,tot){
-    var p=tot>0?val/tot:0;
-    return p>=1?'#16a34a':p>0?'#f59e0b':'#e5e7eb';
-  };
-  var miniBar=function(val,tot){
-    var p=tot>0?Math.min(val/tot*100,100):0;
-    return '<div style="background:#f3f4f6;border-radius:4px;height:6px;width:60px;display:inline-block;vertical-align:middle;margin-left:4px;">'
-      +'<div style="background:'+barColor(val,tot)+';height:6px;border-radius:4px;width:'+p+'%;"></div></div>';
-  };
+    var estadoBadge=esCompleto
+      ?'<span style="background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">✅ Completado</span>'
+      :'<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:10px;font-size:11px;">En proceso</span>';
 
-  cont.innerHTML='<div class="panel"><div style="overflow-x:auto;">'
-    +'<table style="width:100%;font-size:12px;border-collapse:collapse;">'
-    +'<thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">'
-    +'<th style="padding:8px;text-align:left;">Prenda</th>'
-    +'<th style="padding:8px;">Tela</th>'
-    +'<th style="padding:8px;">Color</th>'
-    +'<th style="padding:8px;">Talle</th>'
-    +'<th style="padding:8px;text-align:right;">Pedido</th>'
-    +'<th style="padding:8px;text-align:right;">Tizada</th>'
-    +'<th style="padding:8px;text-align:right;">Costura</th>'
-    +'<th style="padding:8px;text-align:right;">Recibido</th>'
-    +'<th style="padding:8px;text-align:right;">Entregado</th>'
-    +'<th style="padding:8px;text-align:right;">% Entregado</th>'
-    +'</tr></thead><tbody>'
-    +filas.map(function(f){
-      var pctEnt=f.cantidad>0?Math.round(f.entregado/f.cantidad*100):0;
-      var rowBg=pctEnt===100?'#f0fdf4':pctEnt>0?'#fffbeb':'';
-      return '<tr style="border-bottom:1px solid #f3f4f6;background:'+rowBg+';">'
-        +'<td style="padding:6px 8px;font-weight:600;">'+f.prenda+'</td>'
-        +'<td style="padding:6px 8px;text-align:center;">'+(f.tela||'—')+'</td>'
-        +'<td style="padding:6px 8px;text-align:center;">'+(f.color||'—')+'</td>'
-        +'<td style="padding:6px 8px;text-align:center;">'+(f.talle||'—')+'</td>'
-        +'<td style="padding:6px 8px;text-align:right;font-weight:700;">'+f.cantidad+'</td>'
-        +'<td style="padding:6px 8px;text-align:right;">'+f.tizada+miniBar(f.tizada,f.cantidad)+'</td>'
-        +'<td style="padding:6px 8px;text-align:right;">'+f.costura+miniBar(f.costura,f.cantidad)+'</td>'
-        +'<td style="padding:6px 8px;text-align:right;">'+f.recibido+miniBar(f.recibido,f.cantidad)+'</td>'
-        +'<td style="padding:6px 8px;text-align:right;color:#16a34a;font-weight:700;">'+f.entregado+'</td>'
-        +'<td style="padding:6px 8px;text-align:right;">'
-        +'<span style="font-weight:700;color:'+(pctEnt===100?'#16a34a':pctEnt>0?'#f59e0b':'#9ca3af')+';">'+pctEnt+'%</span>'
-        +'</td>'
-        +'</tr>';
-    }).join('')
-    +'<tr style="background:#f3f4f6;font-weight:700;border-top:2px solid #e5e7eb;">'
-    +'<td colspan="4" style="padding:8px;">TOTAL</td>'
-    +'<td style="padding:8px;text-align:right;">'+totCant+'</td>'
-    +'<td style="padding:8px;text-align:right;">'+totTiz+'</td>'
-    +'<td style="padding:8px;text-align:right;">'+totCos+'</td>'
-    +'<td style="padding:8px;text-align:right;">'+totRec+'</td>'
-    +'<td style="padding:8px;text-align:right;color:#16a34a;">'+totEnt+'</td>'
-    +'<td style="padding:8px;text-align:right;">'+pct(totEnt,totCant)+'</td>'
-    +'</tr>'
-    +'</tbody></table></div></div>';
+    return '<div class="panel" style="margin-bottom:12px;border-left:4px solid '+borderColor+';'+(esCompleto?'opacity:.8;':'')+'">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;">'+
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'+
+          '<span style="font-size:18px;font-weight:800;color:#1f2937;">#'+p.nro_pedido+'</span>'+
+          pedCarBadge(p.caracter)+estadoBadge+
+          '<span style="font-weight:600;font-size:15px;">'+(cli?cli.nombre:'—')+'</span>'+
+          '<span style="color:#9ca3af;font-size:13px;">'+fmtF(p.fecha)+'</span>'+
+        '</div>'+
+        '<span style="font-size:13px;font-weight:800;color:'+(pctEnt===100?'#16a34a':'#374151')+';">'+totEnt+' / '+totCant+' prendas ('+pctEnt+'%)</span>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:80px 1fr;gap:6px 12px;font-size:12px;align-items:center;">'+
+        '<span style="color:#374151;font-weight:600;">✂️ Cortado</span>'+pipeBar(totTiz,totCant,'#f59e0b')+
+        '<span style="color:#374151;font-weight:600;">🧵 Costura</span>'+pipeBar(totCos,totCant,'#3b82f6')+
+        '<span style="color:#374151;font-weight:600;">📥 Recibido</span>'+pipeBar(totRec,totCant,'#8b5cf6')+
+        '<span style="color:#374151;font-weight:600;">📦 Entregado</span>'+pipeBar(totEnt,totCant,'#16a34a')+
+      '</div>'+
+    '</div>';
+  }).join('');
 }
 
 function pedChip(label, val, total){
