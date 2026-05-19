@@ -11359,6 +11359,10 @@ async function completarTizada(id){
   await sb.from('tizadas').update({estado:'completado',updated_at:new Date().toISOString()}).eq('id',id);
   await Promise.all([loadTizadas(),loadTizadasItems(),loadPedidosItems()]);
   renderTizadas();
+  renderPedResumen();
+  renderPedidos();
+  renderInsumos();
+  renderTizadasSugeridas();
   toast('Tizada completada — cantidades actualizadas en pedidos ✂️');
 }
 
