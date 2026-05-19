@@ -231,7 +231,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="nav-item" onclick="nav('pedidos',this)"><span class="ni">📋</span> Pedidos</div>
     <div class="nav-item" onclick="nav('costura',this)"><span class="ni">🧵</span> Costura</div>
     <div class="nav-item" onclick="nav('entregas',this)"><span class="ni">📦</span> Entregas</div>
-    <div class="nav-item" onclick="nav('materiales',this)"><span class="ni">🎨</span> Materiales</div>
+    <div class="nav-item" onclick="nav('materiales',this)"><span class="ni">🎨</span> Materia Prima</div>
   </div>
 
   <div class="sidebar-footer">
@@ -845,10 +845,10 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           </div>
 
           <!-- Fila 3: stock -->
-          <div class="stat" style="border-top:3px solid #e5e7eb;opacity:.55;">
-            <div class="stat-icon" style="background:#f3f4f6;">🧶</div>
-            <h3 style="color:#d1d5db;">—</h3><p style="color:#9ca3af;">Materia prima</p>
-            <div style="font-size:11px;color:#d1d5db;margin-top:4px;">Próximamente</div>
+          <div class="stat" style="border-top:3px solid #0d9488;">
+            <div class="stat-icon" style="background:#ccfbf1;">🧶</div>
+            <h3 id="pg-mat-prima">$0</h3><p>Materia prima</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-mat-prima-sub">Stock de telas</div>
           </div>
           <div class="stat" style="border-top:3px solid #6c7ae0;">
             <div class="stat-icon" style="background:#ede9fe;">👔</div>
@@ -5036,7 +5036,9 @@ function renderPanelGeneral(){
   var echeqPasivo=0;
   // Total usa stock a precio minorista (valor de realización retail)
   var stockTotal=calcStockValue(null,'minorista');
-  var totalActivos=efectivo+bancos+mp+chqCartTotal+acobrar+stockTotal;
+  var byTipoMP=_telasByTipo();
+  var valorMatPrima=Object.values(byTipoMP).reduce(function(s,d){return s+d.valor;},0);
+  var totalActivos=efectivo+bancos+mp+chqCartTotal+acobrar+stockTotal+valorMatPrima;
   var el=function(id){return document.getElementById(id);};
   if(!el('pg-efectivo'))return;
   el('pg-efectivo').textContent=$p(efectivo);
@@ -5053,6 +5055,8 @@ function renderPanelGeneral(){
   if(el('pg-stock-mg'))el('pg-stock-mg').textContent=$p(stockMG);
   if(el('pg-stock-mg-u'))el('pg-stock-mg-u').textContent=uMG.toLocaleString('es-AR')+' u · precio minorista';
   el('pg-total-activos').textContent=$p(totalActivos);
+  if(el('pg-mat-prima'))el('pg-mat-prima').textContent=$p(Math.round(valorMatPrima));
+  if(el('pg-mat-prima-sub')){var rollosTot=Object.values(byTipoMP).reduce(function(s,d){return s+d.rollos;},0);el('pg-mat-prima-sub').textContent=rollosTot+' rollo'+(rollosTot!==1?'s':'')+' en stock';}
   el('pg-echeq-pas').textContent=$p(echeqPasivo);
   // Moratorias
   var morTotal=MORATORIAS.filter(function(m){return m.estado!=='finalizada';})
