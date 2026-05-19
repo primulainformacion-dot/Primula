@@ -803,11 +803,15 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <div id="sem-total-disponible" style="margin-top:10px;"></div>
         </div>
       </div>
-      <!-- Detalle en 3 columnas -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+      <!-- Detalle en 4 columnas -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;">
         <div class="panel">
-          <div class="panel-hdr"><h4>📝 Cheques propios a vencer</h4></div>
+          <div class="panel-hdr"><h4>📝 Cheques a pagar</h4></div>
           <div id="sem-chqp-tabla"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><h4>📋 Moratorias a vencer</h4></div>
+          <div id="sem-mor-tabla"></div>
         </div>
         <div class="panel">
           <div class="panel-hdr"><h4>🧾 Cheques a cobrar</h4></div>
@@ -1524,6 +1528,24 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
     <!-- Tab: Gastos Fijos -->
     <div id="ft-gastosfijos" style="display:none;">
+
+      <!-- ── ESTADO DE PAGOS DEL PERÍODO ── -->
+      <div class="panel" style="margin-bottom:16px;">
+        <div class="panel-hdr">
+          <h4>✅ Estado de pagos del período</h4>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="gfp-anio" onchange="renderGfPagos()" style="width:90px;"></select>
+            <select id="gfp-mes" onchange="renderGfPagos()" style="width:150px;">
+              <option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option>
+              <option>MAYO</option><option>JUNIO</option><option>JULIO</option><option>AGOSTO</option>
+              <option>SEPTIEMBRE</option><option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option>
+            </select>
+          </div>
+        </div>
+        <div id="gfp-resumen" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;"></div>
+        <div id="gfp-tabla"></div>
+      </div>
+
       <!-- Resumen de totales -->
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:16px;" id="gf-totales"></div>
       <!-- Panel principal -->
@@ -1838,10 +1860,11 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
       <div class="field full" id="mm-moratoria-wrap" style="display:none;">
         <label>Moratoria / plan vinculado</label>
-        <select id="mm-moratoria-id">
+        <select id="mm-moratoria-id" onchange="mm_onMoratoria()">
           <option value="">— Sin vincular —</option>
         </select>
-        <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Asocia este pago a una moratoria para el seguimiento del plan</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Asocia este pago a una moratoria — al guardar avanza automáticamente la cuota</div>
+        <div id="mm-moratoria-info" style="display:none;margin-top:8px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;font-size:12px;color:#166534;line-height:1.7;"></div>
       </div>
       <!-- Tallerista / costurero -->
       <div class="field full" id="mm-tallerista-wrap" style="display:none;">
@@ -2083,6 +2106,35 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-per')">Cancelar</button>
       <button class="btn" onclick="savePer()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Registrar pago de gasto fijo -->
+<div class="modal-bg" id="m-gfpago">
+  <div class="modal" style="max-width:420px;">
+    <h3>💸 Registrar pago</h3>
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:700;color:#0369a1;" id="gfp-modal-info"></div>
+    <div class="grid2">
+      <div class="field full"><label>Monto pagado *</label><input type="number" id="gfp-monto" min="0" placeholder="0"/></div>
+      <div class="field"><label>Fecha de pago *</label><input type="date" id="gfp-fecha"/></div>
+      <div class="field"><label>Caja desde la que se pagó</label><select id="gfp-caja">
+        <option>EFECTIVO ADMINISTRACIÓN</option>
+        <option>BANCO SRL</option><option>BANCO POLY</option>
+        <option>MERCADO PAGO</option><option>LOCAL MONTE GRANDE</option>
+        <option>LOCAL LLAVALLOL</option><option>CAJA USD</option>
+      </select></div>
+      <div class="field full"><label>Nota (opcional)</label><input id="gfp-nota" placeholder="Referencia, Nº de comprobante..."/></div>
+      <div class="field full">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="gfp-gen-mov" checked style="width:auto;accent-color:#6c7ae0;"/>
+          Generar movimiento de egreso automáticamente
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeM('m-gfpago')">Cancelar</button>
+      <button class="btn btn-green" onclick="saveGfPago()">✅ Confirmar pago</button>
     </div>
   </div>
 </div>
@@ -3003,7 +3055,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadMateriales(),loadTelasStock(),loadTelasTipos()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -3147,18 +3199,21 @@ function renderSemana(){
   });
   var chqPropMonto=chqPropVencer.reduce(function(s,c){return s+Number(c.monto||0);},0);
 
-  var totalCompromisos=sueldoSem+gastosFijosSemanales+chqPropMonto;
+  // 4) Moratorias con vencimiento en el horizonte
+  var morVencer=MORATORIAS.filter(function(m){
+    if(m.estado==='finalizada'||m.estado==='suspendida')return false;
+    if(!m.prox_vencimiento)return false;
+    var f=new Date(m.prox_vencimiento+'T12:00:00');
+    return f>=hoy&&f<=limite;
+  });
+  var morMonto=morVencer.reduce(function(s,m){return s+Number(m.monto_cuota||0);},0);
+
+  var totalCompromisos=sueldoSem+gastosFijosSemanales+chqPropMonto+morMonto;
 
   // ── DISPONIBLE ───────────────────────────────────────────
-  // 4) Saldo líquido (efectivo + bancos + MP)
+  // 5) Saldo líquido usando saldoCaja() que respeta cierres de caja
   var cajasLiq=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','LOCAL LLAVALLOL','LOCAL MONTE GRANDE'];
-  var saldoPorCaja={};
-  MOVS.forEach(function(m){
-    if(cajasLiq.indexOf(m.caja)===-1)return;
-    if(!saldoPorCaja[m.caja])saldoPorCaja[m.caja]=0;
-    saldoPorCaja[m.caja]+=Number(m.ingreso||0)-Number(m.egreso||0);
-  });
-  var saldoLiquido=Object.values(saldoPorCaja).reduce(function(s,v){return s+v;},0);
+  var saldoLiquido=cajasLiq.reduce(function(s,caja){return s+saldoCaja(caja);},0);
 
   // 5) Cheques en cartera a cobrar en el horizonte
   var chqCartCobrar=CHEQUES_CARTERA.filter(function(c){
@@ -3211,9 +3266,10 @@ function renderSemana(){
       '</div></div>';
   }
   cc.innerHTML=
-    semCard('👤','Sueldos del personal',sueldoSem,PERSONAL.filter(function(p){return p.activo;}).length+' empleados · '+(_semHorizon===7?'1 semana':_semHorizon===14?'2 semanas':'~4 semanas')+' · $'+$p(sueldoPorSem)+'/sem','#6c7ae0')+
+    semCard('👤','Sueldos del personal',sueldoSem,PERSONAL.filter(function(p){return p.activo;}).length+' empleados · '+(_semHorizon===7?'1 semana':_semHorizon===14?'2 semanas':'~4 semanas')+' · '+$p(sueldoPorSem)+'/sem','#6c7ae0')+
     semCard('📌','Gastos fijos (equiv. período)',gastosFijosSemanales,'Prorrateado al horizonte de '+_semHorizon+' días','#f59e0b')+
-    semCard('📝','Cheques propios a vencer',chqPropMonto,chqPropVencer.length+' cheque'+(chqPropVencer.length!==1?'s':'')+' en los próximos '+_semHorizon+' días','#dc2626');
+    semCard('📝','Cheques propios a vencer',chqPropMonto,chqPropVencer.length+' cheque'+(chqPropVencer.length!==1?'s':'')+' en los próximos '+_semHorizon+' días','#dc2626')+
+    semCard('📋','Moratorias a vencer',morMonto,morVencer.length+' cuota'+(morVencer.length!==1?'s':'')+' en los próximos '+_semHorizon+' días','#7c3aed');
 
   document.getElementById('sem-total-compromisos').innerHTML=
     '<div style="background:#1a1f36;border-radius:12px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">'+
@@ -3270,6 +3326,32 @@ function renderSemana(){
         '</tr>';
       }).join('')+
       '<tr style="border-top:2px solid #e5e7eb;"><td colspan="2" style="padding:8px 6px;font-weight:800;font-size:11px;color:#374151;text-transform:uppercase;letter-spacing:.5px;">Total</td><td style="padding:8px 6px;text-align:right;font-weight:900;color:#0ea5e9;">'+$p(chqCartMonto)+'</td></tr>'+
+      '</tbody></table>';
+  }
+
+  // ── RENDER: tabla moratorias a vencer ────────────────────
+  var tm=document.getElementById('sem-mor-tabla');
+  if(morVencer.length===0){
+    tm.innerHTML='<div style="text-align:center;color:#9ca3af;padding:20px;font-size:13px;">No hay moratorias que vencen en este período</div>';
+  } else {
+    var morSort=morVencer.slice().sort(function(a,b){return a.prox_vencimiento>b.prox_vencimiento?1:-1;});
+    tm.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+      '<thead><tr>'+
+        '<th style="text-align:left;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Vence</th>'+
+        '<th style="text-align:left;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Moratoria</th>'+
+        '<th style="text-align:right;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Cuota</th>'+
+      '</tr></thead><tbody>'+
+      morSort.map(function(m){
+        var diasR=Math.round((new Date(m.prox_vencimiento+'T12:00:00')-hoy)/86400000);
+        var urgente=diasR<=3;
+        var pendientes=Math.max(m.cuotas_total-m.cuotas_pagadas,0);
+        return '<tr style="border-top:1px solid #f3f4f6;">'+
+          '<td style="padding:7px 6px;"><span style="font-size:11px;font-weight:700;color:'+(urgente?'#dc2626':'#7c3aed')+';">'+fmtF(m.prox_vencimiento)+'</span><br><span style="font-size:10px;color:#9ca3af;">en '+diasR+' día'+(diasR!==1?'s':'')+'</span></td>'+
+          '<td style="padding:7px 6px;color:#374151;font-size:11px;">'+(m.nombre||m.acreedor||'Sin nombre')+'<br><span style="color:#9ca3af;">'+pendientes+' cuota'+(pendientes!==1?'s':'')+' restante'+(pendientes!==1?'s':'')+'</span></td>'+
+          '<td style="padding:7px 6px;text-align:right;font-weight:700;color:#7c3aed;">'+$p(Number(m.monto_cuota||0))+'</td>'+
+        '</tr>';
+      }).join('')+
+      '<tr style="border-top:2px solid #e5e7eb;"><td colspan="2" style="padding:8px 6px;font-weight:800;font-size:11px;color:#374151;text-transform:uppercase;">Total</td><td style="padding:8px 6px;text-align:right;font-weight:900;color:#7c3aed;">'+$p(morMonto)+'</td></tr>'+
       '</tbody></table>';
   }
 
@@ -5275,7 +5357,7 @@ function setFinTab(tab,el){
   if(tab==='transferencia')renderTransfHistorial();
   if(tab==='resumen')renderFinResumen();
   if(tab==='cierre')renderCierreCaja();
-  if(tab==='gastosfijos')renderGastosFijos();
+  if(tab==='gastosfijos'){renderGastosFijos();renderGfPagos();}
 }
 
 function renderFin(){
@@ -7466,7 +7548,7 @@ async function saveChqDepositar(){
 var OPERACIONES_VENTA=[];
 var TRANSFERENCIAS_STOCK=[];
 var FACTURAS_CLIENTES=[], CHEQUE_IMPUTACIONES=[];
-var GASTOS_FIJOS=[];
+var GASTOS_FIJOS=[], GF_PAGOS=[];
 var editVentaCostoId=null;
 
 async function loadOperacionesVenta(){
@@ -7489,11 +7571,174 @@ async function loadGastosFijos(){
   var {data}=await sb.from('gastos_fijos').select('*').order('categoria').order('concepto');
   GASTOS_FIJOS=data||[];
 }
+async function loadGfPagos(){
+  var {data}=await sb.from('gastos_fijos_pagos').select('*').order('fecha_pago',{ascending:false});
+  GF_PAGOS=data||[];
+}
 
 // ══ GASTOS FIJOS ══
 var FREC_LABELS={mensual:'Mensual',bimestral:'Bimestral',trimestral:'Trimestral',semestral:'Semestral',anual:'Anual'};
 var FREC_MESES={mensual:1,bimestral:2,trimestral:3,semestral:6,anual:12};
 var MESES_NOMBRES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+// ── GASTOS FIJOS — PAGOS ──────────────────────────────────────
+var _gfPagoId=null; // gasto_fijo_id activo en el modal
+
+function _initGfpPeriodo(){
+  var sel=document.getElementById('gfp-anio');
+  if(!sel||sel.options.length>0)return;
+  var now=new Date(); var anioNow=now.getFullYear();
+  for(var y=anioNow+1;y>=anioNow-2;y--){
+    var o=document.createElement('option');o.value=y;o.textContent=y;
+    if(y===anioNow)o.selected=true;
+    sel.appendChild(o);
+  }
+  // Preseleccionar mes actual
+  var mesSel=document.getElementById('gfp-mes');
+  if(mesSel)mesSel.selectedIndex=now.getMonth();
+}
+
+function renderGfPagos(){
+  _initGfpPeriodo();
+  var anio=parseInt(document.getElementById('gfp-anio').value)||new Date().getFullYear();
+  var mes=document.getElementById('gfp-mes').value;
+  // Solo gastos activos
+  var activos=GASTOS_FIJOS.filter(function(g){return g.activo;});
+  // Pagos del período
+  var pagosDelPeriodo=GF_PAGOS.filter(function(p){return p.anio===anio&&p.mes===mes;});
+  var pagadoIds=pagosDelPeriodo.map(function(p){return p.gasto_fijo_id;});
+
+  var totalEsperado=activos.reduce(function(s,g){return s+Number(g.monto||0)/FREC_MESES[g.frecuencia||'mensual'];},0);
+  var totalPagado=pagosDelPeriodo.reduce(function(s,p){return s+Number(p.monto||0);},0);
+  var pendientes=activos.filter(function(g){return pagadoIds.indexOf(g.id)===-1;});
+  var totalPendiente=pendientes.reduce(function(s,g){return s+Number(g.monto||0)/FREC_MESES[g.frecuencia||'mensual'];},0);
+
+  // Resumen cards
+  document.getElementById('gfp-resumen').innerHTML=
+    '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 18px;min-width:160px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:.8px;">Pagado</div>'+
+      '<div style="font-size:20px;font-weight:900;color:#16a34a;">'+$p(Math.round(totalPagado))+'</div>'+
+      '<div style="font-size:11px;color:#15803d;">'+pagadoIds.length+' gasto'+(pagadoIds.length!==1?'s':'')+'</div>'+
+    '</div>'+
+    '<div style="background:#fff5f5;border:1.5px solid #fca5a5;border-radius:10px;padding:12px 18px;min-width:160px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#991b1b;text-transform:uppercase;letter-spacing:.8px;">Pendiente</div>'+
+      '<div style="font-size:20px;font-weight:900;color:#dc2626;">'+$p(Math.round(totalPendiente))+'</div>'+
+      '<div style="font-size:11px;color:#b91c1c;">'+pendientes.length+' gasto'+(pendientes.length!==1?'s':'')+'</div>'+
+    '</div>'+
+    '<div style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px 18px;min-width:160px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;">Total estimado</div>'+
+      '<div style="font-size:20px;font-weight:900;color:#374151;">'+$p(Math.round(totalEsperado))+'</div>'+
+      '<div style="font-size:11px;color:#9ca3af;">'+activos.length+' gastos activos</div>'+
+    '</div>';
+
+  if(!activos.length){
+    document.getElementById('gfp-tabla').innerHTML='<div style="text-align:center;color:#9ca3af;padding:20px;">No hay gastos fijos activos</div>';
+    return;
+  }
+
+  var html='<table style="width:100%;border-collapse:collapse;font-size:13px;">'+
+    '<thead><tr>'+
+      '<th style="text-align:left;padding:6px 8px;font-size:10px;color:#9ca3af;text-transform:uppercase;font-weight:700;border-bottom:2px solid #f3f4f6;">Concepto</th>'+
+      '<th style="text-align:left;padding:6px 8px;font-size:10px;color:#9ca3af;text-transform:uppercase;font-weight:700;border-bottom:2px solid #f3f4f6;">Categoría</th>'+
+      '<th style="text-align:right;padding:6px 8px;font-size:10px;color:#9ca3af;text-transform:uppercase;font-weight:700;border-bottom:2px solid #f3f4f6;">Monto</th>'+
+      '<th style="text-align:left;padding:6px 8px;font-size:10px;color:#9ca3af;text-transform:uppercase;font-weight:700;border-bottom:2px solid #f3f4f6;">Caja</th>'+
+      '<th style="text-align:center;padding:6px 8px;font-size:10px;color:#9ca3af;text-transform:uppercase;font-weight:700;border-bottom:2px solid #f3f4f6;">Estado</th>'+
+      '<th style="border-bottom:2px solid #f3f4f6;"></th>'+
+    '</tr></thead><tbody>';
+
+  activos.forEach(function(g){
+    var pago=pagosDelPeriodo.find(function(p){return p.gasto_fijo_id===g.id;});
+    var pagado=!!pago;
+    var montoEst=Math.round(Number(g.monto||0)/FREC_MESES[g.frecuencia||'mensual']);
+    html+='<tr style="border-top:1px solid #f3f4f6;background:'+(pagado?'#f9fafb':'')+';">'+
+      '<td style="padding:10px 8px;font-weight:600;">'+(g.concepto||'—')+(g.nota?'<div style="font-size:11px;color:#9ca3af;font-weight:400;">'+g.nota+'</div>':'')+'</td>'+
+      '<td style="padding:10px 8px;"><span class="badge b-gray" style="font-size:10px;">'+( g.categoria||'—')+'</span></td>'+
+      '<td style="padding:10px 8px;text-align:right;font-weight:700;">'+$p(montoEst)+'</td>'+
+      '<td style="padding:10px 8px;font-size:12px;color:#6b7280;">'+(g.caja||'—')+'</td>'+
+      '<td style="padding:10px 8px;text-align:center;">'+
+        (pagado
+          ? '<span class="badge b-green">✓ Pagado</span><div style="font-size:10px;color:#16a34a;margin-top:2px;">'+fmtF(pago.fecha_pago)+' · '+$p(Number(pago.monto))+'</div>'
+          : '<span class="badge b-red">Pendiente</span>')+
+      '</td>'+
+      '<td style="padding:10px 8px;text-align:right;">'+
+        (pagado
+          ? '<button class="btn btn-red btn-sm" onclick="deleteGfPago('+pago.id+','+g.id+')" title="Anular pago">✕</button>'
+          : '<button class="btn btn-green btn-sm" onclick="openGfPagoModal('+g.id+')">💸 Pagar</button>')+
+      '</td>'+
+    '</tr>';
+  });
+
+  html+='</tbody></table>';
+  document.getElementById('gfp-tabla').innerHTML=html;
+}
+
+function openGfPagoModal(gastoFijoId){
+  _gfPagoId=gastoFijoId;
+  var g=GASTOS_FIJOS.find(function(x){return x.id===gastoFijoId;})||{};
+  var anio=parseInt(document.getElementById('gfp-anio').value)||new Date().getFullYear();
+  var mes=document.getElementById('gfp-mes').value;
+  var montoEst=Math.round(Number(g.monto||0)/FREC_MESES[g.frecuencia||'mensual']);
+  document.getElementById('gfp-modal-info').textContent=(g.concepto||'Gasto')+' — '+mes+' '+anio;
+  document.getElementById('gfp-monto').value=montoEst||'';
+  document.getElementById('gfp-fecha').value=today();
+  var cajaSel=document.getElementById('gfp-caja');
+  if(g.caja&&cajaSel){cajaSel.value=g.caja;}
+  document.getElementById('gfp-nota').value='';
+  document.getElementById('gfp-gen-mov').checked=true;
+  openM('m-gfpago');
+}
+
+async function saveGfPago(){
+  var monto=parseFloat(document.getElementById('gfp-monto').value)||0;
+  var fecha=document.getElementById('gfp-fecha').value;
+  var caja=document.getElementById('gfp-caja').value;
+  var nota=document.getElementById('gfp-nota').value.trim()||null;
+  var genMov=document.getElementById('gfp-gen-mov').checked;
+  if(!monto){toast('Ingresá el monto pagado','err');return;}
+  if(!fecha){toast('Ingresá la fecha de pago','err');return;}
+  var anio=parseInt(document.getElementById('gfp-anio').value)||new Date().getFullYear();
+  var mes=document.getElementById('gfp-mes').value;
+  var g=GASTOS_FIJOS.find(function(x){return x.id===_gfPagoId;})||{};
+  var movId=null;
+  if(genMov){
+    var d=new Date(fecha+'T12:00:00');
+    var movData={
+      caja:caja, fecha:fecha, tipo:'egreso',
+      concepto:g.categoria||'GASTOS VARIOS',
+      detalle:(g.concepto||'Gasto fijo')+' — '+mes+' '+anio,
+      egreso:monto, ingreso:0,
+      anio:d.getFullYear(), mes:MESES_ARR[d.getMonth()], sem:0,
+      referencia:nota||null
+    };
+    var {data:movRes,error:movErr}=await sb.from('movimientos').insert(movData).select('id').single();
+    if(movErr){toast('Error creando movimiento: '+movErr.message,'err');return;}
+    movId=movRes.id;
+  }
+  var {error}=await sb.from('gastos_fijos_pagos').insert({
+    gasto_fijo_id:_gfPagoId, anio, mes, fecha_pago:fecha,
+    monto, mov_id:movId, nota
+  });
+  if(error){toast('Error registrando pago: '+error.message,'err');return;}
+  toast('Pago registrado correctamente');
+  closeM('m-gfpago');
+  await Promise.all([loadGfPagos(), genMov?loadMovs():Promise.resolve()]);
+  renderGfPagos();
+  if(genMov){renderFin();renderFinCajas();}
+}
+
+async function deleteGfPago(pagoId,gastoFijoId){
+  var g=GASTOS_FIJOS.find(function(x){return x.id===gastoFijoId;})||{};
+  if(!confirm('¿Anular el pago de "'+( g.concepto||'gasto')+'"? El movimiento de egreso también se eliminará si fue generado automáticamente.'))return;
+  var pago=GF_PAGOS.find(function(p){return p.id===pagoId;});
+  if(pago&&pago.mov_id){
+    await sb.from('movimientos').delete().eq('id',pago.mov_id);
+  }
+  var {error}=await sb.from('gastos_fijos_pagos').delete().eq('id',pagoId);
+  if(error){toast('Error: '+error.message,'err');return;}
+  toast('Pago anulado');
+  await Promise.all([loadGfPagos(),loadMovs()]);
+  renderGfPagos();renderFin();renderFinCajas();
+}
 
 function renderGastosFijos(){
   var filCat=document.getElementById('gf-fil-cat').value;
@@ -9177,6 +9422,8 @@ function mm_onConcepto(){
   if(wMor){
     var showMor=concepto==='MORATORIAS/PLANES';
     wMor.style.display=showMor?'':'none';
+    var infoMor=document.getElementById('mm-moratoria-info');
+    if(!showMor&&infoMor)infoMor.style.display='none';
     if(showMor){
       var selMor=document.getElementById('mm-moratoria-id');
       var prevMor=selMor.value;
@@ -9185,6 +9432,7 @@ function mm_onConcepto(){
         var o=document.createElement('option');o.value=m.id;o.textContent=m.nombre+(m.acreedor?' ('+m.acreedor+')':'');selMor.appendChild(o);
       });
       if(prevMor)selMor.value=prevMor;
+      mm_onMoratoria();
     }
   }
   // Tallerista
@@ -9228,6 +9476,27 @@ function mm_onConcepto(){
     });
     if(prevProv)selProv.value=prevProv;
   }
+}
+
+function mm_onMoratoria(){
+  var id=parseInt(document.getElementById('mm-moratoria-id').value)||null;
+  var info=document.getElementById('mm-moratoria-info');
+  if(!id||!info){if(info)info.style.display='none';return;}
+  var m=MORATORIAS.find(function(x){return x.id===id;});
+  if(!m){info.style.display='none';return;}
+  var prox=m.prox_vencimiento?fmtF(m.prox_vencimiento):'—';
+  var pendiente=morPendiente(m);
+  var cuotaSig=m.cuotas_pagadas+1;
+  info.innerHTML=
+    '<strong>'+m.nombre+'</strong>'+(m.acreedor?' &mdash; '+m.acreedor:'')+
+    '<br>Cuota a pagar: <strong>'+cuotaSig+' de '+m.cuotas_total+'</strong>'+
+    ' &nbsp;·&nbsp; Monto cuota: <strong>'+$p(m.monto_cuota)+'</strong>'+
+    '<br>Próx. vencimiento: '+prox+' &nbsp;·&nbsp; Pendiente total: '+$p(pendiente)+
+    '<br><em style="font-size:11px;color:#15803d;">✅ Al guardar se registrará como cuota '+cuotaSig+' pagada y se avanzará el vencimiento</em>';
+  info.style.display='';
+  // Pre-llenar monto si está vacío
+  var mmonto=document.getElementById('mm-monto');
+  if(mmonto&&!mmonto.value)mmonto.value=m.monto_cuota||'';
 }
 
 function mm_onTallerista(){
@@ -9301,7 +9570,7 @@ function openMovModal(id){
     document.getElementById('mm-precio-prenda').value=m.precio_prenda||'';
     mm_onTipo(); mm_onCaja(); mm_onConcepto();
     // pre-seleccionar entidades vinculadas
-    if(m.moratoria_id) document.getElementById('mm-moratoria-id').value=m.moratoria_id;
+    if(m.moratoria_id){document.getElementById('mm-moratoria-id').value=m.moratoria_id;mm_onMoratoria();}
     if(m.tallerista_id) document.getElementById('mm-tallerista-id').value=m.tallerista_id;
     if(m.personal_id)  document.getElementById('mm-personal-id').value=m.personal_id;
     if(m.proveedor_id) document.getElementById('mm-proveedor-id').value=m.proveedor_id;
@@ -9360,9 +9629,31 @@ async function saveMov(){
   };
   var r=editMovId?await sb.from('movimientos').update(d).eq('id',editMovId):await sb.from('movimientos').insert(d);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
-  toast(editMovId?'Movimiento actualizado':'Movimiento registrado');
+
+  // Si es nuevo movimiento con moratoria vinculada → avanzar cuota automáticamente
+  if(!editMovId&&morId&&concepto==='MORATORIAS/PLANES'){
+    var mMor=MORATORIAS.find(function(x){return x.id===morId;});
+    if(mMor){
+      var nuevasPagadas=mMor.cuotas_pagadas+1;
+      var nuevoEstMor=nuevasPagadas>=mMor.cuotas_total?'finalizada':mMor.estado;
+      var proxVencMor=null;
+      if(mMor.prox_vencimiento&&nuevoEstMor!=='finalizada'){
+        var dv=new Date(mMor.prox_vencimiento+'T12:00:00');
+        dv.setMonth(dv.getMonth()+1);
+        proxVencMor=dv.toISOString().split('T')[0];
+      }
+      await sb.from('moratorias').update({
+        cuotas_pagadas:nuevasPagadas,estado:nuevoEstMor,
+        prox_vencimiento:proxVencMor,updated_at:new Date().toISOString()
+      }).eq('id',morId);
+      var msgMor=nuevoEstMor==='finalizada'?' — ¡Moratoria finalizada!':' (cuota '+nuevasPagadas+'/'+mMor.cuotas_total+')';
+      toast('Movimiento registrado + moratoria avanzada'+msgMor);
+    } else { toast('Movimiento registrado'); }
+  } else { toast(editMovId?'Movimiento actualizado':'Movimiento registrado'); }
+
   closeM('m-mov');
-  await loadMovs();renderFin();
+  await Promise.all([loadMovs(),loadMoratorias()]);
+  renderFin();renderMoratorias();
 }
 
 async function deleteMov(id){
@@ -9435,6 +9726,7 @@ function renderTransfHistorial(){
       var colorH=CAJA_COLORES[p.hacia]||'#6b7280';
       var esc=function(s){return (s||'').replace(/'/g,"\\'");};
       var editCall="openEditTransf("+p.idEgr+","+p.idIng+",'"+esc(p.desde)+"','"+esc(p.hacia)+"',"+p.monto+",'"+p.fecha+"','"+esc(p.detalle)+"','"+esc(p.referencia)+"')";
+      var delCall="deleteTransf("+p.idEgr+","+p.idIng+",'"+esc(p.desde)+"','"+esc(p.hacia)+"',"+p.monto+")";
       var desdeLabel=p.desde?('<span style="font-size:11px;font-weight:700;color:'+colorD+';">'+p.desde+'</span>'):'<span style="font-size:11px;color:#dc2626;font-style:italic;">sin origen</span>';
       var haciaLabel=p.hacia?('<span style="font-size:11px;font-weight:700;color:'+colorH+';">'+p.hacia+'</span>'):'<span style="font-size:11px;color:#dc2626;font-style:italic;">sin destino</span>';
       return '<tr style="'+(incompleto?'background:#fffbeb;':'')+'">'+
@@ -9444,7 +9736,7 @@ function renderTransfHistorial(){
         '<td>'+haciaLabel+'</td>'+
         '<td style="text-align:right;font-weight:700;color:#374151;">'+$p(p.monto)+'</td>'+
         '<td style="font-size:11px;color:#6b7280;">'+(p.detalle||'—')+'</td>'+
-        '<td><button class="btn btn-gray btn-sm" onclick="'+editCall+'" title="Editar">✏️</button></td>'+
+        '<td style="white-space:nowrap;"><button class="btn btn-gray btn-sm" onclick="'+editCall+'" title="Editar">✏️</button> <button class="btn btn-red btn-sm" onclick="'+delCall+'" title="Eliminar">🗑️</button></td>'+
       '</tr>';
     }).join('')+'</tbody></table></div>';
 }
@@ -9508,6 +9800,19 @@ async function saveEditTransf(){
   if(huboError)return;
   toast('Transferencia actualizada');
   closeM('m-edit-transf');
+  await loadMovs();
+  renderFin();
+  renderTransfHistorial();
+}
+
+async function deleteTransf(idEgr,idIng,desde,hacia,monto){
+  var desc=(desde||'?')+' → '+(hacia||'?')+' por '+$p(monto);
+  if(!confirm('¿Eliminar la transferencia '+desc+'?\nSe van a borrar los dos movimientos asociados.'))return;
+  var ids=[idEgr,idIng].filter(function(id){return id!=null;});
+  if(!ids.length){toast('No se encontraron movimientos para eliminar','err');return;}
+  var {error}=await sb.from('movimientos').delete().in('id',ids);
+  if(error){toast('Error al eliminar: '+error.message,'err');return;}
+  toast('Transferencia eliminada');
   await loadMovs();
   renderFin();
   renderTransfHistorial();
