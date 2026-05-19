@@ -1798,16 +1798,57 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
 <!-- Proveedor -->
 <div class="modal-bg" id="m-prov">
-  <div class="modal">
+  <div class="modal" style="max-width:700px;">
     <h3 id="m-prov-title">Nuevo proveedor</h3>
-    <div class="grid2">
+
+    <div style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Datos generales</div>
+    <div class="grid2" style="margin-bottom:16px;">
       <div class="field full"><label>Nombre *</label><input id="mp-nombre"/></div>
       <div class="field"><label>Teléfono</label><input id="mp-tel"/></div>
       <div class="field"><label>Email</label><input id="mp-email" type="email"/></div>
-      <div class="field"><label>CUIT</label><input id="mp-cuit"/></div>
+      <div class="field"><label>Rubro</label><input id="mp-rubro" placeholder="Ej: Telas, Avíos, Bordado, Servicios..."/></div>
       <div class="field full"><label>Dirección</label><input id="mp-dir"/></div>
-      <div class="field full"><label>Nota</label><textarea id="mp-nota"></textarea></div>
     </div>
+
+    <div style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Datos fiscales</div>
+    <div class="grid2" style="margin-bottom:16px;">
+      <div class="field"><label>CUIT</label><input id="mp-cuit" placeholder="20-12345678-9"/></div>
+      <div class="field"><label>Condición IVA</label>
+        <select id="mp-cond-iva" style="width:100%;">
+          <option value="">— Sin especificar —</option>
+          <option value="Responsable Inscripto">Responsable Inscripto</option>
+          <option value="Monotributista">Monotributista</option>
+          <option value="No Responsable">No Responsable</option>
+          <option value="Exento">Exento</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Condiciones comerciales</div>
+    <div class="grid2" style="margin-bottom:16px;">
+      <div class="field"><label>Forma de pago</label>
+        <select id="mp-forma-pago" style="width:100%;">
+          <option value="">— Sin especificar —</option>
+          <option value="Efectivo">Efectivo</option>
+          <option value="Transferencia">Transferencia</option>
+          <option value="Cheque">Cheque</option>
+          <option value="Cuenta corriente">Cuenta corriente</option>
+          <option value="Mixto">Mixto</option>
+        </select>
+      </div>
+      <div class="field"><label>Días de pago</label>
+        <input type="number" id="mp-dias-pago" min="0" placeholder="Ej: 30"/>
+      </div>
+      <div class="field"><label>Tiempo de entrega (días)</label>
+        <input type="number" id="mp-tiempo-ent" min="0" placeholder="Ej: 7"/>
+      </div>
+      <div class="field"><label>Banco</label><input id="mp-banco" placeholder="Ej: Galicia, Macro..."/></div>
+      <div class="field full"><label>CBU</label><input id="mp-cbu" placeholder="22 dígitos"/></div>
+    </div>
+
+    <div style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Notas</div>
+    <div class="field"><textarea id="mp-nota" style="min-height:52px;" placeholder="Observaciones..."></textarea></div>
+
     <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-prov')">Cancelar</button><button class="btn" onclick="saveProv()">Guardar</button></div>
   </div>
 </div>
@@ -4506,10 +4547,19 @@ function renderProveedores(){
   makeSortThead('prov-thead',PROV_COLS,provSort,renderProveedores);
   list=sortArr(list,provSort);
   var tb=document.getElementById('prov-tbody');
-  if(!list.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><div class="ei">🤝</div><p>Sin proveedores</p></div></td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="ei">🤝</div><p>Sin proveedores</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(p){
-    return '<tr><td><strong>'+esc(p.nombre)+'</strong></td><td>'+(p.telefono||'—')+'</td><td>'+(p.email||'—')+'</td><td>'+(p.cuit||'—')+'</td><td>'+(p.nota||'—')+'</td>'+
-    '<td><button class="btn btn-sm btn-gray btn-icon" onclick="openProv('+p.id+')">✏️</button></td></tr>';
+    var pagoBadge=p.forma_pago?'<span style="background:#ede9fe;color:#5b21b6;padding:1px 7px;border-radius:8px;font-size:11px;">'+p.forma_pago+(p.dias_pago?' '+p.dias_pago+'d':'')+'</span>':'—';
+    var ivaBadge=p.condicion_iva?'<span style="background:#f3f4f6;color:#374151;padding:1px 7px;border-radius:8px;font-size:11px;">'+p.condicion_iva+'</span>':'—';
+    return '<tr>'+
+      '<td><strong>'+esc(p.nombre)+'</strong>'+(p.rubro?'<br><span style="font-size:11px;color:#9ca3af;">'+p.rubro+'</span>':'')+'</td>'+
+      '<td>'+(p.telefono||'—')+'</td>'+
+      '<td>'+(p.email||'—')+'</td>'+
+      '<td>'+(p.cuit||'—')+'<br>'+ivaBadge+'</td>'+
+      '<td>'+pagoBadge+'</td>'+
+      '<td>'+(p.tiempo_entrega!=null?p.tiempo_entrega+' días':'—')+'</td>'+
+      '<td><button class="btn btn-sm btn-gray btn-icon" onclick="openProv('+p.id+')">✏️</button></td>'+
+    '</tr>';
   }).join('');
 }
 function openProv(id){
@@ -4519,15 +4569,37 @@ function openProv(id){
   document.getElementById('mp-nombre').value=p.nombre||'';
   document.getElementById('mp-tel').value=p.telefono||'';
   document.getElementById('mp-email').value=p.email||'';
-  document.getElementById('mp-cuit').value=p.cuit||'';
+  document.getElementById('mp-rubro').value=p.rubro||'';
   document.getElementById('mp-dir').value=p.direccion||'';
+  document.getElementById('mp-cuit').value=p.cuit||'';
+  document.getElementById('mp-cond-iva').value=p.condicion_iva||'';
+  document.getElementById('mp-forma-pago').value=p.forma_pago||'';
+  document.getElementById('mp-dias-pago').value=p.dias_pago!=null?p.dias_pago:'';
+  document.getElementById('mp-tiempo-ent').value=p.tiempo_entrega!=null?p.tiempo_entrega:'';
+  document.getElementById('mp-banco').value=p.banco||'';
+  document.getElementById('mp-cbu').value=p.cbu||'';
   document.getElementById('mp-nota').value=p.nota||'';
   openM('m-prov');
 }
 async function saveProv(){
   var n=document.getElementById('mp-nombre').value.trim();
   if(!n){toast('El nombre es obligatorio','err');return;}
-  var d={nombre:n,telefono:document.getElementById('mp-tel').value,email:document.getElementById('mp-email').value,cuit:document.getElementById('mp-cuit').value,direccion:document.getElementById('mp-dir').value,nota:document.getElementById('mp-nota').value,updated_at:new Date().toISOString()};
+  var diasPago=document.getElementById('mp-dias-pago').value;
+  var tiempoEnt=document.getElementById('mp-tiempo-ent').value;
+  var d={nombre:n,
+    telefono:document.getElementById('mp-tel').value||null,
+    email:document.getElementById('mp-email').value||null,
+    rubro:document.getElementById('mp-rubro').value.trim()||null,
+    direccion:document.getElementById('mp-dir').value||null,
+    cuit:document.getElementById('mp-cuit').value.trim()||null,
+    condicion_iva:document.getElementById('mp-cond-iva').value||null,
+    forma_pago:document.getElementById('mp-forma-pago').value||null,
+    dias_pago:diasPago!==''?parseInt(diasPago):null,
+    tiempo_entrega:tiempoEnt!==''?parseInt(tiempoEnt):null,
+    banco:document.getElementById('mp-banco').value.trim()||null,
+    cbu:document.getElementById('mp-cbu').value.trim()||null,
+    nota:document.getElementById('mp-nota').value||null,
+    updated_at:new Date().toISOString()};
   var r=editProvId?await sb.from('proveedores').update(d).eq('id',editProvId):await sb.from('proveedores').insert(d);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
   toast(editProvId?'Proveedor actualizado':'Proveedor creado');
