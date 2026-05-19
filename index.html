@@ -2780,7 +2780,7 @@ var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[];
 var PRENDAS_LIST=[
   'Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal',
   'Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre',
@@ -2889,12 +2889,13 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadMateriales(),loadTelasStock(),loadTelasTipos()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadMateriales(),loadTelasStock(),loadTelasTipos()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
 async function loadCierresCaja(){ var {data}=await sb.from('cierres_caja').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false}); CIERRES_CAJA=data||[]; }
 async function loadObjetivos(){ var {data}=await sb.from('objetivos').select('*').order('anio',{ascending:false}); OBJETIVOS=data||[]; }
+async function loadObjMetas(){ var {data}=await sb.from('objetivo_metas').select('*').order('orden'); OBJ_METAS=data||[]; }
 async function loadCategorias(){ var {data}=await sb.from('categorias').select('*').order('nombre'); CATEGORIAS=data||[]; }
 async function loadTalleristas(){ var {data}=await sb.from('talleristas').select('*').order('nombre'); TALLERISTAS=data||[]; }
 async function loadTalHistorial(){ var {data}=await sb.from('tallerista_precios_historial').select('*').order('created_at',{ascending:false}); TAL_PRECIOS_HIST=data||[]; }
@@ -5282,9 +5283,12 @@ function renderObjetivos(){
           '<span>Meta: <strong>'+metaU+' u.</strong></span>'+
         '</div>'+pBar(realU,metaU,cfg.color)
       )+
-      '<div style="display:flex;gap:6px;margin-top:auto;padding-top:8px;">'+
-        '<button class="btn btn-gray btn-sm" onclick="'+oc1+'">✏️ Editar</button>'+
-        '<button class="btn btn-sm" onclick="'+oc2+'" style="'+(logrado?'background:#dcfce7;color:#166534;border-color:#bbf7d0;':'background:#f9fafb;color:#374151;border-color:#e5e7eb;')+'">'+(logrado?'✓ Logrado':'Marcar logrado')+'</button>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-top:auto;padding-top:8px;">'+
+        '<button class="btn btn-gray btn-sm" onclick="'+oc1+'" style="padding:4px 8px;">✏️</button>'+
+        '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:5px 10px;border-radius:8px;border:1px solid '+(logrado?'#bbf7d0':'#e5e7eb')+';background:'+(logrado?'#dcfce7':'#f9fafb')+';flex:1;justify-content:center;">'+
+          '<input type="checkbox" '+(logrado?'checked':'')+' onchange="'+oc2+'" style="width:14px;height:14px;cursor:pointer;accent-color:#16a34a;flex-shrink:0;">'+
+          '<span style="font-size:11px;font-weight:700;color:'+(logrado?'#166534':'#6b7280')+';white-space:nowrap;">'+(logrado?'✓ Logrado':'Logrado')+'</span>'+
+        '</label>'+
       '</div>'+
     '</div>';
   }
@@ -6297,66 +6301,62 @@ function setMatCatFiltro(cat,el){
   renderMatPrima();
 }
 
+function _telasByTipo(){
+  var byTipo={};
+  TELAS_TIPOS.forEach(function(t){byTipo[t.nombre]={tipo:t,rollos:0,kg:0,valor:0};});
+  TELAS_STOCK.forEach(function(r){if(byTipo[r.tipo_tela])byTipo[r.tipo_tela].rollos+=Number(r.rollos)||0;});
+  TELAS_TIPOS.forEach(function(t){
+    var d=byTipo[t.nombre];
+    d.kg=d.rollos*(Number(t.kg_por_rollo)||20);
+    d.valor=d.kg*Number(t.precio_kg);
+  });
+  return byTipo;
+}
+
 function renderMateriales(){
-  var activos=MATERIALES.filter(function(m){return m.activo;});
-  var stockTotal=activos.reduce(function(s,m){return s+Number(m.cantidad);},0);
-  var valorTotal=activos.reduce(function(s,m){return s+Number(m.cantidad)*Number(m.precio_unitario);},0);
-  document.getElementById('mat-total').textContent=activos.length;
-  document.getElementById('mat-stock-total').textContent=stockTotal.toLocaleString('es-AR');
-  document.getElementById('mat-valor-total').textContent=$p(valorTotal);
+  var byTipo=_telasByTipo();
+  var vals=Object.values(byTipo);
+  var totalRollos=vals.reduce(function(s,d){return s+d.rollos;},0);
+  var totalValor=vals.reduce(function(s,d){return s+d.valor;},0);
+  document.getElementById('mat-total').textContent=TELAS_TIPOS.length+' tipos';
+  document.getElementById('mat-stock-total').textContent=totalRollos+' rollos';
+  document.getElementById('mat-valor-total').textContent=$p(Math.round(totalValor));
   renderMatResumen();
 }
 
 function renderMatResumen(){
-  var activos=MATERIALES.filter(function(m){return m.activo;});
-  var cats={};
-  activos.forEach(function(m){
-    var cat=m.categoria||'OTRO';
-    if(!cats[cat])cats[cat]={items:0,cantidad:0,valor:0};
-    cats[cat].items++;
-    cats[cat].cantidad+=Number(m.cantidad);
-    cats[cat].valor+=Number(m.cantidad)*Number(m.precio_unitario);
-  });
-  var catArr=Object.entries(cats).sort(function(a,b){return b[1].valor-a[1].valor;});
   var cont=document.getElementById('mat-resumen-cont');
-  if(!catArr.length){
-    cont.innerHTML='<div class="panel"><div class="empty"><div class="ei">🎨</div><p>Sin materiales cargados — añadí el primero desde la pestaña Materia Prima</p></div></div>';
+  if(!TELAS_TIPOS.length){
+    cont.innerHTML='<div class="panel"><div class="empty"><div class="ei">🧵</div><p>Ejecutá patch_36 en Supabase para activar el stock de telas</p></div></div>';
     return;
   }
-  var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:20px;">';
-  catArr.forEach(function(e){
-    var cat=e[0]; var d=e[1];
-    var bg=MAT_CAT_BG[cat]||'#f9fafb';
-    var icon=MAT_CAT_ICON[cat]||'📦';
-    html+='<div class="stat" style="background:'+bg+';border:none;text-align:left;">'+
-      '<div style="font-size:22px;margin-bottom:4px;">'+icon+'</div>'+
-      '<div style="font-size:11px;font-weight:700;color:#6b7280;letter-spacing:.5px;">'+cat+'</div>'+
-      '<div style="font-size:20px;font-weight:800;margin:4px 0;">'+Number(d.cantidad).toLocaleString('es-AR')+'<span style="font-size:11px;font-weight:400;color:#9ca3af;margin-left:3px;">unid.</span></div>'+
-      '<div style="font-size:12px;color:#6b7280;">'+d.items+' material'+(d.items!==1?'es':'')+'</div>'+
-      (d.valor>0?'<div style="font-size:13px;font-weight:700;color:#7c3aed;margin-top:4px;">'+$p(d.valor)+'</div>':'')+
-    '</div>';
+  var byTipo=_telasByTipo();
+  var tipoArr=TELAS_TIPOS.map(function(t){return byTipo[t.nombre];});
+  var totalRollos=tipoArr.reduce(function(s,d){return s+d.rollos;},0);
+  var totalKg=tipoArr.reduce(function(s,d){return s+d.kg;},0);
+  var totalValor=tipoArr.reduce(function(s,d){return s+d.valor;},0);
+
+  // Card total
+  var html='<div style="background:linear-gradient(135deg,#7c3aed 0%,#4f46e5 100%);border-radius:12px;padding:22px 28px;color:#fff;margin-bottom:20px;display:flex;gap:36px;flex-wrap:wrap;align-items:center;">';
+  html+='<div><div style="font-size:11px;opacity:.75;letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px;">Total materia prima</div>'+
+    '<div style="font-size:38px;font-weight:900;line-height:1;">'+totalRollos+'<span style="font-size:16px;font-weight:400;opacity:.75;margin-left:6px;">rollos</span></div></div>';
+  html+='<div><div style="font-size:11px;opacity:.75;letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px;">Total en KG</div>'+
+    '<div style="font-size:26px;font-weight:700;">'+totalKg.toLocaleString('es-AR')+'</div></div>';
+  html+='<div style="margin-left:auto;"><div style="font-size:11px;opacity:.75;letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px;">Valor del stock</div>'+
+    '<div style="font-size:26px;font-weight:700;">'+$p(Math.round(totalValor))+'</div></div>';
+  html+='</div>';
+
+  // Cards por tipo
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;">';
+  tipoArr.forEach(function(d){
+    var t=d.tipo; var vacio=d.rollos===0;
+    html+='<div style="background:#fff;border:1px solid '+(vacio?'#f3f4f6':'#e5e7eb')+';border-radius:10px;padding:18px 14px;text-align:center;">'+
+      '<div style="font-size:11px;font-weight:700;color:#6b7280;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;">'+t.nombre+'</div>'+
+      '<div style="font-size:44px;font-weight:900;line-height:1;color:'+(vacio?'#d1d5db':'#7c3aed')+';">'+d.rollos+'</div>'+
+      '<div style="font-size:12px;color:#9ca3af;margin-top:4px;">rollos</div>'+
+      (d.kg>0?'<div style="font-size:12px;font-weight:600;color:#374151;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;">'+d.kg.toLocaleString('es-AR')+' kg</div>':'')+'</div>';
   });
   html+='</div>';
-  var totCant=activos.reduce(function(s,m){return s+Number(m.cantidad);},0);
-  var totVal=activos.reduce(function(s,m){return s+Number(m.cantidad)*Number(m.precio_unitario);},0);
-  html+='<div class="panel"><div class="panel-hdr"><h4>Detalle por categoría</h4></div>'+
-    '<div class="tbl"><table><thead><tr>'+
-    '<th>Categoría</th><th>Materiales</th><th style="text-align:right">Cantidad</th><th style="text-align:right">Valor stock</th>'+
-    '</tr></thead><tbody>';
-  catArr.forEach(function(e){
-    var cat=e[0]; var d=e[1];
-    var bg=MAT_CAT_BG[cat]||'#f3f4f6'; var clr=MAT_CAT_COLOR[cat]||'#374151';
-    html+='<tr>'+
-      '<td><span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:'+bg+';color:'+clr+';">'+cat+'</span></td>'+
-      '<td>'+d.items+'</td>'+
-      '<td style="text-align:right;font-weight:600;">'+Number(d.cantidad).toLocaleString('es-AR')+'</td>'+
-      '<td style="text-align:right;font-weight:700;">'+$p(d.valor)+'</td>'+
-    '</tr>';
-  });
-  html+='<tr style="border-top:2px solid #e5e7eb;font-weight:700;"><td>TOTAL</td><td>'+activos.length+'</td>'+
-    '<td style="text-align:right;">'+Number(totCant).toLocaleString('es-AR')+'</td>'+
-    '<td style="text-align:right;">'+$p(totVal)+'</td></tr>';
-  html+='</tbody></table></div></div>';
   cont.innerHTML=html;
 }
 
