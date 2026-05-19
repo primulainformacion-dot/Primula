@@ -200,7 +200,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="nav-group">
     <div class="nav-label">General</div>
     <div class="nav-item active" onclick="nav('inicio',this)"><span class="ni">🏠</span> Inicio</div>
-    <div class="nav-item" onclick="nav('semana',this)"><span class="ni">📅</span> Control semanal</div>
   </div>
 
   <div class="nav-group">
@@ -270,53 +269,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="panel">
         <div class="panel-hdr"><h4>Clientes con deuda</h4><button class="btn btn-sm btn-outline" onclick="nav('clientes',null)">Ver todos</button></div>
         <div id="dash-deudas"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ════════════ CONTROL SEMANAL ════════════ -->
-  <div class="section" id="sec-semana">
-    <!-- Barra de control -->
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:20px;">
-      <div style="font-size:13px;font-weight:700;color:#6b7280;">Horizonte de análisis:</div>
-      <div id="sem-horizon-tabs" style="display:flex;gap:6px;">
-        <button class="tab active" onclick="setSemHorizon(7,this)">7 días</button>
-        <button class="tab" onclick="setSemHorizon(14,this)">14 días</button>
-        <button class="tab" onclick="setSemHorizon(30,this)">30 días</button>
-      </div>
-      <button class="btn btn-gray btn-sm" style="margin-left:auto;" onclick="renderSemana()">↻ Actualizar</button>
-    </div>
-
-    <!-- Resultado principal -->
-    <div id="sem-resultado-card" style="margin-bottom:20px;"></div>
-
-    <!-- Grilla principal: compromisos + disponible -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
-      <div>
-        <div style="font-size:11px;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;">COMPROMISOS — Lo que hay que pagar</div>
-        <div id="sem-compromisos-cards" style="display:flex;flex-direction:column;gap:10px;"></div>
-        <div id="sem-total-compromisos" style="margin-top:10px;"></div>
-      </div>
-      <div>
-        <div style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;">DISPONIBLE — Lo que tengo y espero recibir</div>
-        <div id="sem-disponible-cards" style="display:flex;flex-direction:column;gap:10px;"></div>
-        <div id="sem-total-disponible" style="margin-top:10px;"></div>
-      </div>
-    </div>
-
-    <!-- Detalle en 3 columnas -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
-      <div class="panel">
-        <div class="panel-hdr"><h4>📝 Cheques propios a vencer</h4></div>
-        <div id="sem-chqp-tabla"></div>
-      </div>
-      <div class="panel">
-        <div class="panel-hdr"><h4>🧾 Cheques a cobrar</h4></div>
-        <div id="sem-chqc-tabla"></div>
-      </div>
-      <div class="panel">
-        <div class="panel-hdr"><h4>📊 Ingresos por negocio (últ. 4 sem.)</h4></div>
-        <div id="sem-ingresos-tabla"></div>
       </div>
     </div>
   </div>
@@ -819,12 +771,57 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
     <!-- Tabs -->
     <div class="tabs" id="pan-tabs">
-      <div class="tab active" onclick="setPanTab('resumen',this)">📊 Resumen financiero</div>
+      <div class="tab active" onclick="setPanTab('semana',this)">📅 Control semanal</div>
+      <div class="tab" onclick="setPanTab('resumen',this)">📊 Resumen financiero</div>
       <div class="tab" onclick="setPanTab('objetivos',this)">🎯 Objetivos</div>
     </div>
 
+    <!-- Tab: Control semanal -->
+    <div id="pan-tab-semana">
+      <!-- Barra de control -->
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:20px;margin-top:4px;">
+        <div style="font-size:13px;font-weight:700;color:#6b7280;">Horizonte de análisis:</div>
+        <div id="sem-horizon-tabs" style="display:flex;gap:6px;">
+          <button class="tab active" onclick="setSemHorizon(7,this)">7 días</button>
+          <button class="tab" onclick="setSemHorizon(14,this)">14 días</button>
+          <button class="tab" onclick="setSemHorizon(30,this)">30 días</button>
+        </div>
+        <button class="btn btn-gray btn-sm" style="margin-left:auto;" onclick="renderSemana()">↻ Actualizar</button>
+      </div>
+      <!-- Resultado principal -->
+      <div id="sem-resultado-card" style="margin-bottom:20px;"></div>
+      <!-- Grilla: compromisos + disponible -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div>
+          <div style="font-size:11px;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;">COMPROMISOS — Lo que hay que pagar</div>
+          <div id="sem-compromisos-cards" style="display:flex;flex-direction:column;gap:10px;"></div>
+          <div id="sem-total-compromisos" style="margin-top:10px;"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;">DISPONIBLE — Lo que tengo y espero recibir</div>
+          <div id="sem-disponible-cards" style="display:flex;flex-direction:column;gap:10px;"></div>
+          <div id="sem-total-disponible" style="margin-top:10px;"></div>
+        </div>
+      </div>
+      <!-- Detalle en 3 columnas -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+        <div class="panel">
+          <div class="panel-hdr"><h4>📝 Cheques propios a vencer</h4></div>
+          <div id="sem-chqp-tabla"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><h4>🧾 Cheques a cobrar</h4></div>
+          <div id="sem-chqc-tabla"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><h4>📊 Ingresos por negocio (últ. 4 sem.)</h4></div>
+          <div id="sem-ingresos-tabla"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Tab: Resumen -->
-    <div id="pan-tab-resumen">
+    <div id="pan-tab-resumen" style="display:none;">
 
       <!-- TARJETAS MACRO: activos / pasivos / neto -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:22px;">
@@ -1953,13 +1950,35 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 <!-- Tallerista (alta / edición) -->
 <!-- Modal: Editar transferencia entre cajas -->
 <div class="modal-bg" id="m-edit-transf">
-  <div class="modal" style="max-width:420px;">
+  <div class="modal" style="max-width:440px;">
     <h3>✏️ Editar transferencia</h3>
-    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:600;color:#0369a1;" id="et-info"></div>
-    <div class="field"><label>Monto *</label><input type="number" id="et-monto" min="0" placeholder="0"/></div>
-    <div class="field"><label>Fecha *</label><input type="date" id="et-fecha"/></div>
-    <div class="field"><label>Detalle</label><input id="et-detalle" placeholder="Motivo de la transferencia"/></div>
-    <div class="field"><label>Referencia / Comprobante</label><input id="et-ref" placeholder="Nº transferencia, cheque..."/></div>
+    <div class="grid2">
+      <div class="field">
+        <label>Desde (caja origen) *</label>
+        <select id="et-desde"></select>
+      </div>
+      <div class="field">
+        <label>Hacia (caja destino) *</label>
+        <select id="et-hacia"></select>
+      </div>
+      <div class="field">
+        <label>Monto *</label>
+        <input type="number" id="et-monto" min="0" placeholder="0"/>
+      </div>
+      <div class="field">
+        <label>Fecha *</label>
+        <input type="date" id="et-fecha"/>
+      </div>
+      <div class="field full">
+        <label>Detalle</label>
+        <input id="et-detalle" placeholder="Motivo de la transferencia"/>
+      </div>
+      <div class="field full">
+        <label>Referencia / Comprobante</label>
+        <input id="et-ref" placeholder="Nº transferencia, cheque..."/>
+      </div>
+    </div>
+    <div id="et-warn" style="display:none;background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:12px;color:#92400e;"></div>
     <div style="display:flex;gap:8px;margin-top:18px;">
       <button class="btn btn-green" onclick="saveEditTransf()" style="flex:1;">Guardar cambios</button>
       <button class="btn btn-gray" onclick="closeM('m-edit-transf')">Cancelar</button>
@@ -3037,12 +3056,11 @@ function nav(sec, el){
   if(el) el.classList.add('active');
   document.getElementById('pg-title').textContent=el?el.textContent.trim():sec;
   document.getElementById('pg-sub').textContent='';
-  if(sec==='panel'){renderPanelGeneral();}
+  if(sec==='panel'){renderSemana();}
   if(sec==='finanzas'){renderFinCajas();renderFin();}
   if(sec==='cheques'){renderChqResumen();renderChqCartera();renderChqPropios();}
   if(sec==='productos'){renderResumenColegios();}
   if(sec==='materiales'){renderMateriales();}
-  if(sec==='semana'){renderSemana();}
 }
 
 function navLocal(local, tab, el){
@@ -5441,11 +5459,14 @@ function renderFlujoCajas(anio,mes){
 
 // ── PANEL TABS ──
 function setPanTab(tab,el){
+  document.getElementById('pan-tab-semana').style.display=tab==='semana'?'block':'none';
   document.getElementById('pan-tab-resumen').style.display=tab==='resumen'?'block':'none';
   document.getElementById('pan-tab-objetivos').style.display=tab==='objetivos'?'block':'none';
   document.querySelectorAll('#pan-tabs .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
+  if(tab==='semana')renderSemana();
   if(tab==='objetivos')renderObjetivos();
+  if(tab==='resumen')renderPanelGeneral();
 }
 
 // ── VENTAS POR CANAL ──
@@ -9388,7 +9409,10 @@ function renderTransfHistorial(){
   // Construir pares desde→hacia usando transferencia_ref
   var refs={};
   transfAll.forEach(function(m){
-    var r=m.transferencia_ref||('_'+m.id);
+    // Clave: transferencia_ref > referencia cuando empieza con TRANSF- > id individual
+    var r=m.transferencia_ref
+      ||(m.referencia&&m.referencia.indexOf('TRANSF-')===0?m.referencia:null)
+      ||('_'+m.id);
     if(!refs[r])refs[r]={fecha:m.fecha,mes:m.mes,detalle:m.detalle,referencia:m.referencia,monto:0,desde:'',hacia:'',idEgr:null,idIng:null};
     if(Number(m.egreso)>0){refs[r].desde=m.caja;refs[r].monto=Number(m.egreso);refs[r].idEgr=m.id;}
     if(Number(m.ingreso)>0){refs[r].hacia=m.caja;refs[r].idIng=m.id;}
@@ -9403,15 +9427,18 @@ function renderTransfHistorial(){
     '<th>Fecha</th><th>Desde</th><th></th><th>Hacia</th><th style="text-align:right">Monto</th><th>Detalle</th><th></th>'+
     '</tr></thead><tbody>'+
     pares.map(function(p){
+      var incompleto=!p.idEgr||!p.idIng||!p.desde||!p.hacia;
       var colorD=CAJA_COLORES[p.desde]||'#6b7280';
       var colorH=CAJA_COLORES[p.hacia]||'#6b7280';
       var esc=function(s){return (s||'').replace(/'/g,"\\'");};
       var editCall="openEditTransf("+p.idEgr+","+p.idIng+",'"+esc(p.desde)+"','"+esc(p.hacia)+"',"+p.monto+",'"+p.fecha+"','"+esc(p.detalle)+"','"+esc(p.referencia)+"')";
-      return '<tr>'+
-        '<td style="font-size:12px;white-space:nowrap;">'+p.fecha+'</td>'+
-        '<td><span style="font-size:11px;font-weight:700;color:'+colorD+';">'+p.desde+'</span></td>'+
+      var desdeLabel=p.desde?('<span style="font-size:11px;font-weight:700;color:'+colorD+';">'+p.desde+'</span>'):'<span style="font-size:11px;color:#dc2626;font-style:italic;">sin origen</span>';
+      var haciaLabel=p.hacia?('<span style="font-size:11px;font-weight:700;color:'+colorH+';">'+p.hacia+'</span>'):'<span style="font-size:11px;color:#dc2626;font-style:italic;">sin destino</span>';
+      return '<tr style="'+(incompleto?'background:#fffbeb;':'')+'">'+
+        '<td style="font-size:12px;white-space:nowrap;">'+fmtF(p.fecha)+(incompleto?'<br><span style="font-size:10px;color:#d97706;font-weight:700;">⚠ incompleto</span>':'')+'</td>'+
+        '<td>'+desdeLabel+'</td>'+
         '<td style="color:#9ca3af;font-size:14px;">→</td>'+
-        '<td><span style="font-size:11px;font-weight:700;color:'+colorH+';">'+p.hacia+'</span></td>'+
+        '<td>'+haciaLabel+'</td>'+
         '<td style="text-align:right;font-weight:700;color:#374151;">'+$p(p.monto)+'</td>'+
         '<td style="font-size:11px;color:#6b7280;">'+(p.detalle||'—')+'</td>'+
         '<td><button class="btn btn-gray btn-sm" onclick="'+editCall+'" title="Editar">✏️</button></td>'+
@@ -9422,27 +9449,60 @@ function renderTransfHistorial(){
 // ── EDITAR TRANSFERENCIA ──
 var _etIdEgr=null,_etIdIng=null;
 function openEditTransf(idEgr,idIng,desde,hacia,monto,fecha,detalle,ref){
-  _etIdEgr=idEgr;_etIdIng=idIng;
-  document.getElementById('et-info').textContent=desde+' → '+hacia;
-  document.getElementById('et-monto').value=monto;
-  document.getElementById('et-fecha').value=fecha;
+  _etIdEgr=idEgr; _etIdIng=idIng;
+  // Poblar selectores de caja
+  var opts=CAJAS_SISTEMA.map(function(c){return '<option>'+c+'</option>';}).join('');
+  document.getElementById('et-desde').innerHTML=opts;
+  document.getElementById('et-hacia').innerHTML=opts;
+  if(desde)document.getElementById('et-desde').value=desde;
+  if(hacia)document.getElementById('et-hacia').value=hacia;
+  document.getElementById('et-monto').value=monto||'';
+  document.getElementById('et-fecha').value=fecha||'';
   document.getElementById('et-detalle').value=detalle||'';
   document.getElementById('et-ref').value=ref||'';
+  // Avisar si el par estaba incompleto
+  var warn=document.getElementById('et-warn');
+  var incompleto=!idEgr||!idIng||!desde||!hacia;
+  if(incompleto){
+    warn.style.display='block';
+    warn.textContent='⚠ Este registro estaba incompleto. Completá las cajas y guardá para corregirlo.';
+  } else {
+    warn.style.display='none';
+  }
   openM('m-edit-transf');
 }
 async function saveEditTransf(){
+  var desde=document.getElementById('et-desde').value;
+  var hacia=document.getElementById('et-hacia').value;
   var monto=parseFloat(document.getElementById('et-monto').value)||0;
   var fecha=document.getElementById('et-fecha').value;
   var detalle=document.getElementById('et-detalle').value.trim()||null;
   var ref=document.getElementById('et-ref').value.trim()||null;
   if(!monto){toast('Ingresá un monto','err');return;}
   if(!fecha){toast('Ingresá una fecha','err');return;}
-  var anio=new Date(fecha+'T12:00:00').getFullYear();
-  var mes=MESES_ARR[new Date(fecha+'T12:00:00').getMonth()];
-  var base={fecha,anio,mes,detalle,referencia:ref,updated_at:new Date().toISOString()};
-  var r1=await sb.from('movimientos').update({...base,egreso:monto,ingreso:0}).eq('id',_etIdEgr);
-  var r2=await sb.from('movimientos').update({...base,ingreso:monto,egreso:0}).eq('id',_etIdIng);
-  if(r1.error||r2.error){toast('Error al guardar','err');return;}
+  if(desde===hacia){toast('La caja origen y destino no pueden ser la misma','err');return;}
+  var d=new Date(fecha+'T12:00:00');
+  var anio=d.getFullYear(); var mes=MESES_ARR[d.getMonth()];
+  var tref=ref||'TRANSF-'+Date.now();
+  var base={fecha,anio,mes,detalle,referencia:tref,transferencia_ref:tref,updated_at:new Date().toISOString()};
+  var huboError=false;
+  if(_etIdEgr){
+    var r1=await sb.from('movimientos').update({...base,caja:desde,egreso:monto,ingreso:0,tipo:'transferencia'}).eq('id',_etIdEgr);
+    if(r1.error){toast('Error en movimiento origen: '+r1.error.message,'err');huboError=true;}
+  } else {
+    // Crear el movimiento egreso que faltaba
+    var r1b=await sb.from('movimientos').insert({...base,caja:desde,egreso:monto,ingreso:0,tipo:'transferencia',concepto:'TRANSFERENCIA',sem:0});
+    if(r1b.error){toast('Error creando movimiento origen','err');huboError=true;}
+  }
+  if(_etIdIng){
+    var r2=await sb.from('movimientos').update({...base,caja:hacia,ingreso:monto,egreso:0,tipo:'transferencia'}).eq('id',_etIdIng);
+    if(r2.error){toast('Error en movimiento destino: '+r2.error.message,'err');huboError=true;}
+  } else {
+    // Crear el movimiento ingreso que faltaba
+    var r2b=await sb.from('movimientos').insert({...base,caja:hacia,ingreso:monto,egreso:0,tipo:'transferencia',concepto:'TRANSFERENCIA',sem:0});
+    if(r2b.error){toast('Error creando movimiento destino','err');huboError=true;}
+  }
+  if(huboError)return;
   toast('Transferencia actualizada');
   closeM('m-edit-transf');
   await loadMovs();
