@@ -3132,7 +3132,7 @@ function renderSemana(){
   // 4) Saldo líquido (efectivo + bancos + MP)
   var cajasLiq=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','LOCAL LLAVALLOL','LOCAL MONTE GRANDE'];
   var saldoPorCaja={};
-  MOVIMIENTOS.forEach(function(m){
+  MOVS.forEach(function(m){
     if(cajasLiq.indexOf(m.caja)===-1)return;
     if(!saldoPorCaja[m.caja])saldoPorCaja[m.caja]=0;
     saldoPorCaja[m.caja]+=Number(m.ingreso||0)-Number(m.egreso||0);
@@ -3149,7 +3149,7 @@ function renderSemana(){
   var chqCartMonto=chqCartCobrar.reduce(function(s,c){return s+Number(c.monto||0);},0);
 
   // 6) Promedio semanal de ingresos (últimas 4 semanas, sin transferencias)
-  var ingresosUlt=MOVIMIENTOS.filter(function(m){
+  var ingresosUlt=MOVS.filter(function(m){
     var f=new Date(m.fecha+'T12:00:00');
     return f>=hace28&&f<hoy&&Number(m.ingreso||0)>0&&m.tipo!=='transferencia';
   });
@@ -3279,7 +3279,7 @@ function renderSemana(){
   var totalPorSem=[0,0,0,0];
   negocios.forEach(function(neg){
     var porSem=semanas.map(function(sem){
-      return MOVIMIENTOS.filter(function(m){
+      return MOVS.filter(function(m){
         if(neg.cajas.indexOf(m.caja)===-1)return false;
         if(neg.conceptos&&neg.conceptos.indexOf(m.concepto)===-1)return false;
         if(Number(m.ingreso||0)===0)return false;
