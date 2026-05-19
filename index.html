@@ -1350,6 +1350,8 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="tabs" style="margin-bottom:18px;" id="ped-tabs">
       <button class="tab active" onclick="setPedTab('resumen',this)">📊 Resumen</button>
       <button class="tab" onclick="setPedTab('lista',this)">📋 Pedidos</button>
+      <button class="tab" onclick="setPedTab('insumos',this)">🧶 Insumos a utilizar</button>
+      <button class="tab" onclick="setPedTab('sugeridas',this)">📐 Tizadas sugeridas</button>
     </div>
 
     <!-- Tab Resumen -->
@@ -1368,9 +1370,10 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div id="ped-tab-lista" style="display:none;">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
         <select id="ped-fil-cli" onchange="renderPedidos()" style="min-width:180px;"><option value="">Todos los clientes</option></select>
-        <select id="ped-fil-car" onchange="renderPedidos()" style="min-width:130px;">
-          <option value="">Urgente + Stock</option>
+        <select id="ped-fil-car" onchange="renderPedidos()" style="min-width:140px;">
+          <option value="">Todos los caracteres</option>
           <option value="URGENTE">🚨 Urgente</option>
+          <option value="IMPORTANTE">⭐ Importante</option>
           <option value="STOCK">📦 Stock</option>
         </select>
         <select id="ped-fil-est" onchange="renderPedidos()" style="min-width:140px;">
@@ -1383,6 +1386,16 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <button class="btn" style="margin-left:auto;" onclick="openPedidoModal()">+ Nuevo pedido</button>
       </div>
       <div id="ped-lista"></div>
+    </div>
+
+    <!-- Tab Insumos -->
+    <div id="ped-tab-insumos" style="display:none;">
+      <div id="ped-insumos-cont"></div>
+    </div>
+
+    <!-- Tab Tizadas sugeridas -->
+    <div id="ped-tab-sugeridas" style="display:none;">
+      <div id="ped-sugeridas-cont"></div>
     </div>
   </div>
 
@@ -2010,6 +2023,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="field"><label>Carácter</label>
         <select id="mp-caracter" style="width:100%;">
           <option value="URGENTE">🚨 URGENTE</option>
+          <option value="IMPORTANTE">⭐ IMPORTANTE</option>
           <option value="STOCK">📦 STOCK</option>
         </select>
       </div>
@@ -2030,13 +2044,13 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <!-- Items -->
     <div style="font-size:12px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Ítems del pedido</div>
     <div style="overflow-x:auto;background:#f9fafb;border-radius:10px;padding:12px;">
-      <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:500px;">
+      <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:620px;">
         <thead>
           <tr style="background:#f3f4f6;">
             <th style="padding:6px 8px;text-align:left;min-width:150px;">Prenda</th>
-            <th style="padding:6px 8px;min-width:80px;">Tela</th>
-            <th style="padding:6px 8px;min-width:80px;">Color</th>
-            <th style="padding:6px 8px;min-width:60px;">Talle</th>
+            <th style="padding:6px 8px;min-width:90px;">Tela</th>
+            <th style="padding:6px 8px;min-width:110px;">Color</th>
+            <th style="padding:6px 8px;min-width:72px;">Talle</th>
             <th style="padding:6px 8px;text-align:right;min-width:70px;">Cantidad</th>
             <th style="padding:6px 8px;text-align:right;min-width:70px;">Kg/prenda</th>
             <th style="padding:6px 8px;min-width:32px;"></th>
@@ -7296,6 +7310,7 @@ async function loadTizadas(){ var {data}=await sb.from('tizadas').select('*').or
 async function loadTizadasItems(){ var {data}=await sb.from('tizadas_items').select('*'); TIZADAS_ITEMS=data||[]; }
 
 var COLORES_TELAS=['MARINO','NEGRO','GRIS MELANGE','GRIS TOPO','GRIS PERLA','BLANCO','ROJO','BORDO','FRANCIA','AMARILLO','NARANJA','BEIGE','CELESTE','VERDE'];
+var TALLES_PRENDAS=['XS','S','M','L','XL','XXL','3XL','4XL','5XL','6XL','7XL','8XL','UNICO'];
 
 var matSort={col:null,dir:'asc'};
 var matCatFiltro='TODOS';
@@ -11361,7 +11376,7 @@ async function deleteTizada(id){
 // ══════════════════════════════════════════════════════════
 
 function setPedTab(tab, el){
-  ['resumen','lista'].forEach(function(t){
+  ['resumen','lista','insumos','sugeridas'].forEach(function(t){
     var d=document.getElementById('ped-tab-'+t);
     if(d)d.style.display=t===tab?'block':'none';
   });
@@ -11369,6 +11384,252 @@ function setPedTab(tab, el){
   if(el)el.classList.add('active');
   if(tab==='resumen')renderPedResumen();
   if(tab==='lista')renderPedidos();
+  if(tab==='insumos')renderInsumos();
+  if(tab==='sugeridas')renderTizadasSugeridas();
+}
+
+// ── INSUMOS A UTILIZAR ──────────────────────────────────
+function renderInsumos(){
+  var cont=document.getElementById('ped-insumos-cont');
+  if(!cont)return;
+
+  // Ítems de pedidos en proceso con pendiente de tizada
+  var pedIds=PEDIDOS.filter(function(p){return p.estado==='en_proceso';}).map(function(p){return p.id;});
+  var items=PEDIDOS_ITEMS.filter(function(i){
+    return pedIds.includes(i.pedido_id)&&Number(i.cantidad)>Number(i.tizada);
+  });
+
+  if(!items.length){
+    cont.innerHTML='<div class="empty"><div class="ei">🧶</div><p>No hay prendas pendientes de tizada</p></div>';
+    return;
+  }
+
+  // Agrupar por tela + color
+  var grupos={};
+  items.forEach(function(i){
+    var tela=i.tela||'SIN TELA', color=i.color||'SIN COLOR';
+    var k=tela+'|||'+color;
+    if(!grupos[k])grupos[k]={tela:tela,color:color,prendas:0,kg:0};
+    var pend=Number(i.cantidad)-Number(i.tizada);
+    grupos[k].prendas+=pend;
+    grupos[k].kg+=pend*Number(i.peso_prenda);
+  });
+
+  var filas=Object.values(grupos).sort(function(a,b){
+    return a.tela.localeCompare(b.tela)||a.color.localeCompare(b.color);
+  });
+
+  // Cruzar con stock de telas
+  var kgPorRollo=function(tela){
+    var t=TELAS_TIPOS.find(function(x){return x.nombre===tela;});
+    return t?Number(t.kg_por_rollo)||20:20;
+  };
+  var stockKg=function(tela,color){
+    var s=TELAS_STOCK.find(function(x){return x.tipo_tela===tela&&x.color===color;});
+    if(!s)return 0;
+    return Number(s.rollos)*kgPorRollo(tela);
+  };
+  var stockRollos=function(tela,color){
+    var s=TELAS_STOCK.find(function(x){return x.tipo_tela===tela&&x.color===color;});
+    return s?Number(s.rollos):0;
+  };
+
+  var totPrendas=filas.reduce(function(s,f){return s+f.prendas;},0);
+  var totKg=filas.reduce(function(s,f){return s+f.kg;},0);
+
+  var html='<div class="panel"><div style="margin-bottom:12px;font-size:13px;color:#6b7280;">'
+    +'Prendas pendientes de tizada en pedidos activos — <strong>'+totPrendas+' prendas · '+totKg.toFixed(2)+' kg estimados</strong>'
+    +'</div>'
+    +'<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;border-collapse:collapse;">'
+    +'<thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">'
+    +'<th style="padding:8px;text-align:left;">Tela</th>'
+    +'<th style="padding:8px;text-align:left;">Color</th>'
+    +'<th style="padding:8px;text-align:right;">Prendas pendientes</th>'
+    +'<th style="padding:8px;text-align:right;">Kg necesarios</th>'
+    +'<th style="padding:8px;text-align:right;">Rollos en stock</th>'
+    +'<th style="padding:8px;text-align:right;">Kg en stock</th>'
+    +'<th style="padding:8px;text-align:right;">Diferencia kg</th>'
+    +'<th style="padding:8px;text-align:right;">Rollos a pedir</th>'
+    +'</tr></thead><tbody>'
+    +filas.map(function(f){
+      var kgPR=kgPorRollo(f.tela);
+      var sKg=stockKg(f.tela,f.color);
+      var sRollos=stockRollos(f.tela,f.color);
+      var diff=sKg-f.kg;
+      var falta=diff<0?Math.ceil(Math.abs(diff)/kgPR):0;
+      var okColor=diff>=0?'#16a34a':'#dc2626';
+      var rowBg=diff<0?'#fff5f5':diff===0?'':'';
+      return '<tr style="border-bottom:1px solid #f3f4f6;background:'+rowBg+';">'
+        +'<td style="padding:7px 8px;font-weight:700;">'+f.tela+'</td>'
+        +'<td style="padding:7px 8px;">'
+        +'<span style="display:inline-flex;align-items:center;gap:6px;">'
+        +'<span style="width:12px;height:12px;border-radius:50%;background:'+_colorHex(f.color)+';border:1px solid #e5e7eb;display:inline-block;"></span>'
+        +f.color+'</span></td>'
+        +'<td style="padding:7px 8px;text-align:right;font-weight:600;">'+f.prendas+'</td>'
+        +'<td style="padding:7px 8px;text-align:right;">'+f.kg.toFixed(2)+' kg</td>'
+        +'<td style="padding:7px 8px;text-align:right;">'+sRollos+' rollos</td>'
+        +'<td style="padding:7px 8px;text-align:right;">'+sKg.toFixed(2)+' kg</td>'
+        +'<td style="padding:7px 8px;text-align:right;font-weight:700;color:'+okColor+';">'+(diff>=0?'+':'')+diff.toFixed(2)+' kg</td>'
+        +'<td style="padding:7px 8px;text-align:right;font-weight:700;color:'+(falta>0?'#dc2626':'#16a34a')+';"> '+(falta>0?falta+' rollos':'✓')+'</td>'
+        +'</tr>';
+    }).join('')
+    +'<tr style="background:#f3f4f6;font-weight:700;border-top:2px solid #e5e7eb;">'
+    +'<td colspan="2" style="padding:8px;">TOTAL</td>'
+    +'<td style="padding:8px;text-align:right;">'+totPrendas+'</td>'
+    +'<td style="padding:8px;text-align:right;">'+totKg.toFixed(2)+' kg</td>'
+    +'<td colspan="4"></td></tr>'
+    +'</tbody></table></div></div>';
+  cont.innerHTML=html;
+}
+
+function _colorHex(nombre){
+  var map={'MARINO':'#1e3a5f','NEGRO':'#111111','GRIS MELANGE':'#9ca3af','GRIS TOPO':'#6b7280',
+    'GRIS PERLA':'#d1d5db','BLANCO':'#f9fafb','ROJO':'#dc2626','BORDO':'#7f1d1d',
+    'FRANCIA':'#2563eb','AMARILLO':'#fbbf24','NARANJA':'#f97316','BEIGE':'#d4b896',
+    'CELESTE':'#7dd3fc','VERDE':'#16a34a'};
+  return map[nombre]||'#e5e7eb';
+}
+
+function pedCarBadge(car){
+  if(car==='URGENTE') return '<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">🚨 URGENTE</span>';
+  if(car==='IMPORTANTE') return '<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">⭐ IMPORTANTE</span>';
+  return '<span style="background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">📦 STOCK</span>';
+}
+
+var CAR_ORDEN={URGENTE:0,IMPORTANTE:1,STOCK:2};
+
+// ── TIZADAS SUGERIDAS ────────────────────────────────────
+function renderTizadasSugeridas(){
+  var cont=document.getElementById('ped-sugeridas-cont');
+  if(!cont)return;
+
+  var pedActivos=PEDIDOS.filter(function(p){return p.estado==='en_proceso';});
+  var pedIds=pedActivos.map(function(p){return p.id;});
+  var items=PEDIDOS_ITEMS.filter(function(i){
+    return pedIds.includes(i.pedido_id)&&Number(i.cantidad)>Number(i.tizada);
+  });
+
+  if(!items.length){
+    cont.innerHTML='<div class="empty"><div class="ei">📐</div><p>No hay prendas pendientes de tizada</p></div>';
+    return;
+  }
+
+  // Rendimiento histórico por tela
+  var histTela={};
+  TIZADAS.filter(function(t){return t.estado==='completado';}).forEach(function(t){
+    TIZADAS_ITEMS.filter(function(ti){return ti.tizada_id===t.id;}).forEach(function(ti){
+      var pi=PEDIDOS_ITEMS.find(function(x){return x.id===ti.pedido_item_id;});
+      if(!pi||!pi.tela)return;
+      if(!histTela[pi.tela])histTela[pi.tela]={prendas:0,kg:0,tizadas:new Set()};
+      histTela[pi.tela].prendas+=Number(ti.cantidad_cortada);
+      histTela[pi.tela].kg+=Number(ti.cantidad_cortada)*Number(pi.peso_prenda);
+      histTela[pi.tela].tizadas.add(t.id);
+    });
+  });
+
+  // Agrupar pendientes por tela
+  var porTela={};
+  items.forEach(function(i){
+    var tela=i.tela||'SIN TELA';
+    if(!porTela[tela])porTela[tela]={tela:tela,filas:[],totalPrendas:0,totalKg:0,colores:new Set(),tieneUrgente:false,tieneImportante:false};
+    var pend=Number(i.cantidad)-Number(i.tizada);
+    var ped=pedActivos.find(function(p){return p.id===i.pedido_id;});
+    var cli=ped&&CLIENTES.find(function(c){return c.id===ped.cliente_id;});
+    var car=ped?ped.caracter:'STOCK';
+    if(car==='URGENTE')porTela[tela].tieneUrgente=true;
+    if(car==='IMPORTANTE')porTela[tela].tieneImportante=true;
+    porTela[tela].filas.push({i:i,pend:pend,ped:ped,cli:cli,car:car});
+    porTela[tela].totalPrendas+=pend;
+    porTela[tela].totalKg+=pend*Number(i.peso_prenda);
+    if(i.color)porTela[tela].colores.add(i.color);
+  });
+
+  var kgPorRollo=function(tela){
+    var t=TELAS_TIPOS.find(function(x){return x.nombre===tela;});
+    return t?Number(t.kg_por_rollo)||20:20;
+  };
+
+  // Ordenar grupos: primero los que tienen URGENTE, luego IMPORTANTE, luego STOCK
+  // Dentro de cada grupo: filas ordenadas por prioridad de carácter
+  var grupos=Object.values(porTela).sort(function(a,b){
+    var pa=a.tieneUrgente?0:a.tieneImportante?1:2;
+    var pb=b.tieneUrgente?0:b.tieneImportante?1:2;
+    return pa-pb||b.totalPrendas-a.totalPrendas;
+  });
+  grupos.forEach(function(g){
+    g.filas.sort(function(a,b){
+      return (CAR_ORDEN[a.car]||2)-(CAR_ORDEN[b.car]||2)||b.pend-a.pend;
+    });
+  });
+
+  cont.innerHTML='<div style="margin-bottom:12px;background:#ede9fe;border-radius:10px;padding:12px 16px;font-size:13px;color:#5b21b6;">'
+    +'📐 <strong>Agrupación sugerida por tela</strong> — cada bloque es una tizada potencial. '
+    +'Los ítems 🚨 URGENTE y ⭐ IMPORTANTE aparecen primero. '
+    +'<span style="opacity:.7;">Recomendación con IA próximamente.</span>'
+    +'</div>'
+    +grupos.map(function(g){
+      var hist=histTela[g.tela];
+      var kgPR=kgPorRollo(g.tela);
+      var rollosEst=g.totalKg>0?Math.ceil(g.totalKg/kgPR):0;
+
+      // Badge de prioridad del grupo
+      var priBadge=g.tieneUrgente
+        ?'<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">🚨 Tiene URGENTES</span>'
+        :g.tieneImportante
+          ?'<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">⭐ Tiene IMPORTANTES</span>'
+          :'<span style="background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:10px;font-size:11px;">📦 Solo STOCK</span>';
+
+      var borderColor=g.tieneUrgente?'#dc2626':g.tieneImportante?'#f59e0b':'#6c7ae0';
+
+      var histHTML=hist&&hist.prendas>0
+        ?'<span style="background:#f0fdf4;color:#15803d;padding:2px 8px;border-radius:10px;font-size:11px;">📈 '+hist.tizadas.size+' tizadas · prom. '+(hist.kg/hist.prendas).toFixed(3)+' kg/prenda</span>'
+        :'<span style="background:#f9fafb;color:#9ca3af;padding:2px 8px;border-radius:10px;font-size:11px;">Sin historial de corte</span>';
+
+      var coloresStr=Array.from(g.colores).join(', ')||'—';
+
+      var itemsHTML='<div style="overflow-x:auto;margin-top:10px;">'
+        +'<table style="width:100%;font-size:12px;border-collapse:collapse;">'
+        +'<thead><tr style="background:#f9fafb;">'
+        +'<th style="padding:5px 8px;text-align:left;">Carácter</th>'
+        +'<th style="padding:5px 8px;text-align:left;">Pedido · Cliente</th>'
+        +'<th style="padding:5px 8px;text-align:left;">Prenda</th>'
+        +'<th style="padding:5px 8px;">Color</th>'
+        +'<th style="padding:5px 8px;">Talle</th>'
+        +'<th style="padding:5px 8px;text-align:right;">Pend. tizada</th>'
+        +'<th style="padding:5px 8px;text-align:right;">Kg est.</th>'
+        +'</tr></thead><tbody>'
+        +g.filas.map(function(f){
+          var rowBg=f.car==='URGENTE'?'#fff5f5':f.car==='IMPORTANTE'?'#fffbeb':'';
+          return '<tr style="border-bottom:1px solid #f3f4f6;background:'+rowBg+';">'
+            +'<td style="padding:4px 8px;">'+pedCarBadge(f.car)+'</td>'
+            +'<td style="padding:4px 8px;font-size:11px;"><strong>#'+(f.ped?f.ped.nro_pedido:'?')+'</strong> <span style="color:#9ca3af;">'+(f.cli?f.cli.nombre:'—')+'</span></td>'
+            +'<td style="padding:4px 8px;font-weight:600;">'+f.i.prenda+'</td>'
+            +'<td style="padding:4px 8px;text-align:center;">'+(f.i.color||'—')+'</td>'
+            +'<td style="padding:4px 8px;text-align:center;">'+(f.i.talle||'—')+'</td>'
+            +'<td style="padding:4px 8px;text-align:right;font-weight:700;">'+f.pend+'</td>'
+            +'<td style="padding:4px 8px;text-align:right;">'+(f.pend*Number(f.i.peso_prenda)).toFixed(2)+' kg</td>'
+            +'</tr>';
+        }).join('')
+        +'<tr style="background:#f9fafb;font-weight:700;border-top:2px solid #e5e7eb;">'
+        +'<td colspan="5" style="padding:5px 8px;">TOTAL '+g.tela+'</td>'
+        +'<td style="padding:5px 8px;text-align:right;">'+g.totalPrendas+'</td>'
+        +'<td style="padding:5px 8px;text-align:right;">'+g.totalKg.toFixed(2)+' kg</td>'
+        +'</tr></tbody></table></div>';
+
+      return '<div class="panel" style="margin-bottom:14px;border-left:4px solid '+borderColor+';">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">'
+        +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+        +'<span style="font-size:17px;font-weight:800;color:#1f2937;">'+g.tela+'</span>'
+        +priBadge
+        +'<span style="color:#9ca3af;font-size:12px;">Colores: '+coloresStr+'</span>'
+        +'</div>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+        +histHTML
+        +'<span style="font-size:12px;background:#ede9fe;color:#5b21b6;padding:2px 10px;border-radius:10px;font-weight:700;">'+g.totalPrendas+' prendas · '+g.totalKg.toFixed(2)+' kg · ~'+rollosEst+' rollos</span>'
+        +'</div></div>'
+        +itemsHTML
+        +'</div>';
+    }).join('');
 }
 
 function renderPedResumen(){
@@ -11528,9 +11789,7 @@ function renderPedidos(){
     var cli=CLIENTES.find(function(c){return c.id===p.cliente_id;});
     var nomCli=cli?cli.nombre:'—';
 
-    var carBadge=p.caracter==='URGENTE'
-      ?'<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">🚨 URGENTE</span>'
-      :'<span style="background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">📦 STOCK</span>';
+    var carBadge=pedCarBadge(p.caracter);
 
     var estMap={en_proceso:{bg:'#fef3c7',c:'#92400e',t:'En proceso'},completado:{bg:'#d1fae5',c:'#065f46',t:'Completado'},cancelado:{bg:'#fee2e2',c:'#991b1b',t:'Cancelado'}};
     var em=estMap[p.estado]||{bg:'#f3f4f6',c:'#374151',t:p.estado};
@@ -11652,6 +11911,12 @@ function openPedidoModal(id){
 
 function pedAgregarFila(itemId, prenda, tela, color, talle, cantidad, pesoP){
   var prendas=(CONCEPTOS_POR_TIPO['CONFESIÓN']||[]);
+  var telaOpts=TELAS_TIPOS.length
+    ?TELAS_TIPOS.map(function(t){return '<option value="'+t.nombre+'"'+(t.nombre===(tela||'')?' selected':'')+'>'+t.nombre+'</option>';}).join('')
+    :['FRIZA','INTERLOCK','JERSEY','PIQUE','POLAR','RUSTICO'].map(function(t){return '<option value="'+t+'"'+(t===(tela||'')?' selected':'')+'>'+t+'</option>';}).join('');
+  var colorOpts=COLORES_TELAS.map(function(c){return '<option value="'+c+'"'+(c===(color||'')?' selected':'')+'>'+c+'</option>';}).join('');
+  var talleOpts=TALLES_PRENDAS.map(function(t){return '<option value="'+t+'"'+(t===(talle||'')?' selected':'')+'>'+t+'</option>';}).join('');
+
   var tb=document.getElementById('ped-items-tbody');
   var tr=document.createElement('tr');
   if(itemId)tr.setAttribute('data-item-id',itemId);
@@ -11660,9 +11925,9 @@ function pedAgregarFila(itemId, prenda, tela, color, talle, cantidad, pesoP){
   }).join('');
   tr.innerHTML=
     '<td><select style="width:150px;font-size:12px;">'+pOpts+'</select></td>'
-    +'<td><input type="text" value="'+(tela||'')+'" style="width:78px;font-size:12px;" placeholder="POLAR"/></td>'
-    +'<td><input type="text" value="'+(color||'')+'" style="width:78px;font-size:12px;" placeholder="NEGRO"/></td>'
-    +'<td><input type="text" value="'+(talle||'')+'" style="width:58px;font-size:12px;" placeholder="M"/></td>'
+    +'<td><select style="width:90px;font-size:12px;"><option value="">—</option>'+telaOpts+'</select></td>'
+    +'<td><select style="width:110px;font-size:12px;"><option value="">—</option>'+colorOpts+'</select></td>'
+    +'<td><select style="width:72px;font-size:12px;"><option value="">—</option>'+talleOpts+'</select></td>'
     +'<td><input type="number" value="'+(cantidad||0)+'" min="0" style="width:68px;font-size:12px;text-align:right;" oninput="pedActualizarTotales()"/></td>'
     +'<td><input type="number" value="'+(pesoP||0)+'" min="0" step="0.01" style="width:68px;font-size:12px;text-align:right;" oninput="pedActualizarTotales()"/></td>'
     +'<td><button style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;font-size:14px;" onclick="this.closest(\'tr\').remove();pedActualizarTotales()">✕</button></td>';
@@ -11694,15 +11959,14 @@ async function savePedido(){
   var rows=Array.from(document.querySelectorAll('#ped-items-tbody tr'));
   if(!rows.length){toast('Agregá al menos un ítem','err');return;}
   var items=rows.map(function(r){
-    var sel=r.querySelector('select');
+    var sels=r.querySelectorAll('select');
     var nums=r.querySelectorAll('input[type=number]');
-    var txts=r.querySelectorAll('input[type=text]');
     return{
       _itemId:r.getAttribute('data-item-id')?parseInt(r.getAttribute('data-item-id')):null,
-      prenda:sel?sel.value:'',
-      tela:(txts[0]?txts[0].value.trim().toUpperCase():'')||null,
-      color:(txts[1]?txts[1].value.trim().toUpperCase():'')||null,
-      talle:(txts[2]?txts[2].value.trim().toUpperCase():'')||null,
+      prenda:sels[0]?sels[0].value:'',
+      tela:(sels[1]?sels[1].value:'')||null,
+      color:(sels[2]?sels[2].value:'')||null,
+      talle:(sels[3]?sels[3].value:'')||null,
       cantidad:parseInt(nums[0]?nums[0].value:0)||0,
       peso_prenda:parseFloat(nums[1]?nums[1].value:0)||0
     };
