@@ -200,6 +200,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="nav-group">
     <div class="nav-label">General</div>
     <div class="nav-item active" onclick="nav('inicio',this)"><span class="ni">🏠</span> Inicio</div>
+    <div class="nav-item" onclick="nav('semana',this)"><span class="ni">📅</span> Control semanal</div>
   </div>
 
   <div class="nav-group">
@@ -269,6 +270,53 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="panel">
         <div class="panel-hdr"><h4>Clientes con deuda</h4><button class="btn btn-sm btn-outline" onclick="nav('clientes',null)">Ver todos</button></div>
         <div id="dash-deudas"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ CONTROL SEMANAL ════════════ -->
+  <div class="section" id="sec-semana">
+    <!-- Barra de control -->
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:700;color:#6b7280;">Horizonte de análisis:</div>
+      <div id="sem-horizon-tabs" style="display:flex;gap:6px;">
+        <button class="tab active" onclick="setSemHorizon(7,this)">7 días</button>
+        <button class="tab" onclick="setSemHorizon(14,this)">14 días</button>
+        <button class="tab" onclick="setSemHorizon(30,this)">30 días</button>
+      </div>
+      <button class="btn btn-gray btn-sm" style="margin-left:auto;" onclick="renderSemana()">↻ Actualizar</button>
+    </div>
+
+    <!-- Resultado principal -->
+    <div id="sem-resultado-card" style="margin-bottom:20px;"></div>
+
+    <!-- Grilla principal: compromisos + disponible -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+      <div>
+        <div style="font-size:11px;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;">COMPROMISOS — Lo que hay que pagar</div>
+        <div id="sem-compromisos-cards" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <div id="sem-total-compromisos" style="margin-top:10px;"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;">DISPONIBLE — Lo que tengo y espero recibir</div>
+        <div id="sem-disponible-cards" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <div id="sem-total-disponible" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- Detalle en 3 columnas -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+      <div class="panel">
+        <div class="panel-hdr"><h4>📝 Cheques propios a vencer</h4></div>
+        <div id="sem-chqp-tabla"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><h4>🧾 Cheques a cobrar</h4></div>
+        <div id="sem-chqc-tabla"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><h4>📊 Ingresos por negocio (últ. 4 sem.)</h4></div>
+        <div id="sem-ingresos-tabla"></div>
       </div>
     </div>
   </div>
@@ -2994,6 +3042,7 @@ function nav(sec, el){
   if(sec==='cheques'){renderChqResumen();renderChqCartera();renderChqPropios();}
   if(sec==='productos'){renderResumenColegios();}
   if(sec==='materiales'){renderMateriales();}
+  if(sec==='semana'){renderSemana();}
 }
 
 function navLocal(local, tab, el){
@@ -3040,6 +3089,222 @@ function poblarSelectProductos(){
   PRODUCTOS.filter(function(p){return p.activo;}).forEach(function(p){
     var o=document.createElement('option');o.value=p.id;o.textContent=p.nombre+(p.codigo?' ('+p.codigo+')':'');s.appendChild(o);
   });
+}
+
+// ════════════════════════════════════
+// CONTROL SEMANAL
+// ════════════════════════════════════
+var _semHorizon=14;
+
+function setSemHorizon(dias,el){
+  _semHorizon=dias;
+  document.querySelectorAll('#sem-horizon-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  if(el)el.classList.add('active');
+  renderSemana();
+}
+
+function renderSemana(){
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+  var limite=new Date(hoy.getTime()+_semHorizon*86400000);
+  var hace28=new Date(hoy.getTime()-28*86400000);
+
+  // ── COMPROMISOS ──────────────────────────────────────────
+  // 1) Sueldos semanales (personal activo)
+  var sueldoSem=PERSONAL.filter(function(p){return p.activo;})
+    .reduce(function(s,p){return s+Number(p.sueldo_semanal||0);},0);
+
+  // 2) Gastos fijos → equivalente semanal (mensual / 4.33)
+  var gastosFijosSemanales=GASTOS_FIJOS.filter(function(g){return g.activo;})
+    .reduce(function(s,g){return s+Number(g.monto||0)/(FREC_MESES[g.frecuencia||'mensual']*4.33);},0);
+  gastosFijosSemanales=Math.round(gastosFijosSemanales);
+
+  // 3) Cheques propios a vencer en el horizonte
+  var chqPropVencer=CHEQUES_PROPIOS.filter(function(c){
+    if(c.estado!=='pendiente')return false;
+    var f=new Date(c.fecha_pago+'T12:00:00');
+    return f>=hoy&&f<=limite;
+  });
+  var chqPropMonto=chqPropVencer.reduce(function(s,c){return s+Number(c.monto||0);},0);
+
+  var totalCompromisos=sueldoSem+gastosFijosSemanales+chqPropMonto;
+
+  // ── DISPONIBLE ───────────────────────────────────────────
+  // 4) Saldo líquido (efectivo + bancos + MP)
+  var cajasLiq=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','LOCAL LLAVALLOL','LOCAL MONTE GRANDE'];
+  var saldoPorCaja={};
+  MOVIMIENTOS.forEach(function(m){
+    if(cajasLiq.indexOf(m.caja)===-1)return;
+    if(!saldoPorCaja[m.caja])saldoPorCaja[m.caja]=0;
+    saldoPorCaja[m.caja]+=Number(m.ingreso||0)-Number(m.egreso||0);
+  });
+  var saldoLiquido=Object.values(saldoPorCaja).reduce(function(s,v){return s+v;},0);
+
+  // 5) Cheques en cartera a cobrar en el horizonte
+  var chqCartCobrar=CHEQUES_CARTERA.filter(function(c){
+    if(c.estado!=='en_cartera')return false;
+    if(!c.fecha_cobro)return false;
+    var f=new Date(c.fecha_cobro+'T12:00:00');
+    return f>=hoy&&f<=limite;
+  });
+  var chqCartMonto=chqCartCobrar.reduce(function(s,c){return s+Number(c.monto||0);},0);
+
+  // 6) Promedio semanal de ingresos (últimas 4 semanas, sin transferencias)
+  var ingresosUlt=MOVIMIENTOS.filter(function(m){
+    var f=new Date(m.fecha+'T12:00:00');
+    return f>=hace28&&f<hoy&&Number(m.ingreso||0)>0&&m.tipo!=='transferencia';
+  });
+  var totalIngUlt=ingresosUlt.reduce(function(s,m){return s+Number(m.ingreso||0);},0);
+  var promSemanal=Math.round(totalIngUlt/4);
+
+  var totalDisponible=Math.round(saldoLiquido)+chqCartMonto;
+
+  // ── RESULTADO ────────────────────────────────────────────
+  var resultado=totalDisponible-totalCompromisos;
+  var alcanza=resultado>=0;
+
+  // ── RENDER: resultado principal ───────────────────────────
+  var resCont=document.getElementById('sem-resultado-card');
+  var diffLabel=alcanza
+    ? 'Cubrís todos los compromisos y te sobran <strong>'+$p(Math.abs(resultado))+'</strong>'
+    : 'Te <strong style="color:#dc2626;">faltan '+$p(Math.abs(resultado))+'</strong> para cubrir todos los compromisos';
+  var ventaExtra=!alcanza?Math.round(Math.abs(resultado)*1.15):0; // +15% margen
+  resCont.innerHTML=
+    '<div style="background:'+(alcanza?'#f0fdf4':'#fff5f5')+';border:2px solid '+(alcanza?'#16a34a':'#dc2626')+';border-radius:16px;padding:24px 28px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">'+
+      '<div style="font-size:36px;">'+(alcanza?'✅':'⚠️')+'</div>'+
+      '<div style="flex:1;">'+
+        '<div style="font-size:11px;font-weight:800;color:'+(alcanza?'#166534':'#991b1b')+';text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px;">Resultado del período — próximos '+_semHorizon+' días</div>'+
+        '<div style="font-size:28px;font-weight:900;color:'+(alcanza?'#16a34a':'#dc2626')+';">'+$p(Math.round(Math.abs(resultado)))+'</div>'+
+        '<div style="font-size:13px;color:#4b5563;margin-top:6px;">'+diffLabel+'</div>'+
+        (!alcanza?'<div style="margin-top:10px;background:#fee2e2;border-radius:8px;padding:8px 14px;display:inline-block;font-size:13px;color:#991b1b;font-weight:600;">Para cubrir el déficit necesitás vender aprox. <strong>'+$p(ventaExtra)+'</strong></div>':'<div style="margin-top:10px;background:#dcfce7;border-radius:8px;padding:8px 14px;display:inline-block;font-size:13px;color:#166534;font-weight:600;">Promedio semanal de ingresos: <strong>'+$p(promSemanal)+'</strong></div>')+
+      '</div>'+
+    '</div>';
+
+  // ── RENDER: cards compromisos ─────────────────────────────
+  var cc=document.getElementById('sem-compromisos-cards');
+  function semCard(icon,titulo,monto,sub,color){
+    return '<div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-left:4px solid '+color+';display:flex;align-items:center;gap:14px;">'+
+      '<div style="font-size:22px;">'+icon+'</div>'+
+      '<div><div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;">'+titulo+'</div>'+
+      '<div style="font-size:19px;font-weight:900;color:#1a1f36;line-height:1.2;">'+$p(Math.round(monto))+'</div>'+
+      (sub?'<div style="font-size:11px;color:#9ca3af;margin-top:2px;">'+sub+'</div>':'')+
+      '</div></div>';
+  }
+  cc.innerHTML=
+    semCard('👤','Sueldos del personal',sueldoSem,PERSONAL.filter(function(p){return p.activo;}).length+' empleados activos — pago semanal','#6c7ae0')+
+    semCard('📌','Gastos fijos (equiv. semanal)',gastosFijosSemanales,'Prorrateado de '+$p(Math.round(gastosFijosSemanales*4.33))+'/mes','#f59e0b')+
+    semCard('📝','Cheques propios a vencer',chqPropMonto,chqPropVencer.length+' cheque'+(chqPropVencer.length!==1?'s':'')+' en los próximos '+_semHorizon+' días','#dc2626');
+
+  document.getElementById('sem-total-compromisos').innerHTML=
+    '<div style="background:#1a1f36;border-radius:12px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">'+
+    '<span style="font-size:12px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;">TOTAL COMPROMISOS</span>'+
+    '<span style="font-size:22px;font-weight:900;color:#f87171;">'+$p(Math.round(totalCompromisos))+'</span></div>';
+
+  // ── RENDER: cards disponible ──────────────────────────────
+  var dc=document.getElementById('sem-disponible-cards');
+  dc.innerHTML=
+    semCard('💵','Saldo líquido actual',Math.round(saldoLiquido),'Efectivo + Bancos + Mercado Pago + Locales','#16a34a')+
+    semCard('🧾','Cheques a cobrar',chqCartMonto,chqCartCobrar.length+' cheque'+(chqCartCobrar.length!==1?'s':'')+' con vencimiento en '+_semHorizon+' días','#0ea5e9')+
+    semCard('📈','Prom. ingresos semanal',promSemanal,'Basado en los últimos 28 días','#8b5cf6');
+
+  document.getElementById('sem-total-disponible').innerHTML=
+    '<div style="background:#166534;border-radius:12px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">'+
+    '<span style="font-size:12px;font-weight:800;color:#bbf7d0;text-transform:uppercase;letter-spacing:1px;">TOTAL DISPONIBLE</span>'+
+    '<span style="font-size:22px;font-weight:900;color:#4ade80;">'+$p(Math.round(totalDisponible))+'</span></div>';
+
+  // ── RENDER: tabla cheques propios a vencer ────────────────
+  var tp=document.getElementById('sem-chqp-tabla');
+  if(chqPropVencer.length===0){
+    tp.innerHTML='<div style="text-align:center;color:#9ca3af;padding:20px;font-size:13px;">No hay cheques a vencer en este período</div>';
+  } else {
+    var chqpSort=chqPropVencer.slice().sort(function(a,b){return a.fecha_pago>b.fecha_pago?1:-1;});
+    tp.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+      '<thead><tr><th style="text-align:left;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Vence</th><th style="text-align:left;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Destinatario</th><th style="text-align:right;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Monto</th></tr></thead>'+
+      '<tbody>'+chqpSort.map(function(c){
+        var diasR=Math.round((new Date(c.fecha_pago+'T12:00:00')-hoy)/86400000);
+        var urgente=diasR<=3;
+        return '<tr style="border-top:1px solid #f3f4f6;">'+
+          '<td style="padding:7px 6px;"><span style="font-size:11px;font-weight:700;color:'+(urgente?'#dc2626':'#374151')+';">'+fmtF(c.fecha_pago)+'</span><br><span style="font-size:10px;color:#9ca3af;">en '+diasR+' día'+(diasR!==1?'s':'')+'</span></td>'+
+          '<td style="padding:7px 6px;color:#374151;">'+(c.destinatario||'—')+'</td>'+
+          '<td style="padding:7px 6px;text-align:right;font-weight:700;color:#dc2626;">'+$p(Number(c.monto))+'</td>'+
+        '</tr>';
+      }).join('')+
+      '<tr style="border-top:2px solid #e5e7eb;"><td colspan="2" style="padding:8px 6px;font-weight:800;font-size:11px;color:#374151;text-transform:uppercase;letter-spacing:.5px;">Total</td><td style="padding:8px 6px;text-align:right;font-weight:900;color:#dc2626;">'+$p(chqPropMonto)+'</td></tr>'+
+      '</tbody></table>';
+  }
+
+  // ── RENDER: tabla cheques cartera a cobrar ────────────────
+  var tc=document.getElementById('sem-chqc-tabla');
+  if(chqCartCobrar.length===0){
+    tc.innerHTML='<div style="text-align:center;color:#9ca3af;padding:20px;font-size:13px;">No hay cheques a cobrar en este período</div>';
+  } else {
+    var chqcSort=chqCartCobrar.slice().sort(function(a,b){return a.fecha_cobro>b.fecha_cobro?1:-1;});
+    tc.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+      '<thead><tr><th style="text-align:left;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Cobro</th><th style="text-align:left;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Emisor</th><th style="text-align:right;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Monto</th></tr></thead>'+
+      '<tbody>'+chqcSort.map(function(c){
+        var diasR=Math.round((new Date(c.fecha_cobro+'T12:00:00')-hoy)/86400000);
+        return '<tr style="border-top:1px solid #f3f4f6;">'+
+          '<td style="padding:7px 6px;"><span style="font-size:11px;font-weight:700;color:#0ea5e9;">'+fmtF(c.fecha_cobro)+'</span><br><span style="font-size:10px;color:#9ca3af;">en '+diasR+' día'+(diasR!==1?'s':'')+'</span></td>'+
+          '<td style="padding:7px 6px;color:#374151;">'+(c.emisor||'—')+'</td>'+
+          '<td style="padding:7px 6px;text-align:right;font-weight:700;color:#0ea5e9;">'+$p(Number(c.monto))+'</td>'+
+        '</tr>';
+      }).join('')+
+      '<tr style="border-top:2px solid #e5e7eb;"><td colspan="2" style="padding:8px 6px;font-weight:800;font-size:11px;color:#374151;text-transform:uppercase;letter-spacing:.5px;">Total</td><td style="padding:8px 6px;text-align:right;font-weight:900;color:#0ea5e9;">'+$p(chqCartMonto)+'</td></tr>'+
+      '</tbody></table>';
+  }
+
+  // ── RENDER: ingresos por negocio últimas 4 semanas ────────
+  var ti=document.getElementById('sem-ingresos-tabla');
+  var negocios=[
+    {label:'Mayorista',cajas:['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY'],conceptos:['VENTA MAYORISTA','COBRO CLIENTE']},
+    {label:'Local Llavallol',cajas:['LOCAL LLAVALLOL'],conceptos:null},
+    {label:'Local Monte Grande',cajas:['LOCAL MONTE GRANDE'],conceptos:null},
+    {label:'Mercado Pago',cajas:['MERCADO PAGO'],conceptos:null}
+  ];
+  // Calcular por semana (4 semanas)
+  var semanas=[
+    {label:'Sem 1 (hace 4)',desde:new Date(hoy.getTime()-28*86400000),hasta:new Date(hoy.getTime()-21*86400000)},
+    {label:'Sem 2 (hace 3)',desde:new Date(hoy.getTime()-21*86400000),hasta:new Date(hoy.getTime()-14*86400000)},
+    {label:'Sem 3 (hace 2)',desde:new Date(hoy.getTime()-14*86400000),hasta:new Date(hoy.getTime()-7*86400000)},
+    {label:'Ult. semana',desde:new Date(hoy.getTime()-7*86400000),hasta:hoy}
+  ];
+  var negIngHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+    '<thead><tr>'+
+      '<th style="text-align:left;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Negocio</th>'+
+      '<th style="text-align:right;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">S1</th>'+
+      '<th style="text-align:right;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">S2</th>'+
+      '<th style="text-align:right;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">S3</th>'+
+      '<th style="text-align:right;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">S4</th>'+
+      '<th style="text-align:right;padding:4px 6px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Prom.</th>'+
+    '</tr></thead><tbody>';
+  var totalPorSem=[0,0,0,0];
+  negocios.forEach(function(neg){
+    var porSem=semanas.map(function(sem){
+      return MOVIMIENTOS.filter(function(m){
+        if(neg.cajas.indexOf(m.caja)===-1)return false;
+        if(neg.conceptos&&neg.conceptos.indexOf(m.concepto)===-1)return false;
+        if(Number(m.ingreso||0)===0)return false;
+        if(m.tipo==='transferencia')return false;
+        var f=new Date(m.fecha+'T12:00:00');
+        return f>=sem.desde&&f<sem.hasta;
+      }).reduce(function(s,m){return s+Number(m.ingreso||0);},0);
+    });
+    porSem.forEach(function(v,i){totalPorSem[i]+=v;});
+    var prom=Math.round(porSem.reduce(function(s,v){return s+v;},0)/4);
+    negIngHTML+='<tr style="border-top:1px solid #f3f4f6;">'+
+      '<td style="padding:7px 6px;font-weight:600;color:#374151;font-size:11px;">'+neg.label+'</td>'+
+      porSem.map(function(v){return '<td style="padding:7px 6px;text-align:right;font-size:11px;color:'+(v>0?'#374151':'#d1d5db')+';">'+(v>0?'$'+Math.round(v/1000)+'k':'—')+'</td>';}).join('')+
+      '<td style="padding:7px 6px;text-align:right;font-weight:800;color:#6c7ae0;font-size:11px;">$'+Math.round(prom/1000)+'k</td>'+
+    '</tr>';
+  });
+  var totalProm=Math.round(totalPorSem.reduce(function(s,v){return s+v;},0)/4);
+  negIngHTML+='<tr style="border-top:2px solid #e5e7eb;">'+
+    '<td style="padding:8px 6px;font-weight:900;font-size:11px;text-transform:uppercase;color:#1a1f36;">Total</td>'+
+    totalPorSem.map(function(v){return '<td style="padding:8px 6px;text-align:right;font-weight:800;font-size:11px;color:#374151;">'+(v>0?'$'+Math.round(v/1000)+'k':'—')+'</td>';}).join('')+
+    '<td style="padding:8px 6px;text-align:right;font-weight:900;color:#6c7ae0;font-size:12px;">$'+Math.round(totalProm/1000)+'k</td>'+
+  '</tr>';
+  negIngHTML+='</tbody></table>'+
+    '<div style="margin-top:10px;font-size:10px;color:#9ca3af;text-align:center;">S = semana · k = miles de pesos</div>';
+  ti.innerHTML=negIngHTML;
 }
 
 // ════════════════════════════════════
