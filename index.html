@@ -5319,20 +5319,59 @@ function renderObjetivos(){
     html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">';
     customs.forEach(function(o){
       var logrado=!!o.logrado;
-      var oc1="openObjetivoModal('custom','"+o.canal.replace(/'/g,"\\'")+"',"+o.anio+','+ms_(o.mes)+','+o.id+')';
-      var oc2="toggleObjetivoLogrado('custom','"+o.canal.replace(/'/g,"\\'")+"',"+o.anio+','+ms_(o.mes)+','+o.id+')';
-      html+='<div style="border:2px solid '+(logrado?'#16a34a':'#e5e7eb')+';border-radius:14px;padding:14px 16px;background:'+(logrado?'#f0fdf4':'#fff')+';">'+
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'+
+      var canal=o.canal.replace(/'/g,"\\'");
+      var oc1="openObjetivoModal('custom','"+canal+"',"+o.anio+','+ms_(o.mes)+','+o.id+')';
+      var oc2="toggleObjetivoLogrado('custom','"+canal+"',"+o.anio+','+ms_(o.mes)+','+o.id+')';
+      var metas=OBJ_METAS.filter(function(m){return m.objetivo_id===o.id;});
+      var mComp=metas.filter(function(m){return m.completada;}).length;
+      var mPct=metas.length?Math.round(mComp/metas.length*100):0;
+      var mClr=mPct>=100?'#16a34a':mPct>=60?'#7c3aed':'#f59e0b';
+
+      // Metas checklist
+      var metaHtml='';
+      if(metas.length||true){ // always show add input
+        metaHtml+='<div style="margin:10px 0 6px;padding:10px;background:#f9fafb;border-radius:8px;border:1px solid #f3f4f6;">';
+        if(metas.length){
+          metaHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'+
+            '<span style="font-size:10px;color:#9ca3af;font-weight:700;letter-spacing:.4px;text-transform:uppercase;">METAS</span>'+
+            '<span style="font-size:10px;font-weight:800;color:'+mClr+';">'+mComp+'/'+metas.length+'</span>'+
+          '</div>';
+          metaHtml+='<div style="background:#e5e7eb;border-radius:4px;height:4px;margin-bottom:8px;">'+
+            '<div style="height:4px;background:'+mClr+';border-radius:4px;width:'+mPct+'%;transition:width .4s;"></div></div>';
+          metas.forEach(function(m){
+            metaHtml+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'+
+              '<input type="checkbox" '+(m.completada?'checked':'')+' onchange="toggleMeta('+m.id+',this.checked)" '+
+              'style="width:14px;height:14px;cursor:pointer;accent-color:#7c3aed;flex-shrink:0;">'+
+              '<span style="font-size:12px;color:'+(m.completada?'#9ca3af':'#374151')+';flex:1;line-height:1.3;'+(m.completada?'text-decoration:line-through;':'')+'">'+m.texto+'</span>'+
+              '<button onclick="deleteMeta('+m.id+')" style="border:none;background:none;cursor:pointer;color:#d1d5db;font-size:11px;padding:1px 3px;line-height:1;flex-shrink:0;">✕</button>'+
+            '</div>';
+          });
+        }
+        metaHtml+='<div style="display:flex;gap:4px;margin-top:'+(metas.length?'6':'0')+'px;">'+
+          '<input id="nm_'+o.id+'" placeholder="+ Nueva meta..." '+
+          'style="flex:1;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;" '+
+          'onkeydown="if(event.key===\'Enter\')addMeta('+o.id+')">'+
+          '<button class="btn btn-sm btn-gray" onclick="addMeta('+o.id+')" style="padding:4px 10px;font-weight:700;">+</button>'+
+        '</div>';
+        metaHtml+='</div>';
+      }
+
+      html+='<div style="border:2px solid '+(logrado?'#16a34a':'#e5e7eb')+';border-radius:14px;padding:14px 16px;background:'+(logrado?'#f0fdf4':'#fff')+';display:flex;flex-direction:column;">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'+
           '<span style="font-size:18px;">🎯</span>'+
-          '<div style="font-size:12px;font-weight:800;color:'+(logrado?'#166534':'#374151')+';flex:1;">'+o.canal+'</div>'+
-          (logrado?'<span style="font-size:9px;font-weight:800;color:#16a34a;background:#dcfce7;padding:2px 7px;border-radius:20px;">🎯</span>':'')+
+          '<div style="font-size:12px;font-weight:800;color:'+(logrado?'#166534':'#374151')+';flex:1;line-height:1.2;">'+o.canal+'</div>'+
+          (logrado?'<span style="font-size:9px;font-weight:800;color:#16a34a;background:#dcfce7;padding:2px 7px;border-radius:20px;white-space:nowrap;">✓ LOGRADO</span>':'')+
         '</div>'+
-        (Number(o.meta_pesos||0)>0?'<div style="font-size:11px;color:#6b7280;margin-bottom:3px;">Meta $: <strong>'+$p(Number(o.meta_pesos))+'</strong></div>':'')+
-        (Number(o.meta_unidades||0)>0?'<div style="font-size:11px;color:#6b7280;margin-bottom:3px;">Meta unidades: <strong>'+Number(o.meta_unidades)+'</strong></div>':'')+
-        (o.nota?'<div style="font-size:11px;color:#9ca3af;margin-bottom:8px;font-style:italic;">'+o.nota+'</div>':'')+
-        '<div style="display:flex;gap:6px;margin-top:8px;">'+
-          '<button class="btn btn-gray btn-sm" onclick="'+oc1+'">✏️ Editar</button>'+
-          '<button class="btn btn-sm" onclick="'+oc2+'" style="'+(logrado?'background:#dcfce7;color:#166534;border-color:#bbf7d0;':'background:#f9fafb;color:#374151;border-color:#e5e7eb;')+'">'+(logrado?'✓ Logrado':'Marcar logrado')+'</button>'+
+        (Number(o.meta_pesos||0)>0?'<div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Meta $: <strong>'+$p(Number(o.meta_pesos))+'</strong></div>':'')+
+        (Number(o.meta_unidades||0)>0?'<div style="font-size:11px;color:#6b7280;margin-bottom:2px;">Meta unidades: <strong>'+Number(o.meta_unidades)+'</strong></div>':'')+
+        (o.nota?'<div style="font-size:11px;color:#9ca3af;font-style:italic;margin-bottom:2px;">'+o.nota+'</div>':'')+
+        metaHtml+
+        '<div style="display:flex;align-items:center;gap:6px;margin-top:auto;padding-top:6px;">'+
+          '<button class="btn btn-gray btn-sm" onclick="'+oc1+'" style="padding:4px 8px;">✏️</button>'+
+          '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:5px 10px;border-radius:8px;border:1px solid '+(logrado?'#bbf7d0':'#e5e7eb')+';background:'+(logrado?'#dcfce7':'#f9fafb')+';flex:1;justify-content:center;">'+
+            '<input type="checkbox" '+(logrado?'checked':'')+' onchange="'+oc2+'" style="width:14px;height:14px;cursor:pointer;accent-color:#16a34a;flex-shrink:0;">'+
+            '<span style="font-size:11px;font-weight:700;color:'+(logrado?'#166534':'#6b7280')+';white-space:nowrap;">'+(logrado?'✓ Logrado':'Logrado')+'</span>'+
+          '</label>'+
         '</div>'+
       '</div>';
     });
@@ -5392,6 +5431,30 @@ async function deleteObjetivo(){
   toast('Objetivo eliminado','info');
   closeM('m-obj');
   await loadObjetivos();
+  renderObjetivos();
+}
+
+async function toggleMeta(id,completada){
+  var m=OBJ_METAS.find(function(x){return x.id===id;});
+  if(m)m.completada=completada;
+  await sb.from('objetivo_metas').update({completada:completada,updated_at:new Date().toISOString()}).eq('id',id);
+  renderObjetivos();
+}
+
+async function addMeta(objId){
+  var inp=document.getElementById('nm_'+objId);
+  var texto=inp?inp.value.trim():'';
+  if(!texto)return;
+  var orden=OBJ_METAS.filter(function(m){return m.objetivo_id===objId;}).length;
+  var {data,error}=await sb.from('objetivo_metas').insert({objetivo_id:objId,texto,orden,completada:false}).select().single();
+  if(error){toast('Error: '+error.message,'err');return;}
+  OBJ_METAS.push(data);
+  renderObjetivos();
+}
+
+async function deleteMeta(id){
+  OBJ_METAS=OBJ_METAS.filter(function(m){return m.id!==id;});
+  await sb.from('objetivo_metas').delete().eq('id',id);
   renderObjetivos();
 }
 
