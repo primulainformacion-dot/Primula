@@ -1176,6 +1176,12 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           </div>
         </div>
         <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;" id="chq-stats"></div>
+        <!-- Barra de selección -->
+        <div id="chq-sel-bar" style="display:none;background:#1e40af;border-radius:10px;padding:10px 16px;margin-bottom:12px;display:none;align-items:center;gap:16px;flex-wrap:wrap;">
+          <span style="font-size:13px;font-weight:800;color:#fff;" id="chq-sel-count">0 seleccionados</span>
+          <span style="font-size:18px;font-weight:900;color:#93c5fd;" id="chq-sel-total">$0</span>
+          <button onclick="chqDeselAll()" style="margin-left:auto;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px;">✕ Limpiar selección</button>
+        </div>
         <div class="tbl"><table>
           <thead id="chq-thead"><tr></tr></thead>
           <tbody id="chq-tbody"></tbody>
@@ -1416,7 +1422,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
     <!-- Tab: Transferencia entre cajas -->
     <div id="ft-transferencia" style="display:none;">
-      <div class="two-col">
+      <div style="display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start;">
         <div class="panel">
           <div class="panel-hdr"><h4>🔄 Nueva transferencia entre cajas</h4></div>
           <div style="display:flex;flex-direction:column;gap:12px;">
@@ -1897,6 +1903,22 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 </div>
 
 <!-- Tallerista (alta / edición) -->
+<!-- Modal: Editar transferencia entre cajas -->
+<div class="modal-bg" id="m-edit-transf">
+  <div class="modal" style="max-width:420px;">
+    <h3>✏️ Editar transferencia</h3>
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:600;color:#0369a1;" id="et-info"></div>
+    <div class="field"><label>Monto *</label><input type="number" id="et-monto" min="0" placeholder="0"/></div>
+    <div class="field"><label>Fecha *</label><input type="date" id="et-fecha"/></div>
+    <div class="field"><label>Detalle</label><input id="et-detalle" placeholder="Motivo de la transferencia"/></div>
+    <div class="field"><label>Referencia / Comprobante</label><input id="et-ref" placeholder="Nº transferencia, cheque..."/></div>
+    <div style="display:flex;gap:8px;margin-top:18px;">
+      <button class="btn btn-green" onclick="saveEditTransf()" style="flex:1;">Guardar cambios</button>
+      <button class="btn btn-gray" onclick="closeM('m-edit-transf')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="m-tal">
   <div class="modal">
     <h3 id="m-tal-title">Nuevo tallerista</h3>
@@ -5818,7 +5840,9 @@ function renderChqCartera(){
     var tipoBadge=c.tipo==='echeq'
       ?'<span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:10px;">ECHEQ</span>'
       :'<span class="badge" style="background:#f3f4f6;color:#374151;font-size:10px;">Cheque</span>';
-    return '<tr style="'+rowBg+'">'+
+    var chkd=!!CHQ_SELECCION[c.id];
+    return '<tr style="'+rowBg+(chkd?'outline:2px solid #3b82f6;outline-offset:-1px;':'')+'" id="chq-row-'+c.id+'">'+
+      '<td style="padding:4px 6px;"><input type="checkbox" '+(chkd?'checked':'')+' onchange="toggleChqSel('+c.id+','+c.monto+',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d4ed8;"></td>'+
       '<td>'+tipoBadge+'</td>'+
       '<td style="font-size:12px;">'+fmtF(c.fecha_recibido)+'</td>'+
       '<td style="font-size:12px;">'+(c.concepto||'—')+'</td>'+
@@ -6613,6 +6637,7 @@ var finSort={col:null,dir:'asc'};
 var FIN_COLS=[{col:'fecha',label:'Fecha'},{col:'caja',label:'Caja'},{col:'tipo',label:'Tipo'},{col:'concepto',label:'Concepto'},{col:'detalle',label:'Detalle'},{col:'ingreso',label:'Ingreso',r:true},{col:'egreso',label:'Egreso',r:true},{col:'referencia',label:'Referencia'},{col:'fecha_vencimiento',label:'Vto.'},{col:null,label:''}];
 
 var chqSort={col:'fecha_recibido',dir:'desc'};
+var CHQ_SELECCION={}; // id → monto
 
 var CHQ_COLS=[
   {col:'tipo',label:'Tipo'},
@@ -6640,8 +6665,8 @@ function renderChqThead(){
     return '<th data-col="'+c.col+'" style="cursor:pointer;white-space:nowrap;padding:8px 6px;user-select:none;'+(c.r?'text-align:right;':'')+'">'
       +c.label+' <span style="font-size:10px;'+arrowStyle+'">'+arrow+'</span></th>';
   }).join('');
-  thead.innerHTML='<tr>'+ths+'<th></th></tr>';
-  // Adjuntar listeners después de insertar el HTML
+  var chkAll='<th style="padding:8px 6px;width:32px;"><input type="checkbox" id="chq-sel-all" title="Seleccionar todos" onchange="chqSelAll(this.checked)" style="cursor:pointer;accent-color:#1d4ed8;"></th>';
+  thead.innerHTML='<tr>'+chkAll+ths+'<th></th></tr>';
   thead.querySelectorAll('th[data-col]').forEach(function(th){
     th.addEventListener('click',function(){
       setChqSort(this.getAttribute('data-col'));
@@ -6653,6 +6678,55 @@ function setChqSort(col){
   chqSort.dir=(chqSort.col===col&&chqSort.dir==='asc')?'desc':'asc';
   chqSort.col=col;
   renderChqCartera();
+}
+
+function toggleChqSel(id,monto,checked){
+  if(checked) CHQ_SELECCION[id]=Number(monto);
+  else delete CHQ_SELECCION[id];
+  _updateChqSelBar();
+  // resaltar fila
+  var row=document.getElementById('chq-row-'+id);
+  if(row) row.style.outline=checked?'2px solid #3b82f6':'';
+}
+function chqSelAll(checked){
+  // actúa sobre todos los cheques visibles en el tbody
+  document.querySelectorAll('#chq-tbody tr').forEach(function(tr){
+    var chk=tr.querySelector('input[type=checkbox]');
+    if(!chk)return;
+    var match=tr.id.match(/^chq-row-(\d+)$/);
+    if(!match)return;
+    var id=parseInt(match[1]);
+    var c=CHEQUES_CARTERA.find(function(x){return x.id===id;});
+    if(!c)return;
+    chk.checked=checked;
+    if(checked) CHQ_SELECCION[id]=Number(c.monto);
+    else delete CHQ_SELECCION[id];
+    tr.style.outline=checked?'2px solid #3b82f6':'';
+  });
+  _updateChqSelBar();
+}
+function chqDeselAll(){
+  CHQ_SELECCION={};
+  var allChk=document.getElementById('chq-sel-all');
+  if(allChk)allChk.checked=false;
+  document.querySelectorAll('#chq-tbody tr').forEach(function(tr){
+    var chk=tr.querySelector('input[type=checkbox]');
+    if(chk)chk.checked=false;
+    tr.style.outline='';
+  });
+  _updateChqSelBar();
+}
+function _updateChqSelBar(){
+  var ids=Object.keys(CHQ_SELECCION);
+  var total=ids.reduce(function(s,k){return s+CHQ_SELECCION[k];},0);
+  var bar=document.getElementById('chq-sel-bar');
+  var countEl=document.getElementById('chq-sel-count');
+  var totalEl=document.getElementById('chq-sel-total');
+  if(!bar)return;
+  if(ids.length===0){bar.style.display='none';return;}
+  bar.style.display='flex';
+  countEl.textContent=ids.length+' cheque'+(ids.length!==1?'s':'')+' seleccionado'+(ids.length!==1?'s':'');
+  totalEl.textContent=$p(total);
 }
 function chqSortVal(c,col){
   if(col==='monto')return Number(c.monto)||0;
@@ -8942,9 +9016,9 @@ function renderTransfHistorial(){
   var refs={};
   transfAll.forEach(function(m){
     var r=m.transferencia_ref||('_'+m.id);
-    if(!refs[r])refs[r]={fecha:m.fecha,mes:m.mes,detalle:m.detalle,monto:0,desde:'',hacia:''};
-    if(Number(m.egreso)>0){refs[r].desde=m.caja;refs[r].monto=Number(m.egreso);}
-    if(Number(m.ingreso)>0){refs[r].hacia=m.caja;}
+    if(!refs[r])refs[r]={fecha:m.fecha,mes:m.mes,detalle:m.detalle,referencia:m.referencia,monto:0,desde:'',hacia:'',idEgr:null,idIng:null};
+    if(Number(m.egreso)>0){refs[r].desde=m.caja;refs[r].monto=Number(m.egreso);refs[r].idEgr=m.id;}
+    if(Number(m.ingreso)>0){refs[r].hacia=m.caja;refs[r].idIng=m.id;}
   });
   var pares=Object.values(refs).filter(function(p){
     return (!filCaja||(p.desde===filCaja||p.hacia===filCaja));
@@ -8953,11 +9027,13 @@ function renderTransfHistorial(){
   if(!pares.length){el.innerHTML='<div class="empty"><p>Sin transferencias para el filtro seleccionado</p></div>';return;}
   el.innerHTML='<div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">'+pares.length+' transferencia'+(pares.length!==1?'s':'')+' · '+anio+'</div>'+
     '<div class="tbl"><table><thead><tr>'+
-    '<th>Fecha</th><th>Desde</th><th></th><th>Hacia</th><th style="text-align:right">Monto</th><th>Detalle</th>'+
+    '<th>Fecha</th><th>Desde</th><th></th><th>Hacia</th><th style="text-align:right">Monto</th><th>Detalle</th><th></th>'+
     '</tr></thead><tbody>'+
     pares.map(function(p){
       var colorD=CAJA_COLORES[p.desde]||'#6b7280';
       var colorH=CAJA_COLORES[p.hacia]||'#6b7280';
+      var esc=function(s){return (s||'').replace(/'/g,"\\'");};
+      var editCall="openEditTransf("+p.idEgr+","+p.idIng+",'"+esc(p.desde)+"','"+esc(p.hacia)+"',"+p.monto+",'"+p.fecha+"','"+esc(p.detalle)+"','"+esc(p.referencia)+"')";
       return '<tr>'+
         '<td style="font-size:12px;white-space:nowrap;">'+p.fecha+'</td>'+
         '<td><span style="font-size:11px;font-weight:700;color:'+colorD+';">'+p.desde+'</span></td>'+
@@ -8965,8 +9041,40 @@ function renderTransfHistorial(){
         '<td><span style="font-size:11px;font-weight:700;color:'+colorH+';">'+p.hacia+'</span></td>'+
         '<td style="text-align:right;font-weight:700;color:#374151;">'+$p(p.monto)+'</td>'+
         '<td style="font-size:11px;color:#6b7280;">'+(p.detalle||'—')+'</td>'+
+        '<td><button class="btn btn-gray btn-sm" onclick="'+editCall+'" title="Editar">✏️</button></td>'+
       '</tr>';
     }).join('')+'</tbody></table></div>';
+}
+
+// ── EDITAR TRANSFERENCIA ──
+var _etIdEgr=null,_etIdIng=null;
+function openEditTransf(idEgr,idIng,desde,hacia,monto,fecha,detalle,ref){
+  _etIdEgr=idEgr;_etIdIng=idIng;
+  document.getElementById('et-info').textContent=desde+' → '+hacia;
+  document.getElementById('et-monto').value=monto;
+  document.getElementById('et-fecha').value=fecha;
+  document.getElementById('et-detalle').value=detalle||'';
+  document.getElementById('et-ref').value=ref||'';
+  openM('m-edit-transf');
+}
+async function saveEditTransf(){
+  var monto=parseFloat(document.getElementById('et-monto').value)||0;
+  var fecha=document.getElementById('et-fecha').value;
+  var detalle=document.getElementById('et-detalle').value.trim()||null;
+  var ref=document.getElementById('et-ref').value.trim()||null;
+  if(!monto){toast('Ingresá un monto','err');return;}
+  if(!fecha){toast('Ingresá una fecha','err');return;}
+  var anio=new Date(fecha+'T12:00:00').getFullYear();
+  var mes=MESES_ARR[new Date(fecha+'T12:00:00').getMonth()];
+  var base={fecha,anio,mes,detalle,referencia:ref,updated_at:new Date().toISOString()};
+  var r1=await sb.from('movimientos').update({...base,egreso:monto,ingreso:0}).eq('id',_etIdEgr);
+  var r2=await sb.from('movimientos').update({...base,ingreso:monto,egreso:0}).eq('id',_etIdIng);
+  if(r1.error||r2.error){toast('Error al guardar','err');return;}
+  toast('Transferencia actualizada');
+  closeM('m-edit-transf');
+  await loadMovs();
+  renderFin();
+  renderTransfHistorial();
 }
 
 // ── RESUMEN DE GASTOS ──
