@@ -5687,34 +5687,21 @@ function renderChqResumen(){
   var cont=document.getElementById('chq-resumen-cont');
   var html='';
 
-  // ── Fila superior: total en cartera + cupo por período ──
-  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:20px;">';
-  // Card total
+  // ── Fila superior: columna izquierda (cartera + total cupo) + buckets de cupo ──
+  // ── Fila superior: solo 2 cards resumen ──
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">';
   html+='<div class="stat" style="border-top:3px solid #7c3aed;">'+
     '<div class="stat-icon" style="background:#ede9fe;">🧾</div>'+
     '<h3 style="color:#7c3aed;">'+$p(totalDisp)+'</h3>'+
     '<p>Disponible en cartera</p>'+
     '<div style="font-size:11px;color:#8b5cf6;">'+enCarteraDisp.length+' cheque'+(enCarteraDisp.length!==1?'s':'')+'</div>'+
   '</div>';
-  // Cards cupo por período (solo los que tienen cheques, siempre las 4 si hay cupo)
-  if(totalCupoOcupado>0){
-    BK_LBL.forEach(function(lbl,i){
-      var bk=cupoBk[i];
-      if(i===3&&bk.c===0)return;
-      html+='<div class="stat" style="border-top:3px solid '+BK_COL[i]+';background:'+BK_BG[i]+';">'+
-        '<div style="font-size:9px;font-weight:800;color:'+BK_COL[i]+';letter-spacing:.6px;margin-bottom:4px;">CUPO A LIBERAR</div>'+
-        '<div style="font-size:10px;font-weight:700;color:#6b7280;margin-bottom:6px;">'+lbl+'</div>'+
-        '<h3 style="color:'+BK_COL[i]+';margin:0 0 4px;">'+$p(bk.t)+'</h3>'+
-        '<div style="font-size:11px;color:#9ca3af;">'+bk.c+' cheque'+(bk.c!==1?'s':'')+' pendiente'+(bk.c!==1?'s':'')+'</div>'+
-      '</div>';
-    });
-  } else {
-    html+='<div class="stat" style="border-top:3px solid #e5e7eb;opacity:.55;">'+
-      '<div style="font-size:9px;font-weight:800;color:#9ca3af;margin-bottom:4px;">CUPO A LIBERAR</div>'+
-      '<h3 style="color:#d1d5db;">$0</h3>'+
-      '<div style="font-size:11px;color:#d1d5db;">Sin cupo ocupado</div>'+
-    '</div>';
-  }
+  html+='<div class="stat" style="border-top:3px solid #0ea5e9;background:#e0f2fe;">'+
+    '<div class="stat-icon" style="background:#bae6fd;">🏦</div>'+
+    '<h3 style="color:#0284c7;">'+$p(totalCupoOcupado)+'</h3>'+
+    '<p style="color:#0369a1;font-weight:700;">Total cupo a liberar</p>'+
+    '<div style="font-size:11px;color:#0369a1;">'+cupoOcupado.length+' cheque'+(cupoOcupado.length!==1?'s':'')+' pendiente'+(cupoOcupado.length!==1?'s':'')+'</div>'+
+  '</div>';
   html+='</div>';
 
   // ── Vista por MES ──
@@ -5740,24 +5727,40 @@ function renderChqResumen(){
   }
   html+='</div>';
 
-  // ── Vista por PERÍODO (4 buckets) ──
+  // ── Vista por PERÍODO (4 buckets · 2 filas: cartera + cupo) ──
   html+='<div class="panel" style="margin-bottom:18px;">';
   html+='<div class="panel-hdr"><h4>📆 Disponibles por período</h4><span style="font-size:12px;color:#9ca3af;">agrupado por fecha de cobro</span></div>';
-  if(!enCarteraDisp.length){
-    html+='<p style="color:#9ca3af;text-align:center;padding:16px;">Sin cheques en cartera</p>';
-  } else {
-    html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:4px 0;">';
-    BK_LBL.forEach(function(lbl,i){
-      var bk=dispBk[i];
-      html+='<div style="background:'+BK_BG[i]+';border:1.5px solid '+BK_COL[i]+'44;border-radius:12px;padding:16px 14px;">'+
-        '<div style="font-size:10px;font-weight:800;color:'+BK_COL[i]+';letter-spacing:.5px;margin-bottom:8px;">'+lbl.toUpperCase()+'</div>'+
-        '<div style="font-size:22px;font-weight:800;color:'+BK_COL[i]+';">'+$p(bk.t)+'</div>'+
-        '<div style="font-size:12px;color:#6b7280;margin-top:6px;font-weight:600;">'+bk.c+' cheque'+(bk.c!==1?'s':'')+'</div>'+
-        (bk.ech||bk.fis?'<div style="font-size:11px;color:#9ca3af;margin-top:3px;">'+(bk.ech?bk.ech+' ECH ':'')+(bk.fis?bk.fis+' fís.':'')+'</div>':'')+
-      '</div>';
-    });
-    html+='</div>';
-  }
+  html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">';
+  // Encabezados de columna
+  BK_LBL.forEach(function(lbl,i){
+    html+='<div style="text-align:center;font-size:10px;font-weight:800;color:'+BK_COL[i]+';letter-spacing:.5px;padding:6px 0 2px;">'+lbl.toUpperCase()+'</div>';
+  });
+  // Fila 1: Disponible en cartera
+  BK_LBL.forEach(function(_,i){
+    var bk=dispBk[i];
+    html+='<div style="background:'+BK_BG[i]+';border:1.5px solid '+BK_COL[i]+'44;border-radius:10px;padding:13px 12px;">'+
+      '<div style="font-size:9px;font-weight:700;color:'+BK_COL[i]+';letter-spacing:.4px;margin-bottom:5px;">EN CARTERA</div>'+
+      '<div style="font-size:19px;font-weight:800;color:'+BK_COL[i]+';">'+$p(bk.t)+'</div>'+
+      '<div style="font-size:11px;color:#6b7280;margin-top:4px;">'+bk.c+' cheque'+(bk.c!==1?'s':'')+
+        (bk.ech?' · '+bk.ech+' ECH':'')+
+        (bk.fis?' · '+bk.fis+' fís.':'')+
+      '</div>'+
+    '</div>';
+  });
+  // Fila 2: Cupo a liberar
+  BK_LBL.forEach(function(_,i){
+    var bk=cupoBk[i];
+    html+='<div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:13px 12px;">'+
+      '<div style="font-size:9px;font-weight:700;color:#64748b;letter-spacing:.4px;margin-bottom:5px;">CUPO A LIBERAR</div>'+
+      (bk.c>0
+        ? '<div style="font-size:19px;font-weight:800;color:#0284c7;">'+$p(bk.t)+'</div>'+
+          '<div style="font-size:11px;color:#6b7280;margin-top:4px;">'+bk.c+' cheque'+(bk.c!==1?'s':'')+'</div>'
+        : '<div style="font-size:16px;font-weight:700;color:#cbd5e1;">—</div>'+
+          '<div style="font-size:11px;color:#d1d5db;margin-top:4px;">Sin cupo</div>'
+      )+
+    '</div>';
+  });
+  html+='</div>';
   html+='</div>';
 
   // Cheques de terceros (a cobrar) con vencimiento próximo
