@@ -293,6 +293,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="nav-label">Administración</div>
     <div class="nav-item" onclick="nav('clientes',this)"><span class="ni">👥</span> Clientes</div>
     <div class="nav-item" onclick="nav('proveedores',this)"><span class="ni">🤝</span> Proveedores</div>
+    <div class="nav-item" onclick="nav('compras',this)"><span class="ni">🛒</span> Compras</div>
     <div class="nav-item" onclick="nav('talleristas',this)"><span class="ni">🧵</span> Talleristas</div>
     <div class="nav-item" onclick="nav('personal',this)"><span class="ni">👤</span> Personal</div>
     <div class="nav-item" onclick="nav('productos',this)"><span class="ni">👔</span> Productos</div>
@@ -432,6 +433,55 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           </div>
         </div>
         <div id="prov-cc-cont"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ COMPRAS ════════════ -->
+  <div class="section" id="sec-compras">
+    <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
+      <div class="stat"><div class="stat-icon" style="background:#dbeafe;">🛒</div><h3 id="cmp-stat-mes">0</h3><p>Compras este mes</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#fef3c7;">💰</div><h3 id="cmp-stat-total">$0</h3><p>Total gastado (mes)</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#fce7f3;">⏳</div><h3 id="cmp-stat-pend">0</h3><p>Pendientes de recibir</p></div>
+      <div class="stat"><div class="stat-icon" style="background:#d1fae5;">🤝</div><h3 id="cmp-stat-prov">0</h3><p>Proveedores del mes</p></div>
+    </div>
+    <div class="tabs" style="margin-bottom:16px;" id="cmp-tabs">
+      <button class="tab active" onclick="setCmpTab('ordenes',this)">📦 Órdenes de Compra</button>
+      <button class="tab" onclick="setCmpTab('historial',this)">📈 Historial de Precios</button>
+    </div>
+    <!-- Tab: Órdenes -->
+    <div id="cmp-tab-ordenes">
+      <div class="panel-hdr" style="margin-bottom:12px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input id="cmp-q" placeholder="Buscar proveedor o N°..." oninput="renderComprasOrdenes()" style="max-width:240px;padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;"/>
+          <select id="cmp-est" onchange="renderComprasOrdenes()" style="padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
+            <option value="">Todos los estados</option>
+            <option value="borrador">Borrador</option>
+            <option value="confirmada">Confirmada</option>
+            <option value="recibida">Recibida</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+        <button class="btn" onclick="openCompraModal(null)">+ Nueva compra</button>
+      </div>
+      <div id="cmp-ordenes-cont"></div>
+    </div>
+    <!-- Tab: Historial -->
+    <div id="cmp-tab-historial" style="display:none;">
+      <div class="panel">
+        <div class="panel-hdr" style="margin-bottom:14px;">
+          <h4>📈 Historial de precios por material</h4>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="hist-tipo" onchange="renderComprasHistorial()" style="padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
+              <option value="">Todos los tipos</option>
+              <option value="tela">Telas</option>
+              <option value="avio">Avíos</option>
+              <option value="otro">Otros</option>
+            </select>
+            <input id="hist-mat" placeholder="Filtrar material..." oninput="renderComprasHistorial()" style="max-width:200px;padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;"/>
+          </div>
+        </div>
+        <div id="cmp-hist-cont"></div>
       </div>
     </div>
   </div>
@@ -2768,6 +2818,37 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Compra (alta / edición) -->
+<div class="modal-bg modal-wide" id="m-compra">
+  <div class="modal">
+    <h3 id="m-compra-title">Nueva orden de compra</h3>
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="field full">
+        <label>Proveedor</label>
+        <select id="mcmp-prov"></select>
+      </div>
+      <div class="field"><label>Fecha *</label><input type="date" id="mcmp-fecha"/></div>
+      <div class="field"><label>N° referencia</label><input id="mcmp-nro" placeholder="Factura, remito..."/></div>
+      <div class="field full"><label>Nota</label><input id="mcmp-nota" placeholder="Observaciones opcionales..."/></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong style="font-size:13px;color:#1a1f36;">Ítems</strong>
+      <button class="btn btn-sm btn-outline" onclick="cmpAddItem()">+ Agregar ítem</button>
+    </div>
+    <div id="mcmp-items" style="overflow-x:auto;margin-bottom:12px;"></div>
+    <div style="text-align:right;font-size:14px;font-weight:700;color:#1a1f36;margin-bottom:16px;">
+      Total: <span id="mcmp-total">$0</span>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-compra')">Cancelar</button>
+      <button class="btn btn-outline" onclick="saveCompra('borrador')">Guardar borrador</button>
+      <button class="btn btn-green" onclick="saveCompra('confirmada')">Confirmar orden</button>
+    </div>
+  </div>
+</div>
+
 <!-- Avío (alta / edición) -->
 <div class="modal-bg" id="m-avio">
   <div class="modal">
@@ -3708,7 +3789,7 @@ var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[], AVIOS=[], FICHAS_COSTO=[], FICHAS_COSTO_TELAS=[], FICHAS_COSTO_AVIOS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[], AVIOS=[], FICHAS_COSTO=[], FICHAS_COSTO_TELAS=[], FICHAS_COSTO_AVIOS=[], COMPRAS=[], COMPRAS_ITEMS=[], HISTORIAL_PRECIOS=[];
 var CONCEPTOS_POR_TIPO={
   'CONFESIÓN':['Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal','Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre','Chaleco Polar','Campera Polar','Campera Friza','Campera canguro','Sudadera','Joggins','Pantalón común','Cuellos','Bufandas / Cuellos','Reflectivo','Cofia','Arreglo'],
   'BORDADO':[],
@@ -3830,7 +3911,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems(),loadAvios(),loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems(),loadAvios(),loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios(),loadCompras(),loadComprasItems(),loadHistorialPrecios()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderAlertas(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -3894,6 +3975,7 @@ function nav(sec, el){
   if(sec==='costura'){renderCostura();}
   if(sec==='entregas'){renderEntregas();}
   if(sec==='costos'){renderCostos();}
+  if(sec==='compras'){renderCompras();}
 }
 
 function navLocal(local, tab, el){
@@ -5720,11 +5802,13 @@ async function pagarCuota(){
 var editProdId=null;
 
 function poblarSelectProveedoresChq(){
-  var s=document.getElementById('chqu-proveedor-id');if(!s)return;
-  var v=s.value;
-  s.innerHTML='<option value="">— Sin vincular —</option>';
-  PROVEEDORES.forEach(function(p){var o=document.createElement('option');o.value=p.id;o.textContent=p.nombre;s.appendChild(o);});
-  s.value=v;
+  ['chqu-proveedor-id','mcmp-prov'].forEach(function(sid){
+    var s=document.getElementById(sid);if(!s)return;
+    var v=s.value;
+    s.innerHTML='<option value="">— Sin proveedor —</option>';
+    PROVEEDORES.forEach(function(p){var o=document.createElement('option');o.value=p.id;o.textContent=p.nombre;s.appendChild(o);});
+    s.value=v;
+  });
 }
 
 function poblarSelectCategorias(){
@@ -13722,6 +13806,248 @@ async function deleteFicha(id){
   toast('Ficha eliminada','info');
   await Promise.all([loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios()]);
   renderCostos();renderCostosFichas();
+}
+
+// ── COMPRAS ──────────────────────────────────────────────────────────────────
+async function loadCompras(){var {data}=await sb.from('compras').select('*').order('fecha',{ascending:false});COMPRAS=data||[];}
+async function loadComprasItems(){var {data}=await sb.from('compras_items').select('*');COMPRAS_ITEMS=data||[];}
+async function loadHistorialPrecios(){var {data}=await sb.from('historial_precios').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false});HISTORIAL_PRECIOS=data||[];}
+
+function renderCompras(){
+  var now=new Date().toISOString().slice(0,7);
+  var mesC=COMPRAS.filter(function(c){return c.fecha&&c.fecha.slice(0,7)===now;});
+  var totalMes=mesC.reduce(function(s,c){
+    return s+COMPRAS_ITEMS.filter(function(i){return i.compra_id===c.id;}).reduce(function(ss,i){return ss+Number(i.cantidad||0)*Number(i.precio_unit||0);},0);
+  },0);
+  var pend=COMPRAS.filter(function(c){return c.estado==='confirmada';}).length;
+  var provMes=new Set(mesC.map(function(c){return c.proveedor_id;}).filter(Boolean)).size;
+  document.getElementById('cmp-stat-mes').textContent=mesC.length;
+  document.getElementById('cmp-stat-total').textContent=$p(totalMes);
+  document.getElementById('cmp-stat-pend').textContent=pend;
+  document.getElementById('cmp-stat-prov').textContent=provMes;
+  renderComprasOrdenes();
+}
+
+function setCmpTab(t,el){
+  ['ordenes','historial'].forEach(function(x){document.getElementById('cmp-tab-'+x).style.display='none';});
+  document.getElementById('cmp-tab-'+t).style.display='block';
+  document.querySelectorAll('#cmp-tabs .tab').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  if(t==='ordenes')renderComprasOrdenes();
+  if(t==='historial')renderComprasHistorial();
+}
+
+function renderComprasOrdenes(){
+  var q=((document.getElementById('cmp-q')||{}).value||'').toLowerCase();
+  var est=(document.getElementById('cmp-est')||{}).value||'';
+  var ECOL={borrador:'b-gray',confirmada:'b-blue',recibida:'b-green',cancelada:'b-red'};
+  var ELAB={borrador:'Borrador',confirmada:'Confirmada',recibida:'Recibida',cancelada:'Cancelada'};
+  var rows=COMPRAS.filter(function(c){
+    if(est&&c.estado!==est)return false;
+    if(q){var prov=PROVEEDORES.find(function(p){return p.id===c.proveedor_id;});
+      if(!(c.nro_compra||'').toLowerCase().includes(q)&&!(prov?prov.nombre:'').toLowerCase().includes(q))return false;}
+    return true;
+  });
+  var html='';
+  rows.forEach(function(c){
+    var items=COMPRAS_ITEMS.filter(function(i){return i.compra_id===c.id;});
+    var total=items.reduce(function(s,i){return s+Number(i.cantidad||0)*Number(i.precio_unit||0);},0);
+    var prov=PROVEEDORES.find(function(p){return p.id===c.proveedor_id;});
+    var badge=ECOL[c.estado]||'b-gray';
+    var label=ELAB[c.estado]||c.estado;
+    var btnEdit=(c.estado==='borrador'||c.estado==='confirmada')?'<button class="btn btn-sm btn-outline" onclick="openCompraModal('+c.id+')">Editar</button>':'';
+    var btnRecibir=c.estado==='confirmada'?'<button class="btn btn-sm btn-green" onclick="recibirCompra('+c.id+')">Marcar recibida</button>':'';
+    var btnConfirmar=c.estado==='borrador'?'<button class="btn btn-sm btn-amber" onclick="confirmarCompra('+c.id+')">Confirmar</button>':'';
+    var btnCancel=(c.estado!=='recibida'&&c.estado!=='cancelada')?'<button class="btn btn-sm btn-red" onclick="cancelarCompra('+c.id+')">Cancelar</button>':'';
+    var itemsHtml='';
+    if(items.length>0){
+      itemsHtml='<div style="margin-top:12px;border-top:1px solid #f3f4f6;padding-top:10px;overflow-x:auto;"><table style="width:100%;"><thead><tr><th>Tipo</th><th>Material</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead><tbody>';
+      items.forEach(function(i){
+        itemsHtml+='<tr><td><span class="badge b-gray">'+esc(i.tipo)+'</span></td><td>'+esc(i.material_nombre)+'</td><td>'+i.cantidad+' '+esc(i.unidad)+'</td><td>'+$p(i.precio_unit)+'</td><td><strong>'+$p(Number(i.cantidad)*Number(i.precio_unit))+'</strong></td></tr>';
+      });
+      itemsHtml+='</tbody></table></div>';
+    }
+    html+='<div class="panel" style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;"><div><div style="font-weight:700;font-size:14px;color:#1a1f36;">'+esc(prov?prov.nombre:'Sin proveedor')+(c.nro_compra?'<span style="color:#9ca3af;font-size:12px;margin-left:6px;">#'+esc(c.nro_compra)+'</span>':'')+'</div><div style="font-size:12px;color:#6b7280;margin-top:3px;">'+fmtF(c.fecha)+' · '+items.length+' ítem'+(items.length!==1?'s':'')+' · <strong>'+$p(total)+'</strong></div>'+(c.nota?'<div style="font-size:12px;color:#9ca3af;margin-top:2px;">'+esc(c.nota)+'</div>':'')+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"><span class="badge '+badge+'">'+label+'</span>'+btnEdit+btnConfirmar+btnRecibir+btnCancel+'</div></div>'+itemsHtml+'</div>';
+  });
+  if(!rows.length)html='<div style="text-align:center;color:#9ca3af;padding:40px;">Sin órdenes de compra</div>';
+  document.getElementById('cmp-ordenes-cont').innerHTML=html;
+}
+
+function renderComprasHistorial(){
+  var tipo=((document.getElementById('hist-tipo')||{}).value||'');
+  var mat=((document.getElementById('hist-mat')||{}).value||'').toLowerCase();
+  var rows=HISTORIAL_PRECIOS.filter(function(h){
+    if(tipo&&h.tipo!==tipo)return false;
+    if(mat&&!(h.material_nombre||'').toLowerCase().includes(mat))return false;
+    return true;
+  });
+  // agrupar para calcular variación
+  var byMat={};
+  rows.forEach(function(h){var k=h.tipo+'_'+h.material_nombre;if(!byMat[k])byMat[k]=[];byMat[k].push(h);});
+  var html='<div class="tbl"><table><thead><tr><th>Tipo</th><th>Material</th><th>Fecha</th><th>Precio unit.</th><th>Variación</th><th>Proveedor</th></tr></thead><tbody>';
+  rows.forEach(function(h){
+    var k=h.tipo+'_'+h.material_nombre;
+    var grp=byMat[k];
+    var idx=grp.indexOf(h);
+    var prev=grp[idx+1];
+    var varHtml='—';
+    if(prev){
+      var diff=Number(h.precio_unit)-Number(prev.precio_unit);
+      var pct=Number(prev.precio_unit)>0?Math.round(diff/Number(prev.precio_unit)*100):0;
+      var col=diff>0?'#dc2626':diff<0?'#16a34a':'#6b7280';
+      varHtml='<span style="color:'+col+';font-weight:700;">'+(diff>0?'+':'')+pct+'%</span>';
+    }
+    var compra=COMPRAS.find(function(c){return c.id===h.compra_id;});
+    var prov=compra?PROVEEDORES.find(function(p){return p.id===compra.proveedor_id;}):null;
+    html+='<tr><td><span class="badge b-gray">'+esc(h.tipo)+'</span></td><td><strong>'+esc(h.material_nombre)+'</strong></td><td>'+fmtF(h.fecha)+'</td><td>'+$p(h.precio_unit)+'</td><td>'+varHtml+'</td><td style="font-size:12px;color:#6b7280;">'+esc(prov?prov.nombre:'—')+'</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  if(!rows.length)html='<div style="text-align:center;color:#9ca3af;padding:40px;">Sin historial de precios</div>';
+  document.getElementById('cmp-hist-cont').innerHTML=html;
+}
+
+var cmpItemsTemp=[], editCmpId=null;
+
+function openCompraModal(id){
+  editCmpId=id||null;
+  var c=id?COMPRAS.find(function(x){return x.id===id;}):null;
+  poblarSelectProveedoresChq();
+  document.getElementById('mcmp-prov').value=c&&c.proveedor_id?c.proveedor_id:'';
+  document.getElementById('mcmp-fecha').value=c?c.fecha:today();
+  document.getElementById('mcmp-nro').value=c?c.nro_compra||'':'';
+  document.getElementById('mcmp-nota').value=c?c.nota||'':'';
+  document.getElementById('m-compra-title').textContent=id?'Editar orden de compra':'Nueva orden de compra';
+  cmpItemsTemp=id?COMPRAS_ITEMS.filter(function(i){return i.compra_id===id;}).map(function(i){return Object.assign({},i);}):[];
+  renderCmpItemsModal();
+  openM('m-compra');
+}
+
+function renderCmpItemsModal(){
+  var avOpts=AVIOS.map(function(a){return '<option value="'+a.id+'">'+esc(a.nombre)+'</option>';}).join('');
+  var telOpts=TELAS_TIPOS.map(function(t){return '<option value="'+esc(t.nombre)+'">'+esc(t.nombre)+'</option>';}).join('');
+  var html='<table style="width:100%;"><thead><tr><th>Tipo</th><th>Material</th><th>Unidad</th><th style="width:70px;">Cant.</th><th style="width:100px;">Precio unit.</th><th>Subtotal</th><th></th></tr></thead><tbody>';
+  cmpItemsTemp.forEach(function(it,i){
+    var matHtml='';
+    if(it.tipo==='avio'){
+      matHtml='<select onchange="cmpItemChange('+i+',\'mat\',this)" style="min-width:130px;"><option value="">— Avío —</option>'+avOpts+'</select>';
+    } else if(it.tipo==='tela'){
+      matHtml='<select onchange="cmpItemChange('+i+',\'mat\',this)" style="min-width:130px;"><option value="">— Tela —</option>'+telOpts+'</select>';
+    } else {
+      matHtml='<input placeholder="Descripción" value="'+esc(it.material_nombre||'')+'" oninput="cmpItemChange('+i+',\'desc\',this)" style="min-width:130px;"/>';
+    }
+    html+='<tr id="cmp-row-'+i+'"><td><select onchange="cmpItemChangeTipo('+i+',this)" style="width:82px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td><input value="'+esc(it.unidad||'unidades')+'" oninput="cmpItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td><td><input type="number" value="'+(it.cantidad||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'cant\',this)" style="width:70px;"/></td><td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="cmp-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="cmpRemItem('+i+')">✕</button></td></tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('mcmp-items').innerHTML=html;
+  // Restaurar valores de selects para avíos y telas
+  cmpItemsTemp.forEach(function(it,i){
+    var row=document.getElementById('cmp-row-'+i);if(!row)return;
+    var sels=row.querySelectorAll('select');
+    if(sels.length<2)return;
+    if(it.tipo==='avio'&&it.material_id)sels[1].value=it.material_id;
+    if(it.tipo==='tela'&&it.material_nombre)sels[1].value=it.material_nombre;
+  });
+  cmpCalcTotal();
+}
+
+function cmpItemChangeTipo(i,el){
+  cmpItemsTemp[i].tipo=el.value;cmpItemsTemp[i].material_id=null;cmpItemsTemp[i].material_nombre='';
+  if(el.value==='avio')cmpItemsTemp[i].unidad='unidades';
+  if(el.value==='tela')cmpItemsTemp[i].unidad='metros';
+  renderCmpItemsModal();
+}
+function cmpItemChange(i,field,el){
+  if(field==='mat'){
+    var tipo=cmpItemsTemp[i].tipo;
+    if(tipo==='avio'){cmpItemsTemp[i].material_id=Number(el.value)||null;var av=AVIOS.find(function(a){return a.id===Number(el.value);});cmpItemsTemp[i].material_nombre=av?av.nombre:'';}
+    if(tipo==='tela'){cmpItemsTemp[i].material_nombre=el.value;}
+  }
+  if(field==='desc')cmpItemsTemp[i].material_nombre=el.value;
+  if(field==='unidad')cmpItemsTemp[i].unidad=el.value;
+  if(field==='cant')cmpItemsTemp[i].cantidad=Number(el.value)||0;
+  if(field==='precio')cmpItemsTemp[i].precio_unit=Number(el.value)||0;
+  var sub=document.getElementById('cmp-sub-'+i);
+  if(sub)sub.textContent=$p(Number(cmpItemsTemp[i].cantidad||0)*Number(cmpItemsTemp[i].precio_unit||0));
+  cmpCalcTotal();
+}
+function cmpAddItem(){cmpItemsTemp.push({tipo:'avio',material_id:null,material_nombre:'',unidad:'unidades',cantidad:0,precio_unit:0});renderCmpItemsModal();}
+function cmpRemItem(i){cmpItemsTemp.splice(i,1);renderCmpItemsModal();}
+function cmpCalcTotal(){
+  var total=cmpItemsTemp.reduce(function(s,it){return s+Number(it.cantidad||0)*Number(it.precio_unit||0);},0);
+  var el=document.getElementById('mcmp-total');if(el)el.textContent=$p(total);
+}
+
+async function saveCompra(estado){
+  var prov=document.getElementById('mcmp-prov').value;
+  var fecha=document.getElementById('mcmp-fecha').value;
+  if(!fecha){toast('Ingresá la fecha','err');return;}
+  var nro=document.getElementById('mcmp-nro').value.trim();
+  var nota=document.getElementById('mcmp-nota').value.trim();
+  var payload={fecha,proveedor_id:prov?Number(prov):null,nro_compra:nro||null,nota:nota||null,estado:estado,updated_at:new Date().toISOString()};
+  var compraId;
+  if(editCmpId){
+    var r=await sb.from('compras').update(payload).eq('id',editCmpId);
+    if(r.error){toast('Error: '+r.error.message,'err');return;}
+    compraId=editCmpId;
+    await sb.from('compras_items').delete().eq('compra_id',compraId);
+  } else {
+    var r=await sb.from('compras').insert(payload).select().single();
+    if(r.error){toast('Error: '+r.error.message,'err');return;}
+    compraId=r.data.id;
+  }
+  var items=cmpItemsTemp.filter(function(it){return it.material_nombre||it.material_id;}).map(function(it){
+    return {compra_id:compraId,tipo:it.tipo,material_id:it.material_id||null,material_nombre:it.material_nombre||'',unidad:it.unidad||'unidades',cantidad:Number(it.cantidad)||0,precio_unit:Number(it.precio_unit)||0};
+  });
+  if(items.length>0){var ri=await sb.from('compras_items').insert(items);if(ri.error){toast('Error en ítems: '+ri.error.message,'err');return;}}
+  toast(editCmpId?'Compra actualizada':'Compra creada','ok');
+  closeM('m-compra');
+  await Promise.all([loadCompras(),loadComprasItems()]);
+  renderCompras();
+}
+
+async function confirmarCompra(id){
+  var r=await sb.from('compras').update({estado:'confirmada',updated_at:new Date().toISOString()}).eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Compra confirmada','ok');
+  await loadCompras();renderCompras();
+}
+
+async function cancelarCompra(id){
+  if(!confirm('¿Cancelar esta orden de compra?'))return;
+  var r=await sb.from('compras').update({estado:'cancelada',updated_at:new Date().toISOString()}).eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Compra cancelada','info');
+  await loadCompras();renderCompras();
+}
+
+async function recibirCompra(id){
+  var compra=COMPRAS.find(function(c){return c.id===id;});
+  var items=COMPRAS_ITEMS.filter(function(i){return i.compra_id===id;});
+  if(!items.length){toast('La compra no tiene ítems','err');return;}
+  var regCC=confirm('¿Registrar el monto en la cuenta corriente del proveedor?');
+  for(var idx=0;idx<items.length;idx++){
+    var it=items[idx];
+    if(it.tipo==='avio'&&it.material_id){
+      var av=AVIOS.find(function(a){return a.id===it.material_id;});
+      if(av){
+        await sb.from('avios').update({stock_actual:Number(av.stock_actual||0)+Number(it.cantidad||0),costo_unit:it.precio_unit,updated_at:new Date().toISOString()}).eq('id',it.material_id);
+      }
+    }
+    if(it.tipo==='tela'&&it.material_nombre){
+      await sb.from('telas_tipos').update({precio_kg:it.precio_unit}).eq('nombre',it.material_nombre);
+      await sb.from('fichas_costo_telas').update({costo_unit:it.precio_unit}).eq('nombre_tela',it.material_nombre);
+    }
+    await sb.from('historial_precios').insert({tipo:it.tipo,material_id:it.material_id||null,material_nombre:it.material_nombre,fecha:compra.fecha,precio_unit:it.precio_unit,compra_id:id});
+  }
+  await sb.from('compras').update({estado:'recibida',updated_at:new Date().toISOString()}).eq('id',id);
+  if(regCC&&compra.proveedor_id){
+    var total=items.reduce(function(s,i){return s+Number(i.cantidad||0)*Number(i.precio_unit||0);},0);
+    await sb.from('proveedor_facturas').insert({proveedor_id:compra.proveedor_id,numero:compra.nro_compra||null,fecha:compra.fecha,monto_total:total,concepto:'Compra de materiales',estado:'pendiente',compra_id:id});
+    await Promise.all([loadProvFacturas(),loadFacturaPagos()]);
+  }
+  toast('Compra recibida — stock y precios actualizados','ok');
+  await Promise.all([loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadAvios(),loadTelasTipos(),loadFichasCostoTelas()]);
+  renderCompras();
 }
 
 function openManual(){document.getElementById('man-overlay').classList.toggle('open');}
