@@ -13957,6 +13957,145 @@ async function deleteFicha(id){
   renderCostos();renderCostosFichas();
 }
 
+// ── MOVIMIENTOS STOCK ────────────────────────────────────────────────────────
+async function loadMovimientosStock(){var {data}=await sb.from('movimientos_stock').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false});MOVIMIENTOS_STOCK=data||[];}
+
+function renderMovimientosStock(){
+  var tipo=((document.getElementById('mvstk-tipo')||{}).value||'');
+  var local=((document.getElementById('mvstk-local')||{}).value||'');
+  var rows=MOVIMIENTOS_STOCK.filter(function(m){
+    if(tipo&&m.tipo!==tipo)return false;
+    if(local&&m.local!==local)return false;
+    return true;
+  });
+  var LCOL={llavallol:'b-ll',montegrande:'b-mg',deposito:'b-gray',mayorista:'b-purple'};
+  var LLAB={llavallol:'Llavallol',montegrande:'Monte Grande',deposito:'Depósito',mayorista:'Mayorista'};
+  var ORIG={entrega:'Entrega',recepcion_tallerista:'Recepción tallerista',manual:'Manual'};
+  var html='<div class="tbl"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Talle</th><th>Color</th><th>Local</th><th style="text-align:right;">Cantidad</th><th>Origen</th></tr></thead><tbody>';
+  rows.forEach(function(m){
+    var signo=m.tipo==='entrada'?'+':'-';
+    var col=m.tipo==='entrada'?'#16a34a':'#dc2626';
+    html+='<tr>'
+      +'<td>'+fmtF(m.fecha)+'</td>'
+      +'<td><span class="badge '+(m.tipo==='entrada'?'b-green':'b-red')+'">'+signo+' '+m.tipo+'</span></td>'
+      +'<td>'+esc(m.producto_nombre||'—')+'</td>'
+      +'<td style="text-align:center;">'+esc(m.talle||'—')+'</td>'
+      +'<td style="text-align:center;">'+esc(m.color||'—')+'</td>'
+      +'<td><span class="badge '+(LCOL[m.local]||'b-gray')+'">'+esc(LLAB[m.local]||m.local)+'</span></td>'
+      +'<td style="text-align:right;font-weight:700;color:'+col+';">'+signo+m.cantidad+'</td>'
+      +'<td style="font-size:12px;color:#6b7280;">'+esc(ORIG[m.origen]||m.origen)+'</td>'
+      +'</tr>';
+  });
+  if(!rows.length)html+='<tr><td colspan="8" style="text-align:center;color:#9ca3af;padding:30px;">Sin movimientos registrados</td></tr>';
+  html+='</tbody></table></div>';
+  var cont=document.getElementById('mvstk-cont');if(cont)cont.innerHTML=html;
+}
+
+var mvStkItems=[], mvStkTipo='salida', mvStkOrigen='manual', mvStkOrigenId=null;
+
+function openMovStockModal(tipo, origen, origenId){
+  mvStkTipo=tipo; mvStkOrigen=origen||'manual'; mvStkOrigenId=origenId||null;
+  var isManual=origen==='manual'||!origen;
+  var title=tipo==='entrada'?'📥 Ingresar al stock':'📦 Descontar del stock';
+  document.getElementById('m-mvstk-title').textContent=title;
+  var manRow=document.getElementById('m-mvstk-manual-row');
+  if(manRow)manRow.style.display=isManual?'flex':'none';
+
+  mvStkItems=[];
+  if(origen==='entrega'&&origenId){
+    var entItems=ENTREGAS_ITEMS.filter(function(i){return i.entrega_id===origenId;});
+    entItems.forEach(function(ei){
+      var pi=PEDIDOS_ITEMS.find(function(x){return x.id===ei.pedido_item_id;});
+      if(!pi)return;
+      mvStkItems.push({descripcion:pi.prenda,talle:pi.talle||'',color:pi.color||'',cantidad:Number(ei.cantidad_entregada)||0,local:'llavallol',producto_id:null,skip:false});
+    });
+    var ent=ENTREGAS.find(function(e){return e.id===origenId;});
+    document.getElementById('m-mvstk-sub').textContent='Entrega '+(ent&&ent.nro_entrega?'#'+ent.nro_entrega:'')+' · '+fmtF(ent?ent.fecha:'');
+  } else if(origen==='recepcion_tallerista'&&origenId){
+    var recItems=TAL_RECEPCIONES_ITEMS.filter(function(i){return i.recepcion_id===origenId;});
+    recItems.forEach(function(ri){
+      mvStkItems.push({descripcion:ri.prenda,talle:'',color:'',cantidad:Number(ri.cantidad)||0,local:'deposito',producto_id:null,skip:false});
+    });
+    var rec=TAL_RECEPCIONES.find(function(r){return r.id===origenId;});
+    var tal=rec?TALLERISTAS.find(function(t){return t.id===rec.tallerista_id;}):null;
+    document.getElementById('m-mvstk-sub').textContent='Recepción de '+(tal?tal.nombre:'tallerista')+' · '+fmtF(rec?rec.fecha:'');
+  } else {
+    mvStkItems.push({descripcion:'',talle:'',color:'',cantidad:0,local:'llavallol',producto_id:null,skip:false});
+    document.getElementById('m-mvstk-sub').textContent='Movimiento manual';
+  }
+  renderMvStkItems();
+  openM('m-mov-stock');
+}
+
+function renderMvStkItems(){
+  var prodOpts=PRODUCTOS.filter(function(p){return p.activo!==false;}).map(function(p){return '<option value="'+p.id+'">'+esc(p.nombre)+'</option>';}).join('');
+  var localOpts='<option value="llavallol">Llavallol</option><option value="montegrande">Monte Grande</option><option value="deposito">Depósito</option><option value="mayorista">Mayorista</option>';
+  var html='<table style="width:100%;"><thead><tr>'
+    +'<th style="width:28px;"></th>'
+    +'<th>Prenda / Descripción</th><th>Talle</th><th>Color</th>'
+    +'<th style="width:70px;">Cant.</th><th>Local</th><th>Producto</th>'
+    +'</tr></thead><tbody>';
+  mvStkItems.forEach(function(it,i){
+    html+='<tr style="'+(it.skip?'opacity:.4;':'')+'"">'
+      +'<td><input type="checkbox" '+(it.skip?'checked':'')+' onchange="mvStkItemChange('+i+',\'skip\',this)" title="Omitir"/></td>'
+      +'<td><input value="'+esc(it.descripcion)+'" oninput="mvStkItemChange('+i+',\'desc\',this)" style="width:130px;'+(mvStkOrigen!=='manual'?'background:#f9fafb;':'')+'" '+(mvStkOrigen!=='manual'?'readonly':'')+'/></td>'
+      +'<td><input value="'+esc(it.talle)+'" oninput="mvStkItemChange('+i+',\'talle\',this)" style="width:60px;"/></td>'
+      +'<td><input value="'+esc(it.color)+'" oninput="mvStkItemChange('+i+',\'color\',this)" style="width:80px;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase();mvStkItemChange('+i+',\'color\',this)"/></td>'
+      +'<td><input type="number" value="'+it.cantidad+'" min="0" oninput="mvStkItemChange('+i+',\'cant\',this)" style="width:60px;"/></td>'
+      +'<td><select onchange="mvStkItemChange('+i+',\'local\',this)" style="min-width:110px;">'+localOpts+'</select></td>'
+      +'<td><select onchange="mvStkItemChange('+i+',\'prod\',this)" style="min-width:160px;"><option value="">— Producto —</option>'+prodOpts+'</select></td>'
+      +'</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('m-mvstk-items').innerHTML=html;
+  // restaurar selects
+  mvStkItems.forEach(function(it,i){
+    var rows=document.getElementById('m-mvstk-items').querySelectorAll('tbody tr');
+    if(!rows[i])return;
+    var sels=rows[i].querySelectorAll('select');
+    if(sels[0])sels[0].value=it.local;
+    if(sels[1]&&it.producto_id)sels[1].value=it.producto_id;
+  });
+}
+
+function mvStkItemChange(i,field,el){
+  if(field==='skip')mvStkItems[i].skip=el.checked;
+  if(field==='desc')mvStkItems[i].descripcion=el.value;
+  if(field==='talle')mvStkItems[i].talle=el.value;
+  if(field==='color')mvStkItems[i].color=el.value.toUpperCase();
+  if(field==='cant')mvStkItems[i].cantidad=Number(el.value)||0;
+  if(field==='local')mvStkItems[i].local=el.value;
+  if(field==='prod')mvStkItems[i].producto_id=Number(el.value)||null;
+}
+function mvStkAddItem(){mvStkItems.push({descripcion:'',talle:'',color:'',cantidad:0,local:'llavallol',producto_id:null,skip:false});renderMvStkItems();}
+
+async function saveMovStock(){
+  var items=mvStkItems.filter(function(it){return !it.skip&&it.cantidad>0;});
+  if(!items.length){toast('No hay ítems para registrar','err');return;}
+  var fecha=today();
+  for(var idx=0;idx<items.length;idx++){
+    var it=items[idx];
+    var prod=it.producto_id?PRODUCTOS.find(function(p){return p.id===it.producto_id;}):null;
+    // Insertar movimiento
+    await sb.from('movimientos_stock').insert({
+      tipo:mvStkTipo,producto_id:it.producto_id||null,producto_nombre:prod?prod.nombre:(it.descripcion||null),
+      local:it.local,talle:it.talle||'',color:it.color||'',cantidad:it.cantidad,
+      origen:mvStkOrigen,origen_id:mvStkOrigenId||null,fecha:fecha,nota:null
+    });
+    // Actualizar tabla stock si hay producto vinculado
+    if(it.producto_id){
+      var stk=STOCK.find(function(s){return s.producto_id===it.producto_id&&s.local===it.local&&s.talle===(it.talle||'')&&s.color===(it.color||'');});
+      var actual=stk?Number(stk.cantidad):0;
+      var nuevo=mvStkTipo==='entrada'?actual+it.cantidad:Math.max(0,actual-it.cantidad);
+      await sb.from('stock').upsert({producto_id:it.producto_id,local:it.local,talle:it.talle||'',color:it.color||'',cantidad:nuevo},{onConflict:'producto_id,local,talle,color'});
+    }
+  }
+  toast('Movimiento registrado','ok');
+  closeM('m-mov-stock');
+  await Promise.all([loadMovimientosStock(),loadStock()]);
+  renderMovimientosStock();renderEntregas();renderTalRecepciones();
+}
+
 // ── LIQUIDACIONES TALLERISTAS ─────────────────────────────────────────────────
 async function loadTalRecepciones(){var {data}=await sb.from('tal_recepciones').select('*').order('fecha',{ascending:false});TAL_RECEPCIONES=data||[];}
 async function loadTalRecepcionesItems(){var {data}=await sb.from('tal_recepciones_items').select('*');TAL_RECEPCIONES_ITEMS=data||[];}
