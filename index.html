@@ -494,6 +494,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <button class="tab" onclick="setProdTab('stock',this)">📦 Stock</button>
       <button class="tab" onclick="setProdTab('costos',this)">💰 Costos</button>
       <button class="tab" onclick="setProdTab('transferencia',this)">🔄 Transferencia</button>
+      <button class="tab" onclick="setProdTab('movimientos',this)">📋 Movimientos</button>
     </div>
 
     <!-- Sub-tab: Lista -->
@@ -658,6 +659,31 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
     </div><!-- /prod-tab-transferencia -->
 
+    <!-- Sub-tab: Movimientos de stock -->
+    <div id="prod-tab-movimientos" style="display:none;">
+      <div class="panel">
+        <div class="panel-hdr" style="margin-bottom:14px;">
+          <h4>📋 Historial de movimientos de stock</h4>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="mvstk-tipo" onchange="renderMovimientosStock()" style="padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
+              <option value="">Entradas y salidas</option>
+              <option value="entrada">Solo entradas</option>
+              <option value="salida">Solo salidas</option>
+            </select>
+            <select id="mvstk-local" onchange="renderMovimientosStock()" style="padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
+              <option value="">Todos los locales</option>
+              <option value="llavallol">Llavallol</option>
+              <option value="montegrande">Monte Grande</option>
+              <option value="deposito">Depósito</option>
+              <option value="mayorista">Mayorista</option>
+            </select>
+            <button class="btn btn-outline btn-sm" onclick="openMovStockModal('manual',null,null)">+ Manual</button>
+          </div>
+        </div>
+        <div id="mvstk-cont"></div>
+      </div>
+    </div>
+
     <!-- Sub-tab: Stock -->
     <div id="prod-tab-stock" style="display:none;">
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
@@ -780,6 +806,9 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <button class="tab" onclick="setTalTab('produccion',this)">📊 Producción</button>
       <button class="tab" onclick="setTalTab('historial',this)">📋 Historial</button>
       <button class="tab" onclick="setTalTab('precios',this)">💲 Precios</button>
+      <button class="tab" onclick="setTalTab('recepciones',this)">📥 Recepciones</button>
+      <button class="tab" onclick="setTalTab('deuda',this)">💳 Deuda</button>
+      <button class="tab" onclick="setTalTab('pagos',this)">💸 Pagos</button>
     </div>
 
     <!-- Sub-tab 1: Lista -->
@@ -855,6 +884,44 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </table></div>
       </div>
     </div>
+
+    <!-- Tab: Recepciones -->
+    <div id="tal-tab-recepciones" style="display:none;">
+      <div class="panel-hdr" style="margin-bottom:12px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <select id="rec-fil-tal" onchange="renderTalRecepciones()" style="min-width:200px;padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
+            <option value="">Todos los talleristas</option>
+          </select>
+          <select id="rec-fil-est" onchange="renderTalRecepciones()" style="padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="parcial">Parcial</option>
+            <option value="pagado">Pagado</option>
+          </select>
+        </div>
+        <button class="btn" onclick="openRecepcionModal(null)">+ Nueva recepción</button>
+      </div>
+      <div id="tal-rec-cont"></div>
+    </div>
+
+    <!-- Tab: Deuda por tallerista -->
+    <div id="tal-tab-deuda" style="display:none;">
+      <div id="tal-deuda-cont"></div>
+    </div>
+
+    <!-- Tab: Pagos -->
+    <div id="tal-tab-pagos" style="display:none;">
+      <div class="panel-hdr" style="margin-bottom:12px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <select id="pago-fil-tal" onchange="renderTalPagos()" style="min-width:200px;padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
+            <option value="">Todos los talleristas</option>
+          </select>
+        </div>
+        <button class="btn" onclick="openPagoTalModal(null,null)">+ Registrar pago</button>
+      </div>
+      <div id="tal-pagos-cont"></div>
+    </div>
+
   </div>
 
   <!-- ════════════ PERSONAL ════════════ -->
@@ -2818,6 +2885,83 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Movimiento de stock -->
+<div class="modal-bg modal-wide" id="m-mov-stock">
+  <div class="modal">
+    <h3 id="m-mvstk-title">Movimiento de stock</h3>
+    <p id="m-mvstk-sub" style="font-size:12px;color:#6b7280;margin-bottom:16px;"></p>
+    <div id="m-mvstk-items" style="overflow-x:auto;margin-bottom:12px;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;" id="m-mvstk-manual-row" style="display:none;">
+      <button class="btn btn-sm btn-outline" onclick="mvStkAddItem()">+ Agregar ítem</button>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-mov-stock')">Cancelar</button>
+      <button class="btn btn-green" onclick="saveMovStock()">Confirmar movimiento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Recepción de tallerista -->
+<div class="modal-bg modal-wide" id="m-recepcion">
+  <div class="modal">
+    <h3 id="m-rec-title">Nueva recepción</h3>
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="field full">
+        <label>Tallerista *</label>
+        <select id="mrec-tal" onchange="recCargarPrendas()"></select>
+      </div>
+      <div class="field"><label>Fecha *</label><input type="date" id="mrec-fecha"/></div>
+      <div class="field"><label>Estado</label>
+        <select id="mrec-estado">
+          <option value="pendiente">Pendiente de pago</option>
+          <option value="parcial">Pago parcial</option>
+          <option value="pagado">Pagado</option>
+        </select>
+      </div>
+      <div class="field full"><label>Nota</label><input id="mrec-nota" placeholder="Observaciones..."/></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong style="font-size:13px;color:#1a1f36;">Prendas recibidas</strong>
+      <button class="btn btn-sm btn-outline" onclick="recAddItem()">+ Agregar prenda</button>
+    </div>
+    <div id="mrec-items" style="overflow-x:auto;margin-bottom:12px;"></div>
+    <div style="text-align:right;font-size:14px;font-weight:700;color:#1a1f36;margin-bottom:16px;">
+      Total: <span id="mrec-total">$0</span>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-recepcion')">Cancelar</button>
+      <button class="btn" onclick="saveRecepcion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pago a tallerista -->
+<div class="modal-bg" id="m-pago-tal">
+  <div class="modal">
+    <h3>Registrar pago a tallerista</h3>
+    <div class="grid2">
+      <div class="field full">
+        <label>Tallerista *</label>
+        <select id="mpag-tal"></select>
+      </div>
+      <div class="field"><label>Fecha *</label><input type="date" id="mpag-fecha"/></div>
+      <div class="field"><label>Monto *</label><input type="number" id="mpag-monto" min="0" step="0.01" placeholder="0"/></div>
+      <div class="field"><label>Forma de pago</label>
+        <select id="mpag-forma">
+          <option value="efectivo">Efectivo</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="cheque">Cheque</option>
+        </select>
+      </div>
+      <div class="field full"><label>Nota</label><input id="mpag-nota" placeholder="Observaciones..."/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-pago-tal')">Cancelar</button>
+      <button class="btn btn-green" onclick="savePagoTal()">Registrar pago</button>
+    </div>
+  </div>
+</div>
+
 <!-- Compra (alta / edición) -->
 <div class="modal-bg modal-wide" id="m-compra">
   <div class="modal">
@@ -3789,7 +3933,7 @@ var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[], AVIOS=[], FICHAS_COSTO=[], FICHAS_COSTO_TELAS=[], FICHAS_COSTO_AVIOS=[], COMPRAS=[], COMPRAS_ITEMS=[], HISTORIAL_PRECIOS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[], AVIOS=[], FICHAS_COSTO=[], FICHAS_COSTO_TELAS=[], FICHAS_COSTO_AVIOS=[], COMPRAS=[], COMPRAS_ITEMS=[], HISTORIAL_PRECIOS=[], TAL_RECEPCIONES=[], TAL_RECEPCIONES_ITEMS=[], TAL_PAGOS=[], MOVIMIENTOS_STOCK=[];
 var CONCEPTOS_POR_TIPO={
   'CONFESIÓN':['Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal','Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre','Chaleco Polar','Campera Polar','Campera Friza','Campera canguro','Sudadera','Joggins','Pantalón común','Cuellos','Bufandas / Cuellos','Reflectivo','Cofia','Arreglo'],
   'BORDADO':[],
@@ -3911,7 +4055,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems(),loadAvios(),loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios(),loadCompras(),loadComprasItems(),loadHistorialPrecios()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems(),loadAvios(),loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios(),loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadTalRecepciones(),loadTalRecepcionesItems(),loadTalPagos(),loadMovimientosStock()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderAlertas(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -5993,7 +6137,7 @@ function renderProductos(){
 // PROD TABS (Lista / Resumen)
 // ════════════════════════════════════
 function setProdTab(tab, el){
-  ['lista','resumen','stock','costos','transferencia'].forEach(function(t){
+  ['lista','resumen','stock','costos','transferencia','movimientos'].forEach(function(t){
     document.getElementById('prod-tab-'+t).style.display=t===tab?'block':'none';
   });
   document.querySelectorAll('#prod-tabs .tab').forEach(function(b){b.classList.remove('active');});
@@ -6002,6 +6146,7 @@ function setProdTab(tab, el){
   if(tab==='stock') renderStockPanel();
   if(tab==='costos') renderCostosPanel();
   if(tab==='transferencia'){renderTrfSearch();renderTrfHistorial();}
+  if(tab==='movimientos') renderMovimientosStock();
 }
 
 function renderStockPanel(){
@@ -10185,14 +10330,17 @@ function setTalPreciosTipo(tipo,el){
 }
 
 function setTalTab(tab, el){
-  ['lista','produccion','precios','historial'].forEach(function(t){
+  ['lista','produccion','precios','historial','recepciones','deuda','pagos'].forEach(function(t){
     document.getElementById('tal-tab-'+t).style.display=t===tab?'block':'none';
   });
   document.querySelectorAll('#tal-tabs .tab').forEach(function(b){b.classList.remove('active');});
   if(el) el.classList.add('active');
-  if(tab==='produccion') renderTalProduccion();
-  if(tab==='precios')    renderTalPrecios();
-  if(tab==='historial')  renderTalHistorial();
+  if(tab==='produccion')  renderTalProduccion();
+  if(tab==='precios')     renderTalPrecios();
+  if(tab==='historial')   renderTalHistorial();
+  if(tab==='recepciones') renderTalRecepciones();
+  if(tab==='deuda')       renderTalDeuda();
+  if(tab==='pagos')       renderTalPagos();
 }
 
 // ════════════════════════════════════
@@ -11766,6 +11914,7 @@ function renderEntregas(){
       +(e.nota?'<span style="color:#9ca3af;font-size:12px;">📝 '+e.nota+'</span>':'')
       +'<span style="font-size:12px;color:#16a34a;font-weight:700;">'+totEnt+' prendas</span>'
       +'</div>'
+      +(MOVIMIENTOS_STOCK.some(function(m){return m.origen==='entrega'&&m.origen_id===e.id;})?'<span class="badge b-green" style="font-size:11px;">✓ Stock</span>':'<button class="btn btn-sm btn-outline" onclick="openMovStockModal(\'salida\',\'entrega\','+e.id+')">📦 Stock</button>')
       +'<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;" onclick="deleteEntrega('+e.id+')">🗑️</button>'
       +'</div>'+itemsHTML+'</div>';
   }).join('');
@@ -13808,6 +13957,233 @@ async function deleteFicha(id){
   renderCostos();renderCostosFichas();
 }
 
+// ── LIQUIDACIONES TALLERISTAS ─────────────────────────────────────────────────
+async function loadTalRecepciones(){var {data}=await sb.from('tal_recepciones').select('*').order('fecha',{ascending:false});TAL_RECEPCIONES=data||[];}
+async function loadTalRecepcionesItems(){var {data}=await sb.from('tal_recepciones_items').select('*');TAL_RECEPCIONES_ITEMS=data||[];}
+async function loadTalPagos(){var {data}=await sb.from('tal_pagos').select('*').order('fecha',{ascending:false});TAL_PAGOS=data||[];}
+
+function talRecTotal(recId){
+  return TAL_RECEPCIONES_ITEMS.filter(function(i){return i.recepcion_id===recId;}).reduce(function(s,i){return s+Number(i.cantidad||0)*Number(i.precio_unit||0);},0);
+}
+function talDeudaTotal(talId){
+  var totalRec=TAL_RECEPCIONES.filter(function(r){return r.tallerista_id===talId;}).reduce(function(s,r){return s+talRecTotal(r.id);},0);
+  var totalPag=TAL_PAGOS.filter(function(p){return p.tallerista_id===talId;}).reduce(function(s,p){return s+Number(p.monto||0);},0);
+  return totalRec-totalPag;
+}
+
+function poblarSelectTalleristas(){
+  ['mrec-tal','mpag-tal','rec-fil-tal','pago-fil-tal'].forEach(function(sid){
+    var s=document.getElementById(sid);if(!s)return;
+    var v=s.value;
+    s.innerHTML='<option value="">— Tallerista —</option>';
+    TALLERISTAS.filter(function(t){return t.activo!==false;}).forEach(function(t){
+      var o=document.createElement('option');o.value=t.id;o.textContent=t.nombre;s.appendChild(o);
+    });
+    s.value=v;
+  });
+}
+
+function renderTalRecepciones(){
+  poblarSelectTalleristas();
+  var filTal=((document.getElementById('rec-fil-tal')||{}).value||'');
+  var filEst=((document.getElementById('rec-fil-est')||{}).value||'');
+  var ECOL={pendiente:'b-yellow',parcial:'b-purple',pagado:'b-green'};
+  var ELAB={pendiente:'Pendiente',parcial:'Parcial',pagado:'Pagado'};
+  var rows=TAL_RECEPCIONES.filter(function(r){
+    if(filTal&&String(r.tallerista_id)!==filTal)return false;
+    if(filEst&&r.estado!==filEst)return false;
+    return true;
+  });
+  var html='';
+  rows.forEach(function(r){
+    var tal=TALLERISTAS.find(function(t){return t.id===r.tallerista_id;});
+    var items=TAL_RECEPCIONES_ITEMS.filter(function(i){return i.recepcion_id===r.id;});
+    var total=talRecTotal(r.id);
+    var badge=ECOL[r.estado]||'b-gray';
+    var label=ELAB[r.estado]||r.estado;
+    var itemsHtml='';
+    if(items.length>0){
+      itemsHtml='<div style="margin-top:10px;border-top:1px solid #f3f4f6;padding-top:10px;overflow-x:auto;"><table style="width:100%;"><thead><tr><th>Prenda</th><th style="text-align:right;">Cantidad</th><th style="text-align:right;">Precio unit.</th><th style="text-align:right;">Subtotal</th></tr></thead><tbody>';
+      items.forEach(function(i){itemsHtml+='<tr><td>'+esc(i.prenda)+'</td><td style="text-align:right;">'+i.cantidad+'</td><td style="text-align:right;">'+$p(i.precio_unit)+'</td><td style="text-align:right;font-weight:700;">'+$p(Number(i.cantidad)*Number(i.precio_unit))+'</td></tr>';});
+      itemsHtml+='</tbody></table></div>';
+    }
+    html+='<div class="panel" style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;"><div><div style="font-weight:700;font-size:14px;color:#1a1f36;">'+esc(tal?tal.nombre:'Sin tallerista')+'</div><div style="font-size:12px;color:#6b7280;margin-top:3px;">'+fmtF(r.fecha)+' · '+items.length+' prenda'+(items.length!==1?'s':'')+' · <strong>'+$p(total)+'</strong></div>'+(r.nota?'<div style="font-size:12px;color:#9ca3af;margin-top:2px;">'+esc(r.nota)+'</div>':'')+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"><span class="badge '+badge+'">'+label+'</span>'+(r.estado!=='pagado'?'<button class="btn btn-sm btn-green" onclick="openPagoTalModal('+r.tallerista_id+','+r.id+')">Registrar pago</button>':'')+(MOVIMIENTOS_STOCK.some(function(m){return m.origen==='recepcion_tallerista'&&m.origen_id===r.id;})?'<span class="badge b-green" style="font-size:11px;">✓ Stock</span>':'<button class="btn btn-sm btn-outline" onclick="openMovStockModal(\'entrada\',\'recepcion_tallerista\','+r.id+')">📥 Stock</button>')+'<button class="btn btn-sm btn-outline" onclick="openRecepcionModal('+r.id+')">Editar</button><button class="btn btn-sm btn-red" onclick="deleteRecepcion('+r.id+')">Eliminar</button></div></div>'+itemsHtml+'</div>';
+  });
+  if(!rows.length)html='<div style="text-align:center;color:#9ca3af;padding:40px;">Sin recepciones registradas</div>';
+  document.getElementById('tal-rec-cont').innerHTML=html;
+}
+
+function renderTalDeuda(){
+  var activos=TALLERISTAS.filter(function(t){return t.activo!==false;});
+  var html='';
+  activos.forEach(function(t){
+    var recs=TAL_RECEPCIONES.filter(function(r){return r.tallerista_id===t.id;});
+    var totalRec=recs.reduce(function(s,r){return s+talRecTotal(r.id);},0);
+    var totalPag=TAL_PAGOS.filter(function(p){return p.tallerista_id===t.id;}).reduce(function(s,p){return s+Number(p.monto||0);},0);
+    var deuda=totalRec-totalPag;
+    if(totalRec===0&&deuda===0)return;
+    var deudaColor=deuda>0?'#dc2626':deuda<0?'#d97706':'#16a34a';
+    var deudaLabel=deuda>0?$p(deuda)+' a pagar':deuda<0?$p(Math.abs(deuda))+' a favor':'Sin deuda';
+    html+='<div class="panel" style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><div><div style="font-weight:700;font-size:14px;color:#1a1f36;">'+esc(t.nombre)+'</div><div style="font-size:12px;color:#6b7280;margin-top:3px;">Total recibido: '+$p(totalRec)+' · Total pagado: '+$p(totalPag)+'</div></div><div style="display:flex;gap:10px;align-items:center;"><span style="font-size:16px;font-weight:800;color:'+deudaColor+';">'+deudaLabel+'</span>'+(deuda>0?'<button class="btn btn-sm btn-green" onclick="openPagoTalModal('+t.id+',null)">Pagar</button>':'')+'</div></div></div>';
+  });
+  if(!html)html='<div style="text-align:center;color:#9ca3af;padding:40px;">Sin movimientos con talleristas</div>';
+  document.getElementById('tal-deuda-cont').innerHTML=html;
+}
+
+function renderTalPagos(){
+  poblarSelectTalleristas();
+  var filTal=((document.getElementById('pago-fil-tal')||{}).value||'');
+  var FORMA={efectivo:'Efectivo',transferencia:'Transferencia',cheque:'Cheque'};
+  var rows=TAL_PAGOS.filter(function(p){return !filTal||String(p.tallerista_id)===filTal;});
+  var html='<div class="panel"><div class="tbl"><table><thead><tr><th>Fecha</th><th>Tallerista</th><th>Forma</th><th>Nota</th><th style="text-align:right;">Monto</th><th></th></tr></thead><tbody>';
+  rows.forEach(function(p){
+    var tal=TALLERISTAS.find(function(t){return t.id===p.tallerista_id;});
+    html+='<tr><td>'+fmtF(p.fecha)+'</td><td>'+esc(tal?tal.nombre:'—')+'</td><td><span class="badge b-blue">'+esc(FORMA[p.forma_pago]||p.forma_pago)+'</span></td><td style="color:#6b7280;font-size:12px;">'+esc(p.nota||'—')+'</td><td style="text-align:right;font-weight:700;">'+$p(p.monto)+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="deletePagoTal('+p.id+')">✕</button></td></tr>';
+  });
+  if(!rows.length)html+='<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:30px;">Sin pagos registrados</td></tr>';
+  html+='</tbody></table></div></div>';
+  document.getElementById('tal-pagos-cont').innerHTML=html;
+}
+
+// ── Modal recepción ──
+var recItemsTemp=[], editRecId=null;
+
+function openRecepcionModal(id){
+  editRecId=id||null;
+  var r=id?TAL_RECEPCIONES.find(function(x){return x.id===id;}):null;
+  poblarSelectTalleristas();
+  document.getElementById('m-rec-title').textContent=id?'Editar recepción':'Nueva recepción';
+  document.getElementById('mrec-tal').value=r&&r.tallerista_id?r.tallerista_id:'';
+  document.getElementById('mrec-fecha').value=r?r.fecha:today();
+  document.getElementById('mrec-estado').value=r?r.estado:'pendiente';
+  document.getElementById('mrec-nota').value=r?r.nota||'':'';
+  recItemsTemp=id?TAL_RECEPCIONES_ITEMS.filter(function(i){return i.recepcion_id===id;}).map(function(i){return Object.assign({},i);}):[];
+  renderRecItemsModal();
+  openM('m-recepcion');
+}
+
+function recCargarPrendas(){
+  recItemsTemp=[];renderRecItemsModal();
+}
+
+function renderRecItemsModal(){
+  var talId=Number(document.getElementById('mrec-tal').value)||null;
+  var tal=talId?TALLERISTAS.find(function(t){return t.id===talId;}):null;
+  var tipo=tal?tal.tipo||'CONFESIÓN':'CONFESIÓN';
+  var prendas=_getPrendasParaTipo(tipo);
+  var pOpts=prendas.map(function(p){return '<option value="'+esc(p)+'">'+esc(p)+'</option>';}).join('');
+  var html='<table style="width:100%;"><thead><tr><th>Prenda</th><th style="width:80px;">Cant.</th><th style="width:110px;">Precio unit.</th><th style="width:90px;">Subtotal</th><th></th></tr></thead><tbody>';
+  recItemsTemp.forEach(function(it,i){
+    html+='<tr><td><select onchange="recItemChange('+i+',\'prenda\',this)" style="min-width:160px;"><option value="">— Prenda —</option>'+pOpts+'</select></td><td><input type="number" value="'+(it.cantidad||0)+'" min="0" oninput="recItemChange('+i+',\'cant\',this)" style="width:70px;"/></td><td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="recItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="rec-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="recRemItem('+i+')">✕</button></td></tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('mrec-items').innerHTML=html;
+  // restaurar valores de select prenda
+  recItemsTemp.forEach(function(it,i){
+    var rows=document.getElementById('mrec-items').querySelectorAll('tbody tr');
+    if(rows[i]){var sel=rows[i].querySelector('select');if(sel&&it.prenda)sel.value=it.prenda;}
+  });
+  recCalcTotal();
+}
+
+function recItemChange(i,field,el){
+  if(field==='prenda'){
+    recItemsTemp[i].prenda=el.value;
+    var talId=Number(document.getElementById('mrec-tal').value)||null;
+    if(talId&&el.value){
+      var pp=TAL_PRECIOS_PRENDA.find(function(p){return p.tallerista_id===talId&&p.prenda===el.value;});
+      if(pp){recItemsTemp[i].precio_unit=Number(pp.precio)||0;renderRecItemsModal();return;}
+    }
+  }
+  if(field==='cant')recItemsTemp[i].cantidad=Number(el.value)||0;
+  if(field==='precio')recItemsTemp[i].precio_unit=Number(el.value)||0;
+  var sub=document.getElementById('rec-sub-'+i);
+  if(sub)sub.textContent=$p(Number(recItemsTemp[i].cantidad||0)*Number(recItemsTemp[i].precio_unit||0));
+  recCalcTotal();
+}
+function recAddItem(){
+  var talId=Number(document.getElementById('mrec-tal').value)||null;
+  if(!talId){toast('Seleccioná el tallerista primero','err');return;}
+  recItemsTemp.push({prenda:'',cantidad:0,precio_unit:0});
+  renderRecItemsModal();
+}
+function recRemItem(i){recItemsTemp.splice(i,1);renderRecItemsModal();}
+function recCalcTotal(){
+  var t=recItemsTemp.reduce(function(s,i){return s+Number(i.cantidad||0)*Number(i.precio_unit||0);},0);
+  var el=document.getElementById('mrec-total');if(el)el.textContent=$p(t);
+}
+
+async function saveRecepcion(){
+  var talId=document.getElementById('mrec-tal').value;
+  var fecha=document.getElementById('mrec-fecha').value;
+  if(!talId||!fecha){toast('Completá tallerista y fecha','err');return;}
+  var items=recItemsTemp.filter(function(i){return i.prenda&&Number(i.cantidad)>0;});
+  if(!items.length){toast('Agregá al menos una prenda','err');return;}
+  var payload={tallerista_id:Number(talId),fecha,estado:document.getElementById('mrec-estado').value,nota:document.getElementById('mrec-nota').value.trim()||null,updated_at:new Date().toISOString()};
+  var recId;
+  if(editRecId){
+    var r=await sb.from('tal_recepciones').update(payload).eq('id',editRecId);
+    if(r.error){toast('Error: '+r.error.message,'err');return;}
+    recId=editRecId;
+    await sb.from('tal_recepciones_items').delete().eq('recepcion_id',recId);
+  } else {
+    var r=await sb.from('tal_recepciones').insert(payload).select().single();
+    if(r.error){toast('Error: '+r.error.message,'err');return;}
+    recId=r.data.id;
+  }
+  var ri=await sb.from('tal_recepciones_items').insert(items.map(function(i){return {recepcion_id:recId,prenda:i.prenda,cantidad:Number(i.cantidad),precio_unit:Number(i.precio_unit||0)};}));
+  if(ri.error){toast('Error en ítems: '+ri.error.message,'err');return;}
+  toast(editRecId?'Recepción actualizada':'Recepción guardada','ok');
+  closeM('m-recepcion');
+  await Promise.all([loadTalRecepciones(),loadTalRecepcionesItems()]);
+  renderTalRecepciones();renderTalDeuda();
+}
+
+async function deleteRecepcion(id){
+  if(!confirm('¿Eliminar esta recepción?'))return;
+  var r=await sb.from('tal_recepciones').delete().eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Recepción eliminada','info');
+  await Promise.all([loadTalRecepciones(),loadTalRecepcionesItems()]);
+  renderTalRecepciones();renderTalDeuda();
+}
+
+// ── Modal pago tallerista ──
+function openPagoTalModal(talId,recepcionId){
+  poblarSelectTalleristas();
+  document.getElementById('mpag-tal').value=talId||'';
+  document.getElementById('mpag-fecha').value=today();
+  var deuda=talId?Math.max(0,talDeudaTotal(Number(talId))):0;
+  document.getElementById('mpag-monto').value=deuda>0?deuda:'';
+  document.getElementById('mpag-forma').value='efectivo';
+  document.getElementById('mpag-nota').value='';
+  document.getElementById('m-pago-tal').dataset.recId=recepcionId||'';
+  openM('m-pago-tal');
+}
+
+async function savePagoTal(){
+  var talId=document.getElementById('mpag-tal').value;
+  var fecha=document.getElementById('mpag-fecha').value;
+  var monto=Number(document.getElementById('mpag-monto').value)||0;
+  if(!talId||!fecha||monto<=0){toast('Completá todos los campos','err');return;}
+  var recId=document.getElementById('m-pago-tal').dataset.recId||null;
+  var payload={tallerista_id:Number(talId),fecha,monto,forma_pago:document.getElementById('mpag-forma').value,nota:document.getElementById('mpag-nota').value.trim()||null,recepcion_id:recId?Number(recId):null};
+  var r=await sb.from('tal_pagos').insert(payload);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Pago registrado','ok');
+  closeM('m-pago-tal');
+  await loadTalPagos();
+  renderTalPagos();renderTalDeuda();
+}
+
+async function deletePagoTal(id){
+  if(!confirm('¿Eliminar este pago?'))return;
+  var r=await sb.from('tal_pagos').delete().eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Pago eliminado','info');
+  await loadTalPagos();renderTalPagos();renderTalDeuda();
+}
+
 // ── COMPRAS ──────────────────────────────────────────────────────────────────
 async function loadCompras(){var {data}=await sb.from('compras').select('*').order('fecha',{ascending:false});COMPRAS=data||[];}
 async function loadComprasItems(){var {data}=await sb.from('compras_items').select('*');COMPRAS_ITEMS=data||[];}
@@ -13925,7 +14301,7 @@ function openCompraModal(id){
 function renderCmpItemsModal(){
   var avOpts=AVIOS.map(function(a){return '<option value="'+a.id+'">'+esc(a.nombre)+'</option>';}).join('');
   var telOpts=TELAS_TIPOS.map(function(t){return '<option value="'+esc(t.nombre)+'">'+esc(t.nombre)+'</option>';}).join('');
-  var html='<table style="width:100%;"><thead><tr><th>Tipo</th><th>Material</th><th>Unidad</th><th style="width:70px;">Cant.</th><th style="width:100px;">Precio unit.</th><th>Subtotal</th><th></th></tr></thead><tbody>';
+  var html='<table style="width:100%;"><thead><tr><th>Tipo</th><th>Material</th><th>Color</th><th>Unidad</th><th style="width:70px;">Cant.</th><th style="width:100px;">Precio unit.</th><th>Subtotal</th><th></th></tr></thead><tbody>';
   cmpItemsTemp.forEach(function(it,i){
     var matHtml='';
     if(it.tipo==='avio'){
@@ -13935,7 +14311,8 @@ function renderCmpItemsModal(){
     } else {
       matHtml='<input placeholder="Descripción" value="'+esc(it.material_nombre||'')+'" oninput="cmpItemChange('+i+',\'desc\',this)" style="min-width:130px;"/>';
     }
-    html+='<tr id="cmp-row-'+i+'"><td><select onchange="cmpItemChangeTipo('+i+',this)" style="width:82px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td><input value="'+esc(it.unidad||'unidades')+'" oninput="cmpItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td><td><input type="number" value="'+(it.cantidad||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'cant\',this)" style="width:70px;"/></td><td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="cmp-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="cmpRemItem('+i+')">✕</button></td></tr>';
+    var colorHtml=it.tipo==='tela'?'<input placeholder="Ej: MARINO" value="'+esc(it.material_color||'')+'" oninput="cmpItemChange('+i+',\'color\',this)" style="width:90px;text-transform:uppercase;"/>':'<span style="color:#d1d5db;">—</span>';
+    html+='<tr id="cmp-row-'+i+'"><td><select onchange="cmpItemChangeTipo('+i+',this)" style="width:82px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td>'+colorHtml+'</td><td><input value="'+esc(it.unidad||'unidades')+'" oninput="cmpItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td><td><input type="number" value="'+(it.cantidad||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'cant\',this)" style="width:70px;"/></td><td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="cmp-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="cmpRemItem('+i+')">✕</button></td></tr>';
   });
   html+='</tbody></table>';
   document.getElementById('mcmp-items').innerHTML=html;
@@ -13951,9 +14328,9 @@ function renderCmpItemsModal(){
 }
 
 function cmpItemChangeTipo(i,el){
-  cmpItemsTemp[i].tipo=el.value;cmpItemsTemp[i].material_id=null;cmpItemsTemp[i].material_nombre='';
+  cmpItemsTemp[i].tipo=el.value;cmpItemsTemp[i].material_id=null;cmpItemsTemp[i].material_nombre='';cmpItemsTemp[i].material_color='';
   if(el.value==='avio')cmpItemsTemp[i].unidad='unidades';
-  if(el.value==='tela')cmpItemsTemp[i].unidad='metros';
+  if(el.value==='tela')cmpItemsTemp[i].unidad='rollos';
   renderCmpItemsModal();
 }
 function cmpItemChange(i,field,el){
@@ -13962,6 +14339,7 @@ function cmpItemChange(i,field,el){
     if(tipo==='avio'){cmpItemsTemp[i].material_id=Number(el.value)||null;var av=AVIOS.find(function(a){return a.id===Number(el.value);});cmpItemsTemp[i].material_nombre=av?av.nombre:'';}
     if(tipo==='tela'){cmpItemsTemp[i].material_nombre=el.value;}
   }
+  if(field==='color')cmpItemsTemp[i].material_color=el.value.toUpperCase();
   if(field==='desc')cmpItemsTemp[i].material_nombre=el.value;
   if(field==='unidad')cmpItemsTemp[i].unidad=el.value;
   if(field==='cant')cmpItemsTemp[i].cantidad=Number(el.value)||0;
@@ -13996,7 +14374,7 @@ async function saveCompra(estado){
     compraId=r.data.id;
   }
   var items=cmpItemsTemp.filter(function(it){return it.material_nombre||it.material_id;}).map(function(it){
-    return {compra_id:compraId,tipo:it.tipo,material_id:it.material_id||null,material_nombre:it.material_nombre||'',unidad:it.unidad||'unidades',cantidad:Number(it.cantidad)||0,precio_unit:Number(it.precio_unit)||0};
+    return {compra_id:compraId,tipo:it.tipo,material_id:it.material_id||null,material_nombre:it.material_nombre||'',material_color:it.material_color||null,unidad:it.unidad||'unidades',cantidad:Number(it.cantidad)||0,precio_unit:Number(it.precio_unit)||0};
   });
   if(items.length>0){var ri=await sb.from('compras_items').insert(items);if(ri.error){toast('Error en ítems: '+ri.error.message,'err');return;}}
   toast(editCmpId?'Compra actualizada':'Compra creada','ok');
@@ -14036,6 +14414,11 @@ async function recibirCompra(id){
     if(it.tipo==='tela'&&it.material_nombre){
       await sb.from('telas_tipos').update({precio_kg:it.precio_unit}).eq('nombre',it.material_nombre);
       await sb.from('fichas_costo_telas').update({costo_unit:it.precio_unit}).eq('nombre_tela',it.material_nombre);
+      if(it.material_color){
+        var stockExist=TELAS_STOCK.find(function(t){return t.tipo_tela===it.material_nombre&&t.color===it.material_color;});
+        var nuevosRollos=Math.round(Number(stockExist?stockExist.rollos:0)+Number(it.cantidad||0));
+        await sb.from('telas_stock').upsert({color:it.material_color,tipo_tela:it.material_nombre,rollos:nuevosRollos,updated_at:new Date().toISOString()},{onConflict:'color,tipo_tela'});
+      }
     }
     await sb.from('historial_precios').insert({tipo:it.tipo,material_id:it.material_id||null,material_nombre:it.material_nombre,fecha:compra.fecha,precio_unit:it.precio_unit,compra_id:id});
   }
@@ -14046,7 +14429,7 @@ async function recibirCompra(id){
     await Promise.all([loadProvFacturas(),loadFacturaPagos()]);
   }
   toast('Compra recibida — stock y precios actualizados','ok');
-  await Promise.all([loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadAvios(),loadTelasTipos(),loadFichasCostoTelas()]);
+  await Promise.all([loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadAvios(),loadTelasTipos(),loadTelasStock(),loadFichasCostoTelas()]);
   renderCompras();
 }
 
