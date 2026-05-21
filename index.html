@@ -8673,11 +8673,21 @@ async function saveChqCartera(){
     nota:document.getElementById('chqc-nota').value||null,
     updated_at:new Date().toISOString()
   };
+  var esNuevo=!editChqCId;
   var r=editChqCId?await sb.from('cheques_cartera').update(d).eq('id',editChqCId):await sb.from('cheques_cartera').insert(d);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
+  // Registrar ingreso en movimientos solo al crear (no al editar)
+  if(esNuevo){
+    var detalle='Cheque recibido de '+emisor+(d.numero?' N°'+d.numero:'')+(d.nro_factura?' · FAC '+d.nro_factura:'');
+    await sb.from('movimientos').insert({
+      tipo:'ingreso',caja:'CHEQUES/ECHEQ',fecha:fecha,
+      ingreso:monto,egreso:0,
+      concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalle,nota:d.nota||null
+    });
+  }
   toast(editChqCId?'Recibo actualizado':'Recibo registrado');
   closeM('m-chqc');
-  await Promise.all([loadChequesCartera(),loadChequeUsos()]);
+  await Promise.all([loadChequesCartera(),loadChequeUsos(),loadMovs()]);
   renderChqCartera();
 }
 
@@ -8845,9 +8855,15 @@ async function saveChqMasivo(){
   if(!rows.length){toast('Completá al menos un Emisor y Monto','err');return;}
   var r=await sb.from('cheques_cartera').insert(rows);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
+  // Crear un movimiento por cada cheque insertado
+  var movs=rows.map(function(row){
+    var detalle='Cheque recibido de '+row.emisor+(row.numero?' N°'+row.numero:'')+(row.nro_factura?' · FAC '+row.nro_factura:'');
+    return {tipo:'ingreso',caja:'CHEQUES/ECHEQ',fecha:row.fecha_recibido,ingreso:row.monto,egreso:0,concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalle,nota:null};
+  });
+  await sb.from('movimientos').insert(movs);
   toast(rows.length+' recibo'+(rows.length!==1?'s':'')+' registrado'+(rows.length!==1?'s':''));
   closeM('m-chq-masivo');
-  await Promise.all([loadChequesCartera(),loadChequeUsos()]);
+  await Promise.all([loadChequesCartera(),loadChequeUsos(),loadMovs()]);
   renderChqCartera();
 }
 
@@ -8900,14 +8916,21 @@ async function saveChqUso(){
   };
   var r=await sb.from('cheque_usos').insert(d);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
-  // Si saldo queda en 0, marcar como endosado (fue usado como pago a terceros)
+  // Si saldo queda en 0, marcar como endosado
   var nuevoSaldo=Number(c.monto)-usado-monto;
   if(nuevoSaldo<=0){
     await sb.from('cheques_cartera').update({estado:'endosado',updated_at:new Date().toISOString()}).eq('id',chquChequeId);
   }
+  // Registrar egreso en movimientos
+  var detalleUso='Endoso a '+dest+(d.concepto?' · '+d.concepto:'')+(c.numero?' · Cheque N°'+c.numero:'');
+  await sb.from('movimientos').insert({
+    tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha:fecha,
+    ingreso:0,egreso:monto,
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleUso,nota:d.nota||null
+  });
   toast('Uso registrado');
   closeM('m-chqu');
-  await Promise.all([loadChequesCartera(),loadChequeUsos()]);
+  await Promise.all([loadChequesCartera(),loadChequeUsos(),loadMovs()]);
   renderChqCartera();
 }
 
