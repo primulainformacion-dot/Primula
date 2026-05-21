@@ -2217,6 +2217,15 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="field"><label>Fecha</label><input type="date" id="mcob-fecha"/></div>
       <div class="field full"><label>Nota</label><input id="mcob-nota" placeholder="N° transferencia, referencia..."/></div>
     </div>
+    <div id="mcob-chq-section" style="display:none;background:#eff6ff;border-radius:8px;padding:12px;margin-top:4px;">
+      <div style="font-size:12px;font-weight:600;color:#1d4ed8;margin-bottom:10px;">Datos del cheque de terceros</div>
+      <div class="grid2">
+        <div class="field"><label>Emisor</label><input id="mcob-chq-emisor" placeholder="Nombre del firmante"/></div>
+        <div class="field"><label>N° de cheque</label><input id="mcob-chq-nro" placeholder="12345678"/></div>
+        <div class="field"><label>Banco</label><input id="mcob-chq-banco" placeholder="Banco del emisor"/></div>
+        <div class="field"><label>Fecha de cobro</label><input type="date" id="mcob-chq-fecha-cobro"/></div>
+      </div>
+    </div>
     <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-cobro')">Cancelar</button><button class="btn btn-green" onclick="saveCobro()">Registrar cobro</button></div>
   </div>
 </div>
@@ -3765,6 +3774,73 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- ══ LIQUIDACIÓN CON CHEQUES (pagar proveedor / cobrar cliente) ══ -->
+<div class="modal-bg" id="m-liq-cheques">
+  <div class="modal modal-wide" style="max-width:960px;">
+    <h3 id="mliq-title">Liquidar con cheques</h3>
+
+    <!-- Stats row -->
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;background:#f9fafb;padding:12px 16px;border-radius:10px;font-size:13px;">
+      <div>Deuda pendiente: <strong id="mliq-stat-deuda" style="color:#dc2626;">$0</strong></div>
+      <div style="color:#d1d5db;">|</div>
+      <div>Cheques cargados: <strong id="mliq-stat-cheques" style="color:#1d4ed8;">$0</strong></div>
+      <div style="color:#d1d5db;">|</div>
+      <div>Diferencia: <strong id="mliq-stat-dif">$0</strong></div>
+      <div style="margin-left:auto;">Fecha: <input type="date" id="mliq-fecha" style="padding:4px 8px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:12px;"/></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+      <!-- Deudas -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;" id="mliq-deuda-lbl">Facturas pendientes</div>
+        <div id="mliq-deudas-lista" style="max-height:220px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;"></div>
+      </div>
+
+      <!-- Cheques -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;">Cheques</div>
+        <div id="mliq-cheques-lista" style="max-height:140px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:10px;"></div>
+
+        <!-- Modo pagar: seleccionar de cartera -->
+        <div id="mliq-add-cartera" style="display:none;">
+          <select id="mliq-cartera-sel" style="width:100%;padding:7px 10px;border:2px solid #e5e7eb;border-radius:8px;font-size:12px;margin-bottom:6px;">
+            <option value="">— Seleccionar cheque en cartera —</option>
+          </select>
+          <button class="btn btn-sm" style="width:100%;" onclick="liqAddCartera()">+ Agregar cheque</button>
+        </div>
+
+        <!-- Modo cobrar: agregar nuevo cheque -->
+        <div id="mliq-add-nuevo" style="display:none;background:#eff6ff;border-radius:8px;padding:10px;">
+          <div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:8px;">Nuevo cheque recibido</div>
+          <div class="grid2" style="gap:8px;">
+            <div class="field"><label style="font-size:11px;">Emisor *</label><input id="mliq-new-emisor" placeholder="Firmante" style="font-size:12px;"/></div>
+            <div class="field"><label style="font-size:11px;">Monto *</label><input type="number" id="mliq-new-monto" placeholder="0" style="font-size:12px;"/></div>
+            <div class="field"><label style="font-size:11px;">N° cheque</label><input id="mliq-new-nro" placeholder="12345678" style="font-size:12px;"/></div>
+            <div class="field"><label style="font-size:11px;">Banco</label><input id="mliq-new-banco" placeholder="Banco..." style="font-size:12px;"/></div>
+            <div class="field full"><label style="font-size:11px;">Fecha de cobro</label><input type="date" id="mliq-new-fcobro" style="font-size:12px;"/></div>
+          </div>
+          <button class="btn btn-sm" style="width:100%;margin-top:6px;" onclick="liqAddNuevo()">+ Agregar cheque</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribución -->
+    <div style="border-top:2px solid #e5e7eb;padding-top:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.4px;">Distribución</div>
+        <button class="btn btn-sm" onclick="autoAsignarLiq()">⚡ Auto-asignar</button>
+      </div>
+      <div id="mliq-asig-cont"></div>
+    </div>
+
+    <div class="modal-footer" style="margin-top:16px;">
+      <button class="btn btn-gray" onclick="closeM('m-liq-cheques')">Cancelar</button>
+      <button class="btn" onclick="saveLiqCheques()">Confirmar liquidación</button>
+    </div>
+  </div>
+</div>
+
 <!-- Cheque propio -->
 <div class="modal-bg" id="m-chqp">
   <div class="modal">
@@ -4736,7 +4812,9 @@ function verCuenta(id){
       '<div class="cc-saldo"><p>Saldo pendiente</p><span>'+$p(deuda)+'</span></div>'+
     '</div>'+
     '<div class="panel">'+
-      '<div class="panel-hdr"><h4>Historial de ventas</h4><button class="btn btn-sm" onclick="abrirVentaParaCliente('+id+')">+ Nueva venta</button></div>'+
+      '<div class="panel-hdr"><h4>Historial de ventas</h4><div style="display:flex;gap:8px;">'+
+        (deuda>0?'<button class="btn btn-sm btn-outline" onclick="openLiqCheques(\'cobrar\','+id+')">💳 Cobrar con cheques</button>':'')+
+        '<button class="btn btn-sm" onclick="abrirVentaParaCliente('+id+')">+ Nueva venta</button></div></div>'+
       '<div class="tbl"><table><thead><tr><th>N°</th><th>Fecha</th><th>Local</th><th>Total</th><th>Saldo</th><th>Estado</th><th></th></tr></thead><tbody>'+
       (ventas.length?ventas.map(function(v){
         return '<tr>'+
@@ -4822,6 +4900,7 @@ function renderProvCC(){
           (deudaProv>0?'<span style="margin-left:12px;font-size:12px;color:#dc2626;font-weight:700;">Debe: '+$p(deudaProv)+'</span>':
            '<span style="margin-left:12px;font-size:12px;color:#16a34a;font-weight:700;">Sin deuda</span>')+
         '</div>'+
+        (deudaProv>0?'<button class="btn btn-sm btn-outline" onclick="openLiqCheques(\'pagar\','+pid+')" style="margin-right:6px;">💳 Pagar con cheques</button>':'')+
         '<button class="btn btn-sm" onclick="openFacturaModal(null,'+pid+')">+ Factura</button>'+
       '</div>'+
       '<div class="tbl"><table>'+
@@ -4944,12 +5023,14 @@ async function savePagoFactura(){
   var saldo=factSaldo(pagoFacturaId);
   if(monto>saldo+0.01){toast('El monto supera el saldo pendiente ('+$p(saldo)+')','err');return;}
   var chequeId=parseInt(document.getElementById('fpago-cheque-id').value)||null;
+  var cajaVal=document.getElementById('fpago-caja').value||null;
+  var notaVal=document.getElementById('fpago-nota').value||null;
   var d={
     factura_id:pagoFacturaId,
     monto,fecha,
-    caja:document.getElementById('fpago-caja').value||null,
+    caja:cajaVal,
     cheque_id:chequeId,
-    nota:document.getElementById('fpago-nota').value||null
+    nota:notaVal
   };
   var r=await sb.from('factura_pagos').insert(d);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
@@ -4958,10 +5039,283 @@ async function savePagoFactura(){
   var nuevoSaldo=saldo-monto;
   var nuevoEstado=nuevoSaldo<=0.01?'pagada':'parcial';
   await sb.from('proveedor_facturas').update({estado:nuevoEstado,updated_at:new Date().toISOString()}).eq('id',pagoFacturaId);
+  var prov=PROVEEDORES.find(function(p){return p.id===f.proveedor_id;})||{nombre:'Proveedor'};
+  var detallePago='Pago a '+prov.nombre+(f.numero?' · Fact. '+f.numero:'');
+  if(chequeId){
+    // Cheque de terceros: registrar uso + egreso en CHEQUES/ECHEQ
+    var chq=CHEQUES_CARTERA.find(function(x){return x.id===chequeId;})||{};
+    var usadoAntes=CHEQUE_USOS.filter(function(u){return u.cheque_id===chequeId;}).reduce(function(s,u){return s+Number(u.monto);},0);
+    await sb.from('cheque_usos').insert({
+      cheque_id:chequeId,
+      proveedor_id:f.proveedor_id,
+      destinatario:prov.nombre,
+      monto,fecha,
+      concepto:'Pago factura'+(f.numero?' '+f.numero:''),
+      nota:notaVal
+    });
+    await sb.from('movimientos').insert({
+      tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:monto,
+      concepto:'CHEQUES/TRANSFERENCIAS',
+      detalle:detallePago+(chq.numero?' · Cheque N°'+chq.numero:''),
+      nota:notaVal
+    });
+    // Marcar cheque como endosado si saldo queda en 0
+    if(Number(chq.monto)-usadoAntes-monto<=0.01){
+      await sb.from('cheques_cartera').update({estado:'endosado',updated_at:new Date().toISOString()}).eq('id',chequeId);
+    }
+  } else if(cajaVal){
+    // Efectivo / transferencia: egreso en la caja seleccionada
+    await sb.from('movimientos').insert({
+      tipo:'egreso',caja:cajaVal,fecha,ingreso:0,egreso:monto,
+      concepto:'PAGOS',detalle:detallePago,nota:notaVal
+    });
+  }
   toast('Pago registrado');
   closeM('m-fpago');
-  await Promise.all([loadProvFacturas(),loadFacturaPagos()]);
+  await Promise.all([loadProvFacturas(),loadFacturaPagos(),loadChequesCartera(),loadChequeUsos(),loadMovs()]);
   renderProvCC();renderPanelGeneral();
+}
+
+// ══════════════════════════════════════════════
+// LIQUIDACIÓN MASIVA CON CHEQUES
+// ══════════════════════════════════════════════
+var liqMode=null, liqEntityId=null;
+var liqChequesArr=[], liqDeudasArr=[], liqAsigArr=[];
+
+function openLiqCheques(mode, entityId){
+  liqMode=mode; liqEntityId=entityId;
+  liqChequesArr=[]; liqAsigArr=[];
+  document.getElementById('mliq-fecha').value=today();
+  if(mode==='pagar'){
+    var prov=PROVEEDORES.find(function(p){return p.id===entityId;})||{nombre:'?'};
+    document.getElementById('mliq-title').textContent='Pagar a '+prov.nombre+' con cheques';
+    document.getElementById('mliq-deuda-lbl').textContent='Facturas pendientes';
+    liqDeudasArr=PROV_FACTURAS
+      .filter(function(f){return f.proveedor_id===entityId&&f.estado!=='pagada'&&f.estado!=='anulada';})
+      .map(function(f){return {id:f.id,label:'Fact.'+(f.numero?' '+f.numero:' S/N')+' · '+$p(Number(f.monto_total)),saldo:factSaldo(f.id),fecha:f.fecha,tipo:'factura'};})
+      .filter(function(d){return d.saldo>0.01;})
+      .sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+    document.getElementById('mliq-add-cartera').style.display='block';
+    document.getElementById('mliq-add-nuevo').style.display='none';
+    poblarLiqCartera();
+  } else {
+    var cli=CLIENTES.find(function(c){return c.id===entityId;})||{nombre:'?'};
+    document.getElementById('mliq-title').textContent='Cobrar de '+cli.nombre+' con cheques';
+    document.getElementById('mliq-deuda-lbl').textContent='Ventas pendientes';
+    liqDeudasArr=VENTAS
+      .filter(function(v){return v.cliente_id===entityId&&v.estado!=='cobrado'&&v.estado!=='anulada'&&Number(v.saldo)>0.01;})
+      .map(function(v){return {id:v.id,label:'Venta #'+v.id+' '+v.fecha+' · '+$p(Number(v.total)),saldo:Number(v.saldo),fecha:v.fecha||'',tipo:'venta'};})
+      .sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+    document.getElementById('mliq-add-cartera').style.display='none';
+    document.getElementById('mliq-add-nuevo').style.display='block';
+    var emisorEl=document.getElementById('mliq-new-emisor');
+    if(emisorEl)emisorEl.value=cli.nombre||'';
+    ['mliq-new-nro','mliq-new-banco','mliq-new-monto'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('mliq-new-fcobro').value='';
+  }
+  renderLiqModal();
+  openM('m-liq-cheques');
+}
+
+function poblarLiqCartera(){
+  var sel=document.getElementById('mliq-cartera-sel');if(!sel)return;
+  var yaAgregados=liqChequesArr.filter(function(c){return c.cheque_id;}).map(function(c){return c.cheque_id;});
+  sel.innerHTML='<option value="">— Seleccionar cheque en cartera —</option>';
+  CHEQUES_CARTERA.filter(function(c){return c.estado==='en_cartera'&&yaAgregados.indexOf(c.id)<0;}).forEach(function(c){
+    var usado=CHEQUE_USOS.filter(function(u){return u.cheque_id===c.id;}).reduce(function(s,u){return s+Number(u.monto);},0);
+    var saldo=Number(c.monto)-usado;
+    if(saldo>0.01){
+      var o=document.createElement('option');
+      o.value=c.id;
+      o.textContent=c.emisor+(c.numero?' N°'+c.numero:'')+' · '+$p(saldo)+' · vto '+(c.fecha_cobro||'?');
+      sel.appendChild(o);
+    }
+  });
+}
+
+function liqAddCartera(){
+  var sel=document.getElementById('mliq-cartera-sel');
+  var chqId=parseInt(sel.value)||null;
+  if(!chqId){toast('Seleccioná un cheque','err');return;}
+  var chq=CHEQUES_CARTERA.find(function(x){return x.id===chqId;})||{};
+  var usado=CHEQUE_USOS.filter(function(u){return u.cheque_id===chqId;}).reduce(function(s,u){return s+Number(u.monto);},0);
+  var saldo=Number(chq.monto)-usado;
+  liqChequesArr.push({cheque_id:chqId,emisor:chq.emisor,numero:chq.numero,banco:chq.banco,monto:saldo,tipo:'existing'});
+  sel.value='';
+  poblarLiqCartera();
+  renderLiqModal();
+}
+
+function liqAddNuevo(){
+  var emisor=document.getElementById('mliq-new-emisor').value.trim();
+  var monto=parseFloat(document.getElementById('mliq-new-monto').value)||0;
+  if(!emisor||!monto){toast('Completá emisor y monto','err');return;}
+  liqChequesArr.push({
+    tipo:'new',emisor,monto,
+    numero:document.getElementById('mliq-new-nro').value.trim()||null,
+    banco:document.getElementById('mliq-new-banco').value.trim()||null,
+    fecha_cobro:document.getElementById('mliq-new-fcobro').value||null
+  });
+  document.getElementById('mliq-new-nro').value='';
+  document.getElementById('mliq-new-banco').value='';
+  document.getElementById('mliq-new-monto').value='';
+  document.getElementById('mliq-new-fcobro').value='';
+  renderLiqModal();
+}
+
+function removeLiqCheque(i){
+  liqChequesArr.splice(i,1);
+  liqAsigArr=liqAsigArr.filter(function(a){return a.ci!==i;}).map(function(a){return {ci:a.ci>i?a.ci-1:a.ci,di:a.di,monto:a.monto};});
+  if(liqMode==='pagar')poblarLiqCartera();
+  renderLiqModal();
+}
+function removeLiqAsig(i){liqAsigArr.splice(i,1);renderLiqModal();}
+
+function autoAsignarLiq(){
+  liqAsigArr=[];
+  var disponibles=liqChequesArr.map(function(c){return Number(c.monto);});
+  liqDeudasArr.forEach(function(d,di){
+    var saldoDeuda=d.saldo;
+    liqChequesArr.forEach(function(c,ci){
+      if(saldoDeuda<0.01||disponibles[ci]<0.01)return;
+      var aplicar=Math.min(saldoDeuda,disponibles[ci]);
+      aplicar=Math.round(aplicar*100)/100;
+      liqAsigArr.push({ci,di,monto:aplicar});
+      saldoDeuda-=aplicar;
+      disponibles[ci]-=aplicar;
+    });
+  });
+  renderLiqModal();
+}
+
+function renderLiqModal(){
+  // Cheques
+  var clista=document.getElementById('mliq-cheques-lista');
+  if(clista){
+    if(!liqChequesArr.length){clista.innerHTML='<div style="padding:10px;font-size:12px;color:#9ca3af;">Sin cheques.</div>';}
+    else{
+      clista.innerHTML='<table style="width:100%;font-size:12px;border-collapse:collapse;">'+
+        '<thead><tr style="background:#f3f4f6;"><th style="padding:5px 8px;text-align:left;">Emisor</th><th style="padding:5px 8px;">N°</th><th style="padding:5px 8px;text-align:right;">Monto</th><th style="padding:5px 8px;text-align:right;">Disponible</th><th></th></tr></thead><tbody>'+
+        liqChequesArr.map(function(c,i){
+          var asig=liqAsigArr.filter(function(a){return a.ci===i;}).reduce(function(s,a){return s+Number(a.monto);},0);
+          var disp=Number(c.monto)-asig;
+          return '<tr><td style="padding:4px 8px;">'+(c.emisor||'—')+'</td>'+
+            '<td style="padding:4px 8px;color:#6b7280;">'+(c.numero||'—')+'</td>'+
+            '<td style="padding:4px 8px;text-align:right;">'+$p(Number(c.monto))+'</td>'+
+            '<td style="padding:4px 8px;text-align:right;font-weight:700;color:'+(disp<-0.01?'#dc2626':'#16a34a')+';">'+$p(disp)+'</td>'+
+            '<td style="padding:4px 8px;"><button class="btn btn-gray btn-sm" onclick="removeLiqCheque('+i+')">×</button></td></tr>';
+        }).join('')+'</tbody></table>';
+    }
+  }
+  // Deudas
+  var dlista=document.getElementById('mliq-deudas-lista');
+  if(dlista){
+    if(!liqDeudasArr.length){dlista.innerHTML='<div style="padding:10px;font-size:12px;color:#16a34a;">Sin deuda pendiente.</div>';}
+    else{
+      dlista.innerHTML='<table style="width:100%;font-size:12px;border-collapse:collapse;">'+
+        '<thead><tr style="background:#f3f4f6;"><th style="padding:5px 8px;text-align:left;">Concepto</th><th style="padding:5px 8px;text-align:right;">Saldo</th><th style="padding:5px 8px;text-align:right;">Asignado</th></tr></thead><tbody>'+
+        liqDeudasArr.map(function(d,i){
+          var asig=liqAsigArr.filter(function(a){return a.di===i;}).reduce(function(s,a){return s+Number(a.monto);},0);
+          var ok=asig>=d.saldo-0.01;
+          return '<tr style="background:'+(ok?'#f0fdf4':'white')+';">'+
+            '<td style="padding:4px 8px;">'+(ok?'✓ ':'')+d.label+'</td>'+
+            '<td style="padding:4px 8px;text-align:right;color:#dc2626;font-weight:700;">'+$p(d.saldo)+'</td>'+
+            '<td style="padding:4px 8px;text-align:right;font-weight:700;">'+$p(asig)+'</td></tr>';
+        }).join('')+'</tbody></table>';
+    }
+  }
+  // Asignaciones
+  var acont=document.getElementById('mliq-asig-cont');
+  if(acont){
+    if(!liqAsigArr.length){acont.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px 0;">Sin distribución — usá ⚡ Auto-asignar o eliminá cheques y volvé a intentar.</div>';}
+    else{
+      acont.innerHTML='<table style="width:100%;font-size:12px;border-collapse:collapse;">'+
+        '<thead><tr style="background:#f3f4f6;"><th style="padding:5px 8px;text-align:left;">Cheque</th><th style="padding:5px 8px;text-align:left;">Aplicado a</th><th style="padding:5px 8px;text-align:right;">Monto</th><th></th></tr></thead><tbody>'+
+        liqAsigArr.map(function(a,i){
+          var chq=liqChequesArr[a.ci]||{};
+          var deu=liqDeudasArr[a.di]||{};
+          return '<tr><td style="padding:4px 8px;">'+(chq.emisor||'Cheque '+(a.ci+1))+(chq.numero?' N°'+chq.numero:'')+'</td>'+
+            '<td style="padding:4px 8px;">'+deu.label+'</td>'+
+            '<td style="padding:4px 8px;text-align:right;font-weight:700;">'+$p(Number(a.monto))+'</td>'+
+            '<td style="padding:4px 8px;"><button class="btn btn-gray btn-sm" onclick="removeLiqAsig('+i+')">×</button></td></tr>';
+        }).join('')+'</tbody></table>';
+    }
+  }
+  // Stats
+  var totDeuda=liqDeudasArr.reduce(function(s,d){return s+d.saldo;},0);
+  var totCheques=liqChequesArr.reduce(function(s,c){return s+Number(c.monto);},0);
+  var totAsig=liqAsigArr.reduce(function(s,a){return s+Number(a.monto);},0);
+  var el=document.getElementById('mliq-stat-deuda');if(el)el.textContent=$p(totDeuda);
+  var elc=document.getElementById('mliq-stat-cheques');if(elc)elc.textContent=$p(totCheques);
+  var dif=totCheques-totAsig;
+  var elD=document.getElementById('mliq-stat-dif');
+  if(elD){elD.textContent=$p(Math.abs(dif))+(dif>0.01?' sobrante':dif<-0.01?' faltante':' exacto');elD.style.color=dif>0.01?'#1d4ed8':dif<-0.01?'#dc2626':'#16a34a';}
+}
+
+async function saveLiqCheques(){
+  if(!liqChequesArr.length){toast('Agregá al menos un cheque','err');return;}
+  if(!liqAsigArr.length){toast('Usá Auto-asignar para distribuir los cheques','err');return;}
+  // Validar que ningún cheque esté sobre-asignado
+  for(var ci=0;ci<liqChequesArr.length;ci++){
+    var total=liqAsigArr.filter(function(a){return a.ci===ci;}).reduce(function(s,a){return s+Number(a.monto);},0);
+    if(total>Number(liqChequesArr[ci].monto)+0.01){toast('El cheque de '+(liqChequesArr[ci].emisor||ci+1)+' excede su monto disponible','err');return;}
+  }
+  var fecha=document.getElementById('mliq-fecha').value||today();
+
+  if(liqMode==='pagar'){
+    var prov=PROVEEDORES.find(function(p){return p.id===liqEntityId;})||{nombre:'Proveedor'};
+    // Por cada cheque: crear cheque_uso + egreso CHEQUES/ECHEQ + actualizar estado
+    for(var ci2=0;ci2<liqChequesArr.length;ci2++){
+      var chq=liqChequesArr[ci2];
+      var asigs=liqAsigArr.filter(function(a){return a.ci===ci2;});
+      if(!asigs.length)continue;
+      var totalUsado=asigs.reduce(function(s,a){return s+Number(a.monto);},0);
+      await sb.from('cheque_usos').insert({cheque_id:chq.cheque_id,proveedor_id:liqEntityId,destinatario:prov.nombre,monto:totalUsado,fecha,concepto:'Liquidación múltiple',nota:null});
+      await sb.from('movimientos').insert({tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:totalUsado,concepto:'CHEQUES/TRANSFERENCIAS',detalle:'Pago a '+prov.nombre+(chq.numero?' · Cheque N°'+chq.numero:''),nota:null});
+      var chqData=CHEQUES_CARTERA.find(function(x){return x.id===chq.cheque_id;})||{};
+      var usadoAntes=CHEQUE_USOS.filter(function(u){return u.cheque_id===chq.cheque_id;}).reduce(function(s,u){return s+Number(u.monto);},0);
+      if(Number(chqData.monto)-usadoAntes-totalUsado<=0.01)await sb.from('cheques_cartera').update({estado:'endosado',updated_at:new Date().toISOString()}).eq('id',chq.cheque_id);
+    }
+    // Por cada factura: crear factura_pagos + actualizar estado
+    var factTotals={};
+    liqAsigArr.forEach(function(a){if(!factTotals[a.di])factTotals[a.di]=0;factTotals[a.di]+=Number(a.monto);});
+    for(var di in factTotals){
+      var deu=liqDeudasArr[parseInt(di)];
+      var chqAsig=liqChequesArr[liqAsigArr.find(function(a){return a.di===parseInt(di);}).ci]||{};
+      await sb.from('factura_pagos').insert({factura_id:deu.id,monto:factTotals[di],fecha,caja:null,cheque_id:chqAsig.cheque_id||null,nota:'Liquidación múltiple'});
+      var nuevoEst=deu.saldo-factTotals[di]<=0.01?'pagada':'parcial';
+      await sb.from('proveedor_facturas').update({estado:nuevoEst,updated_at:new Date().toISOString()}).eq('id',deu.id);
+    }
+    await Promise.all([loadProvFacturas(),loadFacturaPagos(),loadChequesCartera(),loadChequeUsos(),loadMovs()]);
+    renderProvCC();renderPanelGeneral();
+
+  } else { // cobrar
+    var cli2=CLIENTES.find(function(c){return c.id===liqEntityId;})||{nombre:'Cliente'};
+    // Crear cheques en cartera + ingreso CHEQUES/ECHEQ
+    var chqIdMap=[];
+    for(var ci3=0;ci3<liqChequesArr.length;ci3++){
+      var nc=liqChequesArr[ci3];
+      var {data:ins,error:eins}=await sb.from('cheques_cartera').insert({emisor:nc.emisor,numero:nc.numero||null,banco:nc.banco||null,monto:nc.monto,fecha_recibido:fecha,fecha_cobro:nc.fecha_cobro||null,estado:'en_cartera',nota:null}).select('id');
+      if(eins){toast('Error al crear cheque: '+eins.message,'err');return;}
+      chqIdMap.push(ins&&ins[0]?ins[0].id:null);
+      await sb.from('movimientos').insert({tipo:'ingreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:Number(nc.monto),egreso:0,concepto:'COBRO CLIENTE',detalle:'Cobro de '+cli2.nombre+(nc.numero?' · Cheque N°'+nc.numero:''),nota:null});
+    }
+    // Crear cobros + actualizar ventas
+    var ventaTotals={};
+    liqAsigArr.forEach(function(a){if(!ventaTotals[a.di])ventaTotals[a.di]=0;ventaTotals[a.di]+=Number(a.monto);});
+    for(var di2 in ventaTotals){
+      var deu2=liqDeudasArr[parseInt(di2)];
+      await sb.from('cobros').insert({venta_id:deu2.id,cliente_id:liqEntityId,fecha,monto:ventaTotals[di2],medio:'cheque',nota:'Liquidación múltiple'});
+      var vData=VENTAS.find(function(v){return v.id===deu2.id;})||{};
+      var nuevoSaldo=Math.max(Number(vData.saldo)-ventaTotals[di2],0);
+      await sb.from('ventas').update({saldo:nuevoSaldo,estado:nuevoSaldo<=0?'cobrado':'parcial',updated_at:new Date().toISOString()}).eq('id',deu2.id);
+    }
+    await Promise.all([loadVentas(),loadMovs(),loadChequesCartera()]);
+    renderDash();renderFin();
+    if(document.getElementById('sec-clientes').classList.contains('active'))renderCCMayoristas();
+  }
+  toast('Liquidación registrada');
+  closeM('m-liq-cheques');
 }
 
 function poblarSelectProvCC(){
@@ -5432,8 +5786,10 @@ async function saveVenta(){
 // ════════════════════════════════════
 function mcob_onMedio(){
   var medio=document.getElementById('mcob-medio').value;
-  var cajaMap={efectivo:'EFECTIVO ADMINISTRACIÓN',transferencia:'BANCO SRL',tarjeta:'EFECTIVO ADMINISTRACIÓN',qr:'MERCADO PAGO',cheque:'EFECTIVO ADMINISTRACIÓN'};
+  var cajaMap={efectivo:'EFECTIVO ADMINISTRACIÓN',transferencia:'BANCO SRL',tarjeta:'EFECTIVO ADMINISTRACIÓN',qr:'MERCADO PAGO',cheque:'CHEQUES/ECHEQ'};
   document.getElementById('mcob-caja').value=cajaMap[medio]||'EFECTIVO ADMINISTRACIÓN';
+  var chqSec=document.getElementById('mcob-chq-section');
+  if(chqSec)chqSec.style.display=medio==='cheque'?'block':'none';
 }
 
 function openCobro(vid,cid,saldo){
@@ -5446,6 +5802,15 @@ function openCobro(vid,cid,saldo){
   document.getElementById('mcob-caja').value='EFECTIVO ADMINISTRACIÓN';
   document.getElementById('mcob-fecha').value=today();
   document.getElementById('mcob-nota').value='';
+  // Cheque fields
+  var chqSec=document.getElementById('mcob-chq-section');
+  if(chqSec)chqSec.style.display='none';
+  var cli=cid?CLIENTES.find(function(c){return c.id===cid;}):null;
+  var emisorEl=document.getElementById('mcob-chq-emisor');
+  if(emisorEl)emisorEl.value=cli?cli.nombre:'';
+  var nroEl=document.getElementById('mcob-chq-nro');if(nroEl)nroEl.value='';
+  var bancoEl=document.getElementById('mcob-chq-banco');if(bancoEl)bancoEl.value='';
+  var fcobroEl=document.getElementById('mcob-chq-fecha-cobro');if(fcobroEl)fcobroEl.value='';
   openM('m-cobro');
 }
 async function saveCobro(){
@@ -5468,22 +5833,43 @@ async function saveCobro(){
   var nuevoEstado=nuevoSaldo===0?'cobrado':(monto>0?'parcial':'pendiente');
   await sb.from('ventas').update({saldo:nuevoSaldo,estado:nuevoEstado,updated_at:new Date().toISOString()}).eq('id',vid);
 
-  // 3) Crear movimiento de ingreso en la caja seleccionada
-  var venta=VENTAS.find(function(v){return v.id===vid;})||{};
+  // 3) Movimiento + cheque según medio
   var cli=cid?CLIENTES.find(function(c){return c.id===cid;}):null;
-  var dMov={
-    caja,fecha,tipo:'ingreso',concepto:'COBRO CLIENTE',
-    detalle:'Cobro venta #'+vid+(cli?' — '+cli.nombre:''),
-    ingreso:monto,egreso:0,
-    referencia:nota||null,
-    anio:new Date(fecha+'T12:00:00').getFullYear(),
-    mes:MESES_ARR[new Date(fecha+'T12:00:00').getMonth()],sem:0
-  };
-  await sb.from('movimientos').insert(dMov);
+  var detalleCobro='Cobro venta #'+vid+(cli?' — '+cli.nombre:'');
+  if(medio==='cheque'){
+    // Crear cheque en cartera
+    var emisor=document.getElementById('mcob-chq-emisor').value.trim()||( cli?cli.nombre:'');
+    var nroChq=document.getElementById('mcob-chq-nro').value.trim()||null;
+    var bancoChq=document.getElementById('mcob-chq-banco').value.trim()||null;
+    var fCobroChq=document.getElementById('mcob-chq-fecha-cobro').value||null;
+    var rChq=await sb.from('cheques_cartera').insert({
+      emisor,numero:nroChq,banco:bancoChq,
+      monto,fecha_recibido:fecha,fecha_cobro:fCobroChq,
+      estado:'en_cartera',
+      nro_factura:null,nota:nota||null
+    });
+    if(rChq.error){toast('Error al crear cheque: '+rChq.error.message,'err');return;}
+    // Ingreso en CHEQUES/ECHEQ
+    await sb.from('movimientos').insert({
+      caja:'CHEQUES/ECHEQ',fecha,tipo:'ingreso',concepto:'COBRO CLIENTE',
+      detalle:detalleCobro+(nroChq?' · Cheque N°'+nroChq:''),
+      ingreso:monto,egreso:0,nota:nota||null
+    });
+  } else {
+    // Efectivo, transferencia, tarjeta, QR
+    await sb.from('movimientos').insert({
+      caja,fecha,tipo:'ingreso',concepto:'COBRO CLIENTE',
+      detalle:detalleCobro,
+      ingreso:monto,egreso:0,
+      referencia:nota||null,
+      anio:new Date(fecha+'T12:00:00').getFullYear(),
+      mes:MESES_ARR[new Date(fecha+'T12:00:00').getMonth()],sem:0
+    });
+  }
 
   toast('Cobro registrado'+(nuevoEstado==='cobrado'?' — ¡Venta cobrada al 100%!':''));
   closeM('m-cobro');
-  await Promise.all([loadVentas(),loadMovs()]);
+  await Promise.all([loadVentas(),loadMovs(),loadChequesCartera()]);
   renderDash();renderFin();
   if(document.getElementById('sec-local').classList.contains('active'))renderLocalVentas();
   if(document.getElementById('sec-cuenta').classList.contains('active')&&cid)verCuenta(cid);
@@ -7507,16 +7893,27 @@ async function saveImputacion(){
   if(monto>saldoChq){errEl.textContent='El monto supera el saldo del cheque ('+$p(saldoChq)+')';errEl.style.display='block';return;}
   if(monto>saldoFac){errEl.textContent='El monto supera el saldo de la factura ('+$p(saldoFac)+')';errEl.style.display='block';return;}
   errEl.style.display='none';
+  var fechaImp=document.getElementById('imp-fecha').value||today();
+  var notaImp=document.getElementById('imp-nota').value.trim()||null;
   var r=await sb.from('cheque_imputaciones').insert({
     cheque_id:impChequeId, factura_id:facId, monto:monto,
-    fecha:document.getElementById('imp-fecha').value||today(),
-    nota:document.getElementById('imp-nota').value.trim()||null
+    fecha:fechaImp, nota:notaImp
   });
   if(r.error){errEl.textContent='Error: '+r.error.message;errEl.style.display='block';return;}
   await actualizarEstadoFactura(facId);
+  // Registrar egreso en movimientos
+  var fac=FACTURAS_CLIENTES.find(function(f){return f.id===facId;})||{};
+  var detalleImp='Imputado a FAC '+(fac.nro_factura||'S/N')+(fac.cliente_nombre?' · '+fac.cliente_nombre:'');
+  var chqImp=CHEQUES_CARTERA.find(function(x){return x.id===impChequeId;})||{};
+  if(chqImp.numero)detalleImp+=' · Cheque N°'+chqImp.numero;
+  await sb.from('movimientos').insert({
+    tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha:fechaImp,
+    ingreso:0,egreso:monto,
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleImp,nota:notaImp
+  });
   toast('Imputación registrada: '+$p(monto));
   closeM('m-imputar');
-  await Promise.all([loadChequesCartera(),loadChequeImputaciones(),loadFacturasClientes()]);
+  await Promise.all([loadChequesCartera(),loadChequeImputaciones(),loadFacturasClientes(),loadMovs()]);
   renderChqCartera();
   renderFacturasClientes();
 }
@@ -8961,20 +9358,24 @@ async function saveChqDepositar(){
   var saldo=Number(c.monto)-usado;
   if(monto>saldo+0.01){toast('El monto supera el saldo disponible ('+$p(saldo)+')','err');return;}
   // Crear movimiento ingreso
+  var notaDeposito=document.getElementById('chqd-nota').value||null;
   var detalle='Depósito cheque '+(c.emisor||'')+(c.numero?' N°'+c.numero:'')+(c.nro_factura?' · FAC '+c.nro_factura:'');
-  var mov={
-    tipo:'ingreso',caja,fecha,
-    ingreso:monto,egreso:0,
-    concepto:'CHEQUES/TRANSFERENCIAS',
-    detalle:document.getElementById('chqd-nota').value||detalle,
-    nota:document.getElementById('chqd-nota').value||null
-  };
-  var rMov=await sb.from('movimientos').insert(mov);
+  var detalleTexto=notaDeposito||detalle;
+  // Ingreso en el banco destino
+  var rMov=await sb.from('movimientos').insert({
+    tipo:'ingreso',caja,fecha,ingreso:monto,egreso:0,
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleTexto,nota:notaDeposito
+  });
   if(rMov.error){toast('Error al registrar movimiento: '+rMov.error.message,'err');return;}
+  // Egreso de la caja CHEQUES/ECHEQ
+  await sb.from('movimientos').insert({
+    tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:monto,
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle:'Depositado en '+caja+' · '+detalle,nota:notaDeposito
+  });
   // Marcar cheque como depositado
   var nuevoEstado=monto>=saldo-0.01?'depositado':c.estado;
   await sb.from('cheques_cartera').update({estado:nuevoEstado,updated_at:new Date().toISOString()}).eq('id',chqdChequeId);
-  toast('Depósito registrado — ingreso generado en '+caja);
+  toast('Depósito registrado — ingreso en '+caja+', egreso de CHEQUES/ECHEQ');
   closeM('m-chqd');
   await Promise.all([loadChequesCartera(),loadChequeUsos(),loadMovs()]);
   renderChqCartera();renderPanelGeneral();
