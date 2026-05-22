@@ -2071,6 +2071,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="tab" onclick="setEstrTab('kpis',this)">📊 KPIs por área</div>
       <div class="tab" onclick="setEstrTab('roadmap',this)">🗺️ Roadmap</div>
       <div class="tab" onclick="setEstrTab('semaforo',this)">🚦 Rentabilidad</div>
+      <div class="tab" onclick="setEstrTab('margen',this);renderMargenReal();">💰 Margen real</div>
     </div>
 
     <!-- ── TAB: ORGANIGRAMA ── -->
@@ -2478,6 +2479,44 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </div>
       </div>
     </div>
+
+    <!-- ── TAB: MARGEN REAL ── -->
+    <div id="estr-margen" style="display:none;">
+
+      <!-- Controles del período -->
+      <div class="panel" style="margin-bottom:14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="field" style="width:auto;">
+            <label>Mes</label>
+            <select id="mg-mes" onchange="renderMargenReal()" style="width:160px;">
+              <option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option>
+              <option>MAYO</option><option>JUNIO</option><option>JULIO</option><option>AGOSTO</option>
+              <option>SEPTIEMBRE</option><option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option>
+            </select>
+          </div>
+          <div class="field" style="width:auto;">
+            <label>Año</label>
+            <select id="mg-anio" onchange="renderMargenReal()" style="width:100px;"></select>
+          </div>
+          <div class="field" style="width:auto;">
+            <label>% Costo mercadería <span style="font-size:10px;color:#9ca3af;">(tela + talleristas)</span></label>
+            <input type="number" id="mg-pct-costo" value="45" min="0" max="100" step="0.5" oninput="renderMargenReal()" style="width:110px;"/>
+          </div>
+          <div class="field" style="width:auto;">
+            <label>Otros costos variables <span style="font-size:10px;color:#9ca3af;">(no en gastos fijos)</span></label>
+            <input type="number" id="mg-otros" value="0" min="0" step="1000" oninput="renderMargenReal()" style="width:160px;"/>
+          </div>
+          <div class="field" style="width:auto;">
+            <label>Tipo de cambio <span style="font-size:10px;color:#9ca3af;">$/USD (opcional)</span></label>
+            <input type="number" id="mg-tc" value="" min="0" step="50" placeholder="ej: 1200" oninput="renderMargenReal()" style="width:140px;"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resultado principal -->
+      <div id="mg-resultado"></div>
+
+    </div><!-- /estr-margen -->
 
   </div><!-- /sec-estrategia -->
 
@@ -4643,11 +4682,147 @@ async function loadMovs(){
 
 // ── ESTRATEGIA ──
 function setEstrTab(tab, el){
-  ['organigrama','kpis','roadmap','semaforo'].forEach(function(t){
+  ['organigrama','kpis','roadmap','semaforo','margen'].forEach(function(t){
     var d=document.getElementById('estr-'+t); if(d) d.style.display=(t===tab?'block':'none');
   });
   document.querySelectorAll('#estr-tabs .tab').forEach(function(t){t.classList.remove('active');});
   if(el) el.classList.add('active');
+}
+
+function _initMgPeriodo(){
+  var selA=document.getElementById('mg-anio');
+  if(!selA||selA.options.length>0) return;
+  var now=new Date(); var y=now.getFullYear();
+  for(var i=y+1;i>=y-2;i--){var o=document.createElement('option');o.value=i;o.textContent=i;if(i===y)o.selected=true;selA.appendChild(o);}
+  var MESES=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  var selM=document.getElementById('mg-mes'); if(selM) selM.value=MESES[now.getMonth()];
+}
+
+function renderMargenReal(){
+  _initMgPeriodo();
+  var anio=parseInt(document.getElementById('mg-anio').value)||new Date().getFullYear();
+  var mesNom=(document.getElementById('mg-mes').value||'ENERO');
+  var pctCosto=parseFloat(document.getElementById('mg-pct-costo').value)||0;
+  var otros=parseFloat(document.getElementById('mg-otros').value)||0;
+  var tcVal=document.getElementById('mg-tc').value;
+  var tc=tcVal?parseFloat(tcVal):0;
+
+  var MESES_MAP={ENERO:1,FEBRERO:2,MARZO:3,ABRIL:4,MAYO:5,JUNIO:6,JULIO:7,AGOSTO:8,SEPTIEMBRE:9,OCTUBRE:10,NOVIEMBRE:11,DICIEMBRE:12};
+  var mesNum=MESES_MAP[mesNom]||1;
+  var mesStr=String(mesNum).padStart(2,'0');
+  var desde=anio+'-'+mesStr+'-01';
+  var hasta=anio+'-'+mesStr+'-31';
+
+  var ventas=VENTAS.filter(function(v){return v.fecha>=desde&&v.fecha<=hasta&&v.estado!=='anulada';});
+  var facTotal=ventas.reduce(function(s,v){return s+Number(v.total||0);},0);
+  var facMay=ventas.filter(function(v){return v.local==='mayorista';}).reduce(function(s,v){return s+Number(v.total||0);},0);
+  var facLL=ventas.filter(function(v){return v.local==='llavallol';}).reduce(function(s,v){return s+Number(v.total||0);},0);
+  var facMG=ventas.filter(function(v){return v.local==='montegrande';}).reduce(function(s,v){return s+Number(v.total||0);},0);
+  var facOtros=facTotal-facMay-facLL-facMG;
+
+  var gastosFijos=GASTOS_FIJOS.filter(function(g){return g.activo;})
+    .reduce(function(s,g){return s+Number(g.monto||0)/(FREC_MESES[g.frecuencia||'mensual']||1);},0);
+
+  var costoMerch=facTotal*pctCosto/100;
+  var totalCostos=costoMerch+gastosFijos+otros;
+  var ganancia=facTotal-totalCostos;
+  var margenPct=facTotal>0?ganancia/facTotal*100:0;
+
+  var gananciaUSD=tc>0?ganancia/tc:null;
+  var metaMensualARS=tc>0?5000*tc:null;
+  var progresoMeta=metaMensualARS&&metaMensualARS>0?Math.max(0,Math.min(100,ganancia/metaMensualARS*100)):0;
+
+  function bar(pct,color){return '<div style="background:#f3f4f6;border-radius:20px;height:8px;overflow:hidden;margin-top:6px;"><div style="background:'+color+';height:100%;border-radius:20px;width:'+Math.max(0,Math.min(100,pct))+'%;transition:width .4s;"></div></div>';}
+  function pctBar(label,monto,total,color){
+    var p=total>0?monto/total*100:0;
+    return '<div style="margin-bottom:8px;">'+
+      '<div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:#6b7280;">'+label+'</span><span style="font-weight:700;color:#374151;">'+$p(Math.round(monto))+' <span style="color:#9ca3af;font-weight:400;">('+p.toFixed(1)+'%)</span></span></div>'+
+      bar(p,color)+'</div>';
+  }
+
+  var colorMargen=margenPct>=35?'#16a34a':margenPct>=20?'#f59e0b':'#dc2626';
+  var labelMargen=margenPct>=35?'Margen saludable ✓':margenPct>=20?'Margen en desarrollo':'Margen bajo — revisar costos';
+
+  var html=
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">'+
+
+    // Columna 1: Ingresos
+    '<div class="panel" style="border-top:3px solid #6c7ae0;margin-bottom:0;">'+
+      '<div style="font-size:11px;font-weight:800;color:#6c7ae0;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">💹 Facturación del mes</div>'+
+      '<div style="font-size:28px;font-weight:900;color:#1a1f36;margin-bottom:4px;">'+$p(Math.round(facTotal))+'</div>'+
+      (tc>0?'<div style="font-size:13px;color:#6c7ae0;font-weight:700;margin-bottom:14px;">≈ USD '+Math.round(facTotal/tc).toLocaleString('es-AR')+'</div>':'<div style="margin-bottom:14px;"></div>')+
+      pctBar('🏭 Mayorista',facMay,facTotal,'#6c7ae0')+
+      pctBar('🏪 Llavallol',facLL,facTotal,'#f59e0b')+
+      pctBar('🏪 Monte Grande',facMG,facTotal,'#10b981')+
+      (facOtros>0?pctBar('Otros',facOtros,facTotal,'#9ca3af'):'')+
+      '<div style="font-size:11px;color:#9ca3af;margin-top:8px;">'+ventas.length+' venta'+(ventas.length!==1?'s':'')+' en el período</div>'+
+    '</div>'+
+
+    // Columna 2: Costos
+    '<div class="panel" style="border-top:3px solid #dc2626;margin-bottom:0;">'+
+      '<div style="font-size:11px;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📉 Costos del mes</div>'+
+      '<div style="font-size:28px;font-weight:900;color:#1a1f36;margin-bottom:14px;">'+$p(Math.round(totalCostos))+'</div>'+
+      pctBar('🧵 Costo mercadería ('+pctCosto+'%)',costoMerch,facTotal,'#f87171')+
+      pctBar('📌 Gastos fijos',gastosFijos,facTotal,'#fbbf24')+
+      (otros>0?pctBar('➕ Otros variables',otros,facTotal,'#a78bfa'):'')+
+      '<div style="background:#fff5f5;border-radius:8px;padding:8px 12px;margin-top:10px;font-size:12px;color:#6b7280;">'+
+        'Gastos fijos: '+GASTOS_FIJOS.filter(function(g){return g.activo;}).length+' conceptos activos'+
+      '</div>'+
+    '</div>'+
+
+    // Columna 3: Resultado
+    '<div class="panel" style="border-top:3px solid '+colorMargen+';margin-bottom:0;">'+
+      '<div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;" style="color:'+colorMargen+';">💰 Ganancia neta</div>'+
+      '<div style="font-size:28px;font-weight:900;color:'+(ganancia>=0?colorMargen:'#dc2626')+';margin-bottom:4px;">'+$p(Math.round(ganancia))+'</div>'+
+      (gananciaUSD!==null?'<div style="font-size:13px;font-weight:700;color:'+colorMargen+';margin-bottom:14px;">≈ USD '+Math.round(gananciaUSD).toLocaleString('es-AR')+'</div>':'<div style="margin-bottom:14px;"></div>')+
+      '<div style="text-align:center;margin-bottom:14px;">'+
+        '<div style="font-size:52px;font-weight:900;color:'+colorMargen+';">'+margenPct.toFixed(1)+'%</div>'+
+        '<div style="font-size:12px;color:'+colorMargen+';font-weight:700;">'+labelMargen+'</div>'+
+      '</div>'+
+      (metaMensualARS?
+        '<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Progreso meta USD 5.000/mes'+
+          (tc?' (= '+$p(Math.round(metaMensualARS))+')':'')+
+        '</div>'+
+        bar(progresoMeta,'linear-gradient(90deg,#6c7ae0,#10b981)')+
+        '<div style="font-size:11px;color:#9ca3af;margin-top:4px;">'+progresoMeta.toFixed(0)+'% de la meta mensual</div>'
+      :
+        '<div style="font-size:11px;color:#9ca3af;">Cargá el tipo de cambio para ver el progreso hacia USD 5.000/mes</div>'
+      )+
+    '</div>'+
+
+    '</div>'+
+
+    // Detalle gastos fijos por categoría
+    '<div class="panel" style="margin-bottom:0;">'+
+      '<div style="font-weight:800;font-size:13px;color:#1a1f36;margin-bottom:12px;">📌 Detalle gastos fijos activos del mes</div>'+
+      (function(){
+        var gActivos=GASTOS_FIJOS.filter(function(g){return g.activo;}).sort(function(a,b){return (a.categoria||'').localeCompare(b.categoria||'');});
+        if(!gActivos.length) return '<div style="color:#9ca3af;font-size:13px;">No hay gastos fijos activos cargados. Cargalos en Finanzas → Gastos fijos.</div>';
+        var cats={};
+        gActivos.forEach(function(g){
+          var cat=g.categoria||'Sin categoría';
+          if(!cats[cat])cats[cat]=0;
+          cats[cat]+=Number(g.monto||0)/(FREC_MESES[g.frecuencia||'mensual']||1);
+        });
+        var rows=gActivos.map(function(g){
+          var m=Math.round(Number(g.monto||0)/(FREC_MESES[g.frecuencia||'mensual']||1));
+          return '<tr><td style="padding:6px 8px;font-size:12px;color:#374151;">'+g.concepto+'</td>'+
+            '<td style="padding:6px 8px;"><span class="badge b-gray" style="font-size:10px;">'+g.categoria+'</span></td>'+
+            '<td style="padding:6px 8px;font-size:11px;color:#9ca3af;">'+g.frecuencia+'</td>'+
+            '<td style="padding:6px 8px;text-align:right;font-weight:700;font-size:12px;">'+$p(m)+'</td></tr>';
+        }).join('');
+        return '<div class="tbl"><table><thead><tr>'+
+          '<th>Concepto</th><th>Categoría</th><th>Frecuencia</th><th style="text-align:right;">Monto/mes</th>'+
+          '</tr></thead><tbody>'+rows+
+          '<tr style="border-top:2px solid #e5e7eb;background:#f8f9ff;">'+
+            '<td colspan="3" style="padding:8px 8px;font-weight:800;font-size:12px;color:#1a1f36;">TOTAL GASTOS FIJOS</td>'+
+            '<td style="padding:8px 8px;text-align:right;font-weight:900;font-size:13px;color:#dc2626;">'+$p(Math.round(gastosFijos))+'</td>'+
+          '</tr>'+
+          '</tbody></table></div>';
+      })()
+    +'</div>';
+
+  document.getElementById('mg-resultado').innerHTML=html;
 }
 
 function estrRoadmapToggle(id){
