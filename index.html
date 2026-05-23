@@ -1895,6 +1895,8 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="tabs" id="cos-tabs" style="margin-bottom:16px;">
       <button class="tab active" onclick="setCosTab('costura',this)">🧵 Costura</button>
       <button class="tab" onclick="setCosTab('bordado',this)">🎨 Bordado</button>
+      <button class="tab" onclick="setCosTab('estampado',this)">🖨️ Estampado</button>
+      <button class="tab" onclick="setCosTab('dtf',this)">🖼️ DTF</button>
       <button class="tab" onclick="setCosTab('historial',this)">📋 Historial</button>
     </div>
 
@@ -1931,6 +1933,38 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <button class="btn" style="margin-left:auto;" onclick="openEnvioBordadoModal()">+ Nuevo envío bordado</button>
       </div>
       <div id="bor-lista"></div>
+    </div>
+
+    <!-- Tab Estampado -->
+    <div id="cos-tab-estampado" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <input type="text" id="est-fil-prov" placeholder="Filtrar por proveedor..." oninput="renderEnviosProceso('estampado')" style="min-width:200px;"/>
+        <select id="est-fil-est" onchange="renderEnviosProceso('estampado')" style="min-width:150px;">
+          <option value="en_proceso">En proceso</option>
+          <option value="parcial">Parcial</option>
+          <option value="">Todos los estados</option>
+          <option value="recibido">Recibido</option>
+        </select>
+        <button class="btn btn-gray btn-sm" onclick="renderEnviosProceso('estampado')">↻</button>
+        <button class="btn" style="margin-left:auto;" onclick="openProcesoModal('estampado')">+ Nuevo envío estampado</button>
+      </div>
+      <div id="est-lista"></div>
+    </div>
+
+    <!-- Tab DTF -->
+    <div id="cos-tab-dtf" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <input type="text" id="dtf-fil-prov" placeholder="Filtrar por proveedor..." oninput="renderEnviosProceso('dtf')" style="min-width:200px;"/>
+        <select id="dtf-fil-est" onchange="renderEnviosProceso('dtf')" style="min-width:150px;">
+          <option value="en_proceso">En proceso</option>
+          <option value="parcial">Parcial</option>
+          <option value="">Todos los estados</option>
+          <option value="recibido">Recibido</option>
+        </select>
+        <button class="btn btn-gray btn-sm" onclick="renderEnviosProceso('dtf')">↻</button>
+        <button class="btn" style="margin-left:auto;" onclick="openProcesoModal('dtf')">+ Nuevo envío DTF</button>
+      </div>
+      <div id="dtf-lista"></div>
     </div>
 
     <!-- Tab Historial Costura -->
@@ -14367,7 +14401,7 @@ function entregaDesdeCostura(envioId){
 // ══════════════════════════════════════════════════════════
 
 function setCosTab(tab, el){
-  ['costura','bordado','historial'].forEach(function(t){
+  ['costura','bordado','estampado','dtf','historial'].forEach(function(t){
     var d=document.getElementById('cos-tab-'+t);
     if(d)d.style.display=t===tab?'block':'none';
   });
@@ -14375,6 +14409,8 @@ function setCosTab(tab, el){
   if(el)el.classList.add('active');
   if(tab==='costura')renderEnviosCostura();
   if(tab==='bordado')renderEnviosBordado();
+  if(tab==='estampado')renderEnviosProceso('estampado');
+  if(tab==='dtf')renderEnviosProceso('dtf');
   if(tab==='historial')renderCosHistorial();
 }
 
@@ -14385,41 +14421,84 @@ function renderCosHistorial(){
   if(mesEl&&!mesEl.value){var hoy=new Date();mesEl.value=hoy.getFullYear()+'-'+(String(hoy.getMonth()+1).padStart(2,'0'));}
   var filMes=(mesEl||{}).value||'';
   var estMap={en_proceso:{bg:'#fef3c7',c:'#92400e',t:'En proceso'},parcial:{bg:'#fce7f3',c:'#9d174d',t:'Parcial'},recibido:{bg:'#d1fae5',c:'#065f46',t:'Recibido'},cancelado:{bg:'#fee2e2',c:'#991b1b',t:'Cancelado'}};
-  var list=ENVIOS_COSTURA.slice();
-  if(filMes)list=list.filter(function(e){return (e.fecha||'').startsWith(filMes);});
-  list.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
-  if(!list.length){
-    cont.innerHTML='<div class="empty"><div class="ei">🧵</div><p>No hay envíos de costura en este mes.</p></div>';
+
+  // Costura
+  var listCos=ENVIOS_COSTURA.slice();
+  if(filMes)listCos=listCos.filter(function(e){return (e.fecha||'').startsWith(filMes);});
+  listCos.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+
+  var cosHTML='';
+  if(listCos.length){
+    cosHTML='<h4 style="margin:0 0 8px;font-size:13px;color:#374151;">🧵 Costura</h4>'
+      +'<div class="panel" style="margin-bottom:18px;"><div class="tbl"><table style="width:100%;">'
+      +'<thead><tr style="background:#f9fafb;">'
+      +'<th style="padding:8px 10px;text-align:left;">#</th>'
+      +'<th style="padding:8px 10px;text-align:left;">Fecha</th>'
+      +'<th style="padding:8px 10px;text-align:left;">Tallerista</th>'
+      +'<th style="padding:8px 10px;text-align:center;">Estado</th>'
+      +'<th style="padding:8px 10px;text-align:right;">Env.</th>'
+      +'<th style="padding:8px 10px;text-align:right;">Rec.</th>'
+      +'<th style="padding:8px 10px;text-align:left;">Nota</th>'
+      +'</tr></thead><tbody>'
+      +listCos.map(function(e){
+        var items=ENVIOS_COSTURA_ITEMS.filter(function(i){return i.envio_id===e.id;});
+        var tal=TALLERISTAS.find(function(t){return t.id===e.tallerista_id;});
+        var em=estMap[e.estado]||{bg:'#f3f4f6',c:'#374151',t:e.estado};
+        var totEnv=items.reduce(function(s,i){return s+Number(i.cantidad_enviada);},0);
+        var totRec=items.reduce(function(s,i){return s+Number(i.cantidad_recibida);},0);
+        return '<tr style="border-bottom:1px solid #f3f4f6;">'
+          +'<td style="padding:7px 10px;font-weight:700;color:#6c7ae0;">'+(e.nro_envio?'#'+e.nro_envio:'—')+'</td>'
+          +'<td style="padding:7px 10px;font-size:13px;white-space:nowrap;">'+fmtF(e.fecha)+'</td>'
+          +'<td style="padding:7px 10px;font-weight:600;">'+(tal?tal.nombre:'—')+'</td>'
+          +'<td style="padding:7px 10px;text-align:center;"><span style="background:'+em.bg+';color:'+em.c+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">'+em.t+'</span></td>'
+          +'<td style="padding:7px 10px;text-align:right;font-weight:700;">'+totEnv+'</td>'
+          +'<td style="padding:7px 10px;text-align:right;color:#065f46;font-weight:700;">'+totRec+'</td>'
+          +'<td style="padding:7px 10px;font-size:12px;color:#6b7280;">'+(e.nota||'')+'</td>'
+          +'</tr>';
+      }).join('')+'</tbody></table></div></div>';
+  }
+
+  // Bordado / Estampado / DTF
+  var listProc=ENVIOS_BORDADO.slice();
+  if(filMes)listProc=listProc.filter(function(e){return (e.fecha||'').startsWith(filMes);});
+  listProc.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+
+  var procHTML='';
+  if(listProc.length){
+    procHTML='<h4 style="margin:0 0 8px;font-size:13px;color:#374151;">🎨 Procesos previos (Bordado · Estampado · DTF)</h4>'
+      +'<div class="panel"><div class="tbl"><table style="width:100%;">'
+      +'<thead><tr style="background:#f9fafb;">'
+      +'<th style="padding:8px 10px;text-align:left;">#</th>'
+      +'<th style="padding:8px 10px;text-align:left;">Tipo</th>'
+      +'<th style="padding:8px 10px;text-align:left;">Fecha</th>'
+      +'<th style="padding:8px 10px;text-align:left;">Proveedor</th>'
+      +'<th style="padding:8px 10px;text-align:center;">Estado</th>'
+      +'<th style="padding:8px 10px;text-align:right;">Env.</th>'
+      +'<th style="padding:8px 10px;text-align:right;">Rec.</th>'
+      +'</tr></thead><tbody>'
+      +listProc.map(function(e){
+        var items=ENVIOS_BORDADO_ITEMS.filter(function(i){return i.envio_id===e.id;});
+        var m=_PROC_META[e.tipo||'bordado']||_PROC_META.bordado;
+        var em=estMap[e.estado]||{bg:'#f3f4f6',c:'#374151',t:e.estado};
+        var totEnv=items.reduce(function(s,i){return s+Number(i.cantidad_enviada);},0);
+        var totRec=items.reduce(function(s,i){return s+Number(i.cantidad_recibida);},0);
+        return '<tr style="border-bottom:1px solid #f3f4f6;">'
+          +'<td style="padding:7px 10px;font-weight:700;color:'+m.color+';">'+(e.nro_envio?'#'+e.nro_envio:'—')+'</td>'
+          +'<td style="padding:7px 10px;"><span style="background:'+m.bg+';color:'+m.color+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">'+m.icon+' '+m.label+'</span></td>'
+          +'<td style="padding:7px 10px;font-size:13px;white-space:nowrap;">'+fmtF(e.fecha)+'</td>'
+          +'<td style="padding:7px 10px;font-weight:600;">'+(e.proveedor||'—')+'</td>'
+          +'<td style="padding:7px 10px;text-align:center;"><span style="background:'+em.bg+';color:'+em.c+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">'+em.t+'</span></td>'
+          +'<td style="padding:7px 10px;text-align:right;font-weight:700;">'+totEnv+'</td>'
+          +'<td style="padding:7px 10px;text-align:right;color:'+m.color+';font-weight:700;">'+totRec+'</td>'
+          +'</tr>';
+      }).join('')+'</tbody></table></div></div>';
+  }
+
+  if(!cosHTML&&!procHTML){
+    cont.innerHTML='<div class="empty"><div class="ei">📋</div><p>No hay movimientos en este mes.</p></div>';
     return;
   }
-  var html='<div class="panel"><div class="tbl"><table style="width:100%;">'
-    +'<thead><tr style="background:#f9fafb;">'
-    +'<th style="padding:8px 10px;text-align:left;">#</th>'
-    +'<th style="padding:8px 10px;text-align:left;">Fecha</th>'
-    +'<th style="padding:8px 10px;text-align:left;">Tallerista</th>'
-    +'<th style="padding:8px 10px;text-align:center;">Estado</th>'
-    +'<th style="padding:8px 10px;text-align:right;">Enviadas</th>'
-    +'<th style="padding:8px 10px;text-align:right;">Recibidas</th>'
-    +'<th style="padding:8px 10px;text-align:left;">Nota</th>'
-    +'</tr></thead><tbody>'
-    +list.map(function(e){
-      var items=ENVIOS_COSTURA_ITEMS.filter(function(i){return i.envio_id===e.id;});
-      var tal=TALLERISTAS.find(function(t){return t.id===e.tallerista_id;});
-      var em=estMap[e.estado]||{bg:'#f3f4f6',c:'#374151',t:e.estado};
-      var totEnv=items.reduce(function(s,i){return s+Number(i.cantidad_enviada);},0);
-      var totRec=items.reduce(function(s,i){return s+Number(i.cantidad_recibida);},0);
-      return '<tr style="border-bottom:1px solid #f3f4f6;">'
-        +'<td style="padding:7px 10px;font-weight:700;color:#6c7ae0;">'+(e.nro_envio?'#'+e.nro_envio:'—')+'</td>'
-        +'<td style="padding:7px 10px;font-size:13px;white-space:nowrap;">'+fmtF(e.fecha)+'</td>'
-        +'<td style="padding:7px 10px;font-weight:600;">'+(tal?tal.nombre:'—')+'</td>'
-        +'<td style="padding:7px 10px;text-align:center;"><span style="background:'+em.bg+';color:'+em.c+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">'+em.t+'</span></td>'
-        +'<td style="padding:7px 10px;text-align:right;font-weight:700;">'+totEnv+'</td>'
-        +'<td style="padding:7px 10px;text-align:right;color:#065f46;font-weight:700;">'+totRec+'</td>'
-        +'<td style="padding:7px 10px;font-size:12px;color:#6b7280;">'+(e.nota||'')+'</td>'
-        +'</tr>';
-    }).join('')
-    +'</tbody></table></div></div>';
-  cont.innerHTML=html;
+  cont.innerHTML=cosHTML+procHTML;
 }
 
 function renderCostura(){
@@ -14736,7 +14815,7 @@ function renderEnviosBordado(){
   var filProv=((document.getElementById('bor-fil-prov')||{}).value||'').toLowerCase();
   var filEst=(document.getElementById('bor-fil-est')||{}).value;
   if(filEst===undefined)filEst='en_proceso';
-  var list=ENVIOS_BORDADO.slice();
+  var list=ENVIOS_BORDADO.filter(function(e){return !e.tipo||e.tipo==='bordado';});
   if(filProv)list=list.filter(function(e){return e.proveedor.toLowerCase().includes(filProv);});
   if(filEst!=='')list=list.filter(function(e){return e.estado===filEst;});
   if(!list.length){
@@ -14875,7 +14954,8 @@ async function saveEnvioBordado(){
   }).filter(function(i){return i.pedido_item_id&&i.cantidad_enviada>0;});
   if(!items.length){toast('Sin ítems válidos','err');return;}
 
-  var header={nro_envio:nro||null,fecha:fecha,proveedor:prov,estado:'en_proceso',nota:nota||null,updated_at:new Date().toISOString()};
+  var tipo=_procesoTipo||'bordado';
+  var header={nro_envio:nro||null,fecha:fecha,proveedor:prov,tipo:tipo,estado:'en_proceso',nota:nota||null,updated_at:new Date().toISOString()};
   var r=await sb.from('envios_bordado').insert(header).select().single();
   if(r.error){toast('Error: '+r.error.message,'err');return;}
 
@@ -14883,10 +14963,11 @@ async function saveEnvioBordado(){
   var r2=await sb.from('envios_bordado_items').insert(conEnvio);
   if(r2.error){toast('Error ítems: '+r2.error.message,'err');return;}
 
-  toast('Envío a bordado creado — '+items.length+' ítems');
+  var m=_PROC_META[tipo]||_PROC_META.bordado;
+  toast('Envío '+m.label+' creado — '+items.length+' ítems');
   closeM('m-envio-bordado');
   await Promise.all([loadEnviosBordado(),loadEnviosBordadoItems()]);
-  renderEnviosBordado();
+  if(tipo==='bordado') renderEnviosBordado(); else renderEnviosProceso(tipo);
 }
 
 async function recibirBordado(id){
@@ -14918,6 +14999,203 @@ async function deleteEnvioBordado(id){
   toast('Envío eliminado','info');
   await Promise.all([loadEnviosBordado(),loadEnviosBordadoItems()]);
   renderEnviosBordado();
+}
+
+// ── Proceso genérico (estampado / DTF) ──────────────────
+
+var _procesoTipo='bordado'; // tipo activo para el modal reutilizado
+
+var _PROC_META={
+  bordado: {icon:'🎨',label:'Bordado',color:'#7c3aed',bg:'#ede9fe',filProv:'bor-fil-prov',filEst:'bor-fil-est',lista:'bor-lista'},
+  estampado:{icon:'🖨️',label:'Estampado',color:'#0369a1',bg:'#e0f2fe',filProv:'est-fil-prov',filEst:'est-fil-est',lista:'est-lista'},
+  dtf:      {icon:'🖼️',label:'DTF',color:'#92400e',bg:'#fef3c7',filProv:'dtf-fil-prov',filEst:'dtf-fil-est',lista:'dtf-lista'}
+};
+
+function openProcesoModal(tipo){
+  _procesoTipo=tipo;
+  var m=_PROC_META[tipo]||_PROC_META.bordado;
+  document.getElementById('m-envio-bordado-title').textContent='Nuevo envío — '+m.icon+' '+m.label;
+  document.getElementById('mbor-nro').value='';
+  document.getElementById('mbor-fecha').value=today();
+  document.getElementById('mbor-prov').value='';
+  document.getElementById('mbor-nota').value='';
+  document.getElementById('bor-items-tbody').innerHTML='';
+  borPoblarSelector();
+  openM('m-envio-bordado');
+}
+
+function renderEnviosProceso(tipo){
+  var m=_PROC_META[tipo];
+  if(!m)return;
+  var cont=document.getElementById(m.lista);
+  if(!cont)return;
+  var filProv=((document.getElementById(m.filProv)||{}).value||'').toLowerCase();
+  var filEst=(document.getElementById(m.filEst)||{}).value;
+  if(filEst===undefined)filEst='en_proceso';
+  var list=ENVIOS_BORDADO.filter(function(e){return e.tipo===tipo;});
+  if(filProv)list=list.filter(function(e){return (e.proveedor||'').toLowerCase().includes(filProv);});
+  if(filEst!=='')list=list.filter(function(e){return e.estado===filEst;});
+  if(!list.length){
+    cont.innerHTML='<div class="empty"><div class="ei">'+m.icon+'</div><p>No hay envíos de '+m.label+(filEst?' con estado "'+filEst+'"':'')+'</p></div>';
+    return;
+  }
+  var estMap={en_proceso:{bg:'#fef3c7',c:'#92400e',t:'En proceso'},parcial:{bg:'#fce7f3',c:'#9d174d',t:'Parcial'},recibido:{bg:'#d1fae5',c:'#065f46',t:'Recibido'}};
+  cont.innerHTML=list.map(function(e){
+    var items=ENVIOS_BORDADO_ITEMS.filter(function(i){return i.envio_id===e.id;});
+    var em=estMap[e.estado]||{bg:'#f3f4f6',c:'#374151',t:e.estado};
+    var estBadge='<span style="background:'+em.bg+';color:'+em.c+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">'+em.t+'</span>';
+    var totEnv=items.reduce(function(s,i){return s+Number(i.cantidad_enviada);},0);
+    var totRec=items.reduce(function(s,i){return s+Number(i.cantidad_recibida);},0);
+    var esRecibido=e.estado==='recibido';
+    var itemsHTML='';
+    if(items.length){
+      itemsHTML='<div style="overflow-x:auto;margin-top:12px;">'
+        +'<table style="width:100%;font-size:12px;border-collapse:collapse;min-width:640px;">'
+        +'<thead><tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">'
+        +'<th style="padding:5px 8px;text-align:left;">Pedido · Cliente</th>'
+        +'<th style="padding:5px 8px;text-align:left;">Prenda</th>'
+        +'<th style="padding:5px 8px;">Tela</th><th style="padding:5px 8px;">Color</th><th style="padding:5px 8px;">Talle</th>'
+        +'<th style="padding:5px 8px;text-align:right;">Enviado</th>'
+        +'<th style="padding:5px 8px;text-align:right;font-weight:700;" style="color:'+m.color+'">'+(esRecibido?'Recibido':'✏️ Recibido')+'</th>'
+        +'</tr></thead><tbody>'
+        +items.map(function(bi){
+          var pi=PEDIDOS_ITEMS.find(function(x){return x.id===bi.pedido_item_id;});
+          if(!pi)return '';
+          var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+          var cli=ped&&CLIENTES.find(function(c){return c.id===ped.cliente_id;});
+          var recCell=esRecibido
+            ?'<td style="padding:5px 8px;text-align:right;color:'+m.color+';font-weight:700;">'+bi.cantidad_recibida+'</td>'
+            :'<td style="padding:3px 6px;text-align:right;"><input type="number" value="'+bi.cantidad_recibida+'" min="0" max="'+bi.cantidad_enviada+'" data-bor-item-id="'+bi.id+'" data-prev-rec="'+bi.cantidad_recibida+'" style="width:70px;font-size:12px;text-align:right;border:1px solid '+m.bg+';border-radius:5px;padding:2px 5px;color:'+m.color+';font-weight:700;"/></td>';
+          return '<tr style="border-bottom:1px solid #f3f4f6;">'
+            +'<td style="padding:5px 8px;font-size:11px;">#'+(ped?ped.nro_pedido:'?')+' <span style="color:#9ca3af;">'+(cli?cli.nombre:'—')+'</span></td>'
+            +'<td style="padding:5px 8px;font-weight:600;">'+pi.prenda+'</td>'
+            +'<td style="padding:5px 8px;text-align:center;">'+(pi.tela||'—')+'</td>'
+            +'<td style="padding:5px 8px;text-align:center;">'+(pi.color||'—')+'</td>'
+            +'<td style="padding:5px 8px;text-align:center;">'+(pi.talle||'—')+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-weight:700;">'+bi.cantidad_enviada+'</td>'
+            +recCell+'</tr>';
+        }).join('')
+        +'<tr style="background:#f9fafb;font-weight:700;border-top:2px solid #e5e7eb;">'
+        +'<td colspan="5" style="padding:5px 8px;">TOTAL</td>'
+        +'<td style="padding:5px 8px;text-align:right;">'+totEnv+'</td>'
+        +'<td style="padding:5px 8px;text-align:right;color:'+m.color+';">'+totRec+'</td>'
+        +'</tr></tbody></table></div>';
+    }
+    var tieneParaCos=esRecibido&&items.some(function(bi){
+      var pi=PEDIDOS_ITEMS.find(function(x){return x.id===bi.pedido_item_id;});
+      return pi&&Number(pi.tizada)>Number(pi.costura);
+    });
+    var btnCostura=tieneParaCos
+      ?'<button class="btn btn-sm" style="background:#dbeafe;color:#1e40af;border:none;font-weight:700;" onclick="procesoDesdeCostura('+e.id+')">🧵 Enviar a costura →</button>'
+      :'';
+    var btnRecibir=!esRecibido
+      ?'<button class="btn btn-sm" style="background:'+m.bg+';color:'+m.color+';border:none;" onclick="recibirProceso('+e.id+',\''+tipo+'\')">📥 Marcar recibido</button>'
+      :'';
+    return '<div class="panel" id="proc-card-'+e.id+'" style="margin-bottom:12px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">'
+      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+      +(e.nro_envio?'<span style="font-size:18px;font-weight:800;color:#1f2937;">#'+e.nro_envio+'</span>':'')
+      +estBadge
+      +'<span style="font-weight:600;font-size:15px;">'+m.icon+' '+e.proveedor+'</span>'
+      +'<span style="color:#9ca3af;font-size:13px;">'+fmtF(e.fecha)+'</span>'
+      +(e.nota?'<span style="color:#9ca3af;font-size:12px;">📝 '+e.nota+'</span>':'')
+      +'<span style="font-size:12px;color:'+m.color+';">'+totEnv+' enviadas · '+totRec+' recibidas</span>'
+      +'</div>'
+      +'<div style="display:flex;gap:6px;">'
+      +btnCostura
+      +btnRecibir
+      +'<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;" onclick="deleteProceso('+e.id+',\''+tipo+'\')">🗑️</button>'
+      +'</div></div>'
+      +itemsHTML+'</div>';
+  }).join('');
+}
+
+async function recibirProceso(id, tipo){
+  var card=document.getElementById('proc-card-'+id);
+  var inps=card?Array.from(card.querySelectorAll('input[data-bor-item-id]')):[];
+  if(!inps.length){toast('Sin ítems para marcar','err');return;}
+  await Promise.all(inps.map(function(inp){
+    return sb.from('envios_bordado_items').update({cantidad_recibida:parseInt(inp.value)||0}).eq('id',parseInt(inp.getAttribute('data-bor-item-id')));
+  }));
+  var envItems=ENVIOS_BORDADO_ITEMS.filter(function(i){return i.envio_id===id;});
+  var totalEnv=envItems.reduce(function(s,i){return s+Number(i.cantidad_enviada);},0);
+  var nuevoRec=inps.reduce(function(s,inp){return s+(parseInt(inp.value)||0);},0);
+  var nuevoEstado=nuevoRec>=totalEnv?'recibido':'parcial';
+  await sb.from('envios_bordado').update({estado:nuevoEstado,updated_at:new Date().toISOString()}).eq('id',id);
+  var m=_PROC_META[tipo]||_PROC_META.bordado;
+  toast('Recepción '+m.label+' actualizada '+m.icon);
+  await Promise.all([loadEnviosBordado(),loadEnviosBordadoItems()]);
+  renderEnviosProceso(tipo);
+}
+
+async function deleteProceso(id, tipo){
+  var m=_PROC_META[tipo]||_PROC_META.bordado;
+  if(!confirm('¿Eliminar este envío de '+m.label+'?'))return;
+  await sb.from('envios_bordado').delete().eq('id',id);
+  toast('Envío eliminado','info');
+  await Promise.all([loadEnviosBordado(),loadEnviosBordadoItems()]);
+  renderEnviosProceso(tipo);
+}
+
+function procesoDesdeCostura(envioId){
+  var navEl=document.querySelector('.nav-item[onclick*="\'costura\'"]');
+  nav('costura',navEl);
+  openEnvioCosturaModal();
+  var borItems=ENVIOS_BORDADO_ITEMS.filter(function(i){return i.envio_id===envioId;});
+  var tb=document.getElementById('cos-items-tbody');
+  borItems.forEach(function(bi){
+    var pi=PEDIDOS_ITEMS.find(function(x){return x.id===bi.pedido_item_id;});
+    if(!pi)return;
+    var disp=Number(pi.tizada)-Number(pi.costura);
+    if(disp<=0)return;
+    var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+    var cli=ped&&CLIENTES.find(function(c){return c.id===ped.cliente_id;});
+    var tr=document.createElement('tr');
+    tr.setAttribute('data-pid',pi.id);
+    tr.innerHTML=
+      '<td style="padding:5px 8px;font-size:11px;">#'+(ped?ped.nro_pedido:'?')+' <span style="color:#9ca3af;">'+(cli?cli.nombre:'—')+'</span></td>'
+      +'<td style="padding:5px 8px;font-weight:600;font-size:12px;">'+pi.prenda+'</td>'
+      +'<td style="padding:5px 8px;font-size:12px;">'+(pi.tela||'—')+'</td>'
+      +'<td style="padding:5px 8px;font-size:12px;">'+(pi.color||'—')+'</td>'
+      +'<td style="padding:5px 8px;font-size:12px;">'+(pi.talle||'—')+'</td>'
+      +'<td style="padding:5px 8px;text-align:right;color:#6c7ae0;font-size:12px;">'+disp+'</td>'
+      +'<td><input type="number" value="'+disp+'" min="1" max="'+disp+'" style="width:70px;font-size:12px;text-align:right;"/></td>'
+      +'<td><button style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;" onclick="this.closest(\'tr\').remove();cosPoblarSelector()">✕</button></td>';
+    tb.appendChild(tr);
+  });
+  cosPoblarSelector();
+}
+
+// ── Transición Tizada → Proceso previo opcional ─────────
+
+function enviarTizadaAProceso(tizId, tipo){
+  var m=_PROC_META[tipo]||_PROC_META.bordado;
+  var navEl=document.querySelector('.nav-item[onclick*="\'costura\'"]');
+  nav('costura',navEl);
+  setCosTab(tipo, document.querySelector('#cos-tabs .tab:nth-child('+(tipo==='bordado'?2:tipo==='estampado'?3:4)+')'));
+  openProcesoModal(tipo);
+  var tizItems=TIZADAS_ITEMS.filter(function(i){return i.tizada_id===tizId;});
+  var tb=document.getElementById('bor-items-tbody');
+  tizItems.forEach(function(ti){
+    var pi=PEDIDOS_ITEMS.find(function(x){return x.id===ti.pedido_item_id;});
+    if(!pi||Number(ti.cantidad_cortada)<=0)return;
+    var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+    var cli=ped&&CLIENTES.find(function(c){return c.id===ped.cliente_id;});
+    var cant=Number(ti.cantidad_cortada);
+    var tr=document.createElement('tr');
+    tr.setAttribute('data-pid',pi.id);
+    tr.innerHTML=
+      '<td style="padding:5px 8px;font-size:11px;">#'+(ped?ped.nro_pedido:'?')+' <span style="color:#9ca3af;">'+(cli?cli.nombre:'—')+'</span></td>'
+      +'<td style="padding:5px 8px;font-weight:600;font-size:12px;">'+pi.prenda+'</td>'
+      +'<td style="padding:5px 8px;font-size:12px;">'+(pi.tela||'—')+'</td>'
+      +'<td style="padding:5px 8px;font-size:12px;">'+(pi.color||'—')+'</td>'
+      +'<td style="padding:5px 8px;font-size:12px;">'+(pi.talle||'—')+'</td>'
+      +'<td style="padding:5px 8px;text-align:right;color:#6c7ae0;font-size:12px;">'+cant+'</td>'
+      +'<td><input type="number" value="'+cant+'" min="1" style="width:70px;font-size:12px;text-align:right;"/></td>'
+      +'<td><button style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;" onclick="this.closest(\'tr\').remove();borPoblarSelector()">✕</button></td>';
+    tb.appendChild(tr);
+  });
+  borPoblarSelector();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -15059,7 +15337,12 @@ function renderTizadas(){
       return pi&&Number(pi.tizada)>Number(pi.costura);
     });
     var btnEnviarCos=tieneParaCostura
-      ?'<button class="btn btn-sm" style="background:#dbeafe;color:#1e40af;border:none;font-weight:700;" onclick="enviarTizadaACostura('+t.id+')">🧵 Enviar a costura →</button>'
+      ?'<button class="btn btn-sm" style="background:#dbeafe;color:#1e40af;border:none;font-weight:700;" onclick="enviarTizadaACostura('+t.id+')">🧵 Costura →</button>'
+      :'';
+    var btnsProceso=tieneParaCostura
+      ?'<button class="btn btn-sm btn-gray" title="Enviar a Bordado" onclick="enviarTizadaAProceso('+t.id+',\'bordado\')">🎨</button>'
+       +'<button class="btn btn-sm btn-gray" title="Enviar a Estampado" onclick="enviarTizadaAProceso('+t.id+',\'estampado\')">🖨️</button>'
+       +'<button class="btn btn-sm btn-gray" title="Enviar a DTF" onclick="enviarTizadaAProceso('+t.id+',\'dtf\')">🖼️</button>'
       :'';
 
     return '<div class="panel" id="tiz-card-'+t.id+'" style="margin-bottom:12px;">'
@@ -15070,8 +15353,9 @@ function renderTizadas(){
       +'<span style="color:#9ca3af;font-size:13px;">'+fmtF(t.fecha)+'</span>'
       +(t.nota?'<span style="color:#9ca3af;font-size:12px;">📝 '+t.nota+'</span>':'')
       +'</div>'
-      +'<div style="display:flex;gap:6px;">'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
       +btnEnviarCos
+      +btnsProceso
       +btnCompletar
       +'<button class="btn btn-sm btn-gray" onclick="openTizadaModal('+t.id+')">✏️ Editar</button>'
       +'<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;" onclick="deleteTizada('+t.id+')">🗑️</button>'
