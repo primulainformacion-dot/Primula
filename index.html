@@ -14300,6 +14300,69 @@ async function deleteEntrega(id){
 }
 
 // ══════════════════════════════════════════════════════════
+// TRANSICIONES DE PRODUCCIÓN
+// ══════════════════════════════════════════════════════════
+
+function enviarTizadaACostura(tizId){
+  var navEl=document.querySelector('.nav-item[onclick*="\'costura\'"]');
+  nav('costura',navEl);
+  openEnvioCosturaModal();
+  var tizItems=TIZADAS_ITEMS.filter(function(i){return i.tizada_id===tizId;});
+  var tb=document.getElementById('cos-items-tbody');
+  tizItems.forEach(function(ti){
+    var pi=PEDIDOS_ITEMS.find(function(x){return x.id===ti.pedido_item_id;});
+    if(!pi)return;
+    var disp=Number(pi.tizada)-Number(pi.costura);
+    if(disp<=0)return;
+    var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+    var cli=ped&&CLIENTES.find(function(c){return c.id===ped.cliente_id;});
+    var tr=document.createElement('tr');
+    tr.setAttribute('data-pid',pi.id);
+    tr.innerHTML=
+      '<td style="padding:5px 8px;font-size:11px;">#'+(ped?ped.nro_pedido:'?')+' <span style="color:#9ca3af;">'+(cli?cli.nombre:'—')+'</span></td>'
+      +'<td style="padding:5px 8px;font-weight:600;font-size:12px;">'+pi.prenda+'</td>'
+      +'<td style="padding:5px 8px;font-size:12px;">'+(pi.tela||'—')+'</td>'
+      +'<td style="padding:5px 8px;font-size:12px;">'+(pi.color||'—')+'</td>'
+      +'<td style="padding:5px 8px;font-size:12px;">'+(pi.talle||'—')+'</td>'
+      +'<td style="padding:5px 8px;text-align:right;color:#6c7ae0;font-size:12px;">'+disp+'</td>'
+      +'<td><input type="number" value="'+disp+'" min="1" max="'+disp+'" style="width:70px;font-size:12px;text-align:right;"/></td>'
+      +'<td><button style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;" onclick="this.closest(\'tr\').remove();cosPoblarSelector()">✕</button></td>';
+    tb.appendChild(tr);
+  });
+  cosPoblarSelector();
+}
+
+function entregaDesdeCostura(envioId){
+  var navEl=document.querySelector('.nav-item[onclick*="\'entregas\'"]');
+  nav('entregas',navEl);
+  openEntregaModal();
+  var cosItems=ENVIOS_COSTURA_ITEMS.filter(function(i){return i.envio_id===envioId;});
+  var tb=document.getElementById('ent-items-tbody');
+  cosItems.forEach(function(ci){
+    var pi=PEDIDOS_ITEMS.find(function(x){return x.id===ci.pedido_item_id;});
+    if(!pi)return;
+    var disp=Number(pi.recibido)-Number(pi.entregado);
+    if(disp<=0)return;
+    var ped=PEDIDOS.find(function(p){return p.id===pi.pedido_id;});
+    var cli=ped&&CLIENTES.find(function(c){return c.id===ped.cliente_id;});
+    var tr=document.createElement('tr');
+    tr.setAttribute('data-pid',pi.id);
+    tr.setAttribute('data-ped-id',pi.pedido_id);
+    tr.innerHTML=
+      '<td style="padding:5px 8px;font-size:11px;">#'+(ped?ped.nro_pedido:'?')+' <span style="color:#9ca3af;">'+(cli?cli.nombre:'—')+'</span></td>'
+      +'<td style="padding:5px 8px;font-weight:600;font-size:12px;">'+pi.prenda+'</td>'
+      +'<td style="padding:5px 8px;font-size:12px;">'+(pi.tela||'—')+'</td>'
+      +'<td style="padding:5px 8px;font-size:12px;">'+(pi.color||'—')+'</td>'
+      +'<td style="padding:5px 8px;font-size:12px;">'+(pi.talle||'—')+'</td>'
+      +'<td style="padding:5px 8px;text-align:right;color:#6c7ae0;font-size:12px;">'+disp+'</td>'
+      +'<td><input type="number" value="'+disp+'" min="1" max="'+disp+'" style="width:70px;font-size:12px;text-align:right;"/></td>'
+      +'<td><button style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:2px 7px;cursor:pointer;" onclick="this.closest(\'tr\').remove();entPoblarSelector()">✕</button></td>';
+    tb.appendChild(tr);
+  });
+  entPoblarSelector();
+}
+
+// ══════════════════════════════════════════════════════════
 // MÓDULO COSTURA / BORDADO
 // ══════════════════════════════════════════════════════════
 
@@ -14480,6 +14543,13 @@ function renderEnviosCostura(){
     var btnRecibir=!esRecibido
       ?'<button class="btn btn-sm" style="background:#d1fae5;color:#065f46;border:none;" onclick="recibirCostura('+e.id+')">📥 Marcar recibido</button>'
       :'';
+    var tieneParaEntregar=esRecibido&&items.some(function(ci){
+      var pi=PEDIDOS_ITEMS.find(function(x){return x.id===ci.pedido_item_id;});
+      return pi&&Number(pi.recibido)>Number(pi.entregado);
+    });
+    var btnEntrega=tieneParaEntregar
+      ?'<button class="btn btn-sm" style="background:#d1fae5;color:#065f46;border:none;font-weight:700;" onclick="entregaDesdeCostura('+e.id+')">📦 Registrar entrega →</button>'
+      :'';
     return '<div class="panel" id="cos-card-'+e.id+'" style="margin-bottom:12px;">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">'
       +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
@@ -14491,6 +14561,7 @@ function renderEnviosCostura(){
       +'<span style="font-size:12px;color:#6c7ae0;">'+totEnv+' enviadas · '+totRec+' recibidas</span>'
       +'</div>'
       +'<div style="display:flex;gap:6px;">'
+      +btnEntrega
       +btnRecibir
       +'<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;" onclick="deleteEnvioCostura('+e.id+')">🗑️</button>'
       +'</div></div>'
@@ -14983,6 +15054,13 @@ function renderTizadas(){
     var btnCompletar=!esCompletada
       ?'<button class="btn btn-sm" style="background:#d1fae5;color:#065f46;border:none;" onclick="completarTizada('+t.id+')">✅ Completar</button>'
       :'';
+    var tieneParaCostura=esCompletada&&items.some(function(ti){
+      var pi=PEDIDOS_ITEMS.find(function(x){return x.id===ti.pedido_item_id;});
+      return pi&&Number(pi.tizada)>Number(pi.costura);
+    });
+    var btnEnviarCos=tieneParaCostura
+      ?'<button class="btn btn-sm" style="background:#dbeafe;color:#1e40af;border:none;font-weight:700;" onclick="enviarTizadaACostura('+t.id+')">🧵 Enviar a costura →</button>'
+      :'';
 
     return '<div class="panel" id="tiz-card-'+t.id+'" style="margin-bottom:12px;">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">'
@@ -14993,6 +15071,7 @@ function renderTizadas(){
       +(t.nota?'<span style="color:#9ca3af;font-size:12px;">📝 '+t.nota+'</span>':'')
       +'</div>'
       +'<div style="display:flex;gap:6px;">'
+      +btnEnviarCos
       +btnCompletar
       +'<button class="btn btn-sm btn-gray" onclick="openTizadaModal('+t.id+')">✏️ Editar</button>'
       +'<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;" onclick="deleteTizada('+t.id+')">🗑️</button>'
