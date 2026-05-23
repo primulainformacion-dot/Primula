@@ -14781,79 +14781,72 @@ function renderPedidos(){
     var em=estMap[p.estado]||{bg:'#f3f4f6',c:'#374151',t:p.estado};
     var estBadge='<span style="background:'+em.bg+';color:'+em.c+';padding:2px 8px;border-radius:10px;font-size:11px;">'+em.t+'</span>';
 
-    var itemsHTML='';
-    if(items.length){
-      itemsHTML='<div style="overflow-x:auto;margin-top:14px;">'
-        +'<table style="width:100%;font-size:12px;border-collapse:collapse;min-width:780px;">'
-        +'<thead><tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">'
-        +'<th style="padding:5px 8px;text-align:left;">Prenda</th>'
-        +'<th style="padding:5px 8px;">Tela</th><th style="padding:5px 8px;">Color</th><th style="padding:5px 8px;">Talle</th>'
-        +'<th style="padding:5px 8px;text-align:right;">Cant.</th>'
-        +'<th style="padding:5px 8px;text-align:right;">Tizada</th>'
-        +'<th style="padding:5px 8px;text-align:right;">Costura</th>'
-        +'<th style="padding:5px 8px;text-align:right;">Recibido</th>'
-        +'<th style="padding:5px 8px;text-align:right;">Entregado</th>'
-        +'<th style="padding:5px 8px;text-align:right;">F.Cortar</th>'
-        +'<th style="padding:5px 8px;text-align:right;">Kg/pda</th>'
-        +'<th style="padding:5px 8px;text-align:right;">Total tela</th>'
-        +'<th style="padding:5px 8px;">Tallerista</th>'
-        +'</tr></thead><tbody>'
-        +items.map(function(it){
-          var tal=TALLERISTAS.find(function(t){return t.id===it.tallerista_id;});
-          var falta=Number(it.cantidad)-Number(it.tizada);
-          var totTela=(Number(it.peso_prenda)*Number(it.cantidad)).toFixed(2);
-          var fc=falta>0?'#dc2626':'#16a34a';
-          return '<tr style="border-bottom:1px solid #f3f4f6;">'
-            +'<td style="padding:5px 8px;font-weight:600;">'+it.prenda+'</td>'
-            +'<td style="padding:5px 8px;text-align:center;">'+(it.tela||'—')+'</td>'
-            +'<td style="padding:5px 8px;text-align:center;">'+(it.color||'—')+'</td>'
-            +'<td style="padding:5px 8px;text-align:center;">'+(it.talle||'—')+'</td>'
-            +'<td style="padding:5px 8px;text-align:right;font-weight:700;">'+it.cantidad+'</td>'
-            +'<td style="padding:5px 8px;text-align:right;">'+it.tizada+'</td>'
-            +'<td style="padding:5px 8px;text-align:right;">'+it.costura+'</td>'
-            +'<td style="padding:5px 8px;text-align:right;">'+it.recibido+'</td>'
-            +'<td style="padding:5px 8px;text-align:right;color:#16a34a;font-weight:700;">'+it.entregado+'</td>'
-            +'<td style="padding:5px 8px;text-align:right;color:'+fc+';font-weight:700;">'+falta+'</td>'
-            +'<td style="padding:5px 8px;text-align:right;">'+it.peso_prenda+'</td>'
-            +'<td style="padding:5px 8px;text-align:right;">'+totTela+' kg</td>'
-            +'<td style="padding:5px 8px;font-size:11px;">'+(tal?tal.nombre:'—')+'</td>'
-            +'</tr>';
-        }).join('')
-        +'<tr style="background:#f9fafb;font-weight:700;border-top:2px solid #e5e7eb;">'
-        +'<td colspan="4" style="padding:5px 8px;">TOTAL</td>'
-        +'<td style="padding:5px 8px;text-align:right;">'+totCant+'</td>'
-        +'<td style="padding:5px 8px;text-align:right;">'+pTizada+'</td>'
-        +'<td style="padding:5px 8px;text-align:right;">'+pCostura+'</td>'
-        +'<td style="padding:5px 8px;text-align:right;">'+pRecibido+'</td>'
-        +'<td style="padding:5px 8px;text-align:right;color:#16a34a;">'+pEntregado+'</td>'
-        +'<td style="padding:5px 8px;text-align:right;color:#dc2626;">'+(totCant-pTizada)+'</td>'
-        +'<td colspan="2" style="padding:5px 8px;text-align:right;">'+pTela.toFixed(2)+' kg</td>'
-        +'<td></td></tr>'
-        +'</tbody></table></div>';
+    var pctAvance=totCant>0?Math.round(pEntregado/totCant*100):0;
+    var barColor=pctAvance===100?'#16a34a':pctAvance>=70?'#2563eb':pctAvance>=40?'#f59e0b':'#dc2626';
+
+    // Pipeline chips compactos
+    function chip(icon,label,val,tot){
+      var pct=tot>0?Math.round(val/tot*100):0;
+      var ok=val>=tot&&tot>0;
+      return '<div style="display:flex;align-items:center;gap:5px;background:'+(ok?'#f0fdf4':'#f9fafb')+';border:1px solid '+(ok?'#bbf7d0':'#e5e7eb')+';border-radius:8px;padding:5px 10px;font-size:12px;">'
+        +'<span>'+icon+'</span>'
+        +'<span style="font-weight:700;color:'+(ok?'#16a34a':'#374151')+';">'+val+'<span style="font-weight:400;color:#9ca3af;">/'+tot+'</span></span>'
+        +'<span style="color:#9ca3af;font-size:10px;">'+label+'</span>'
+        +'</div>';
     }
 
-    return '<div class="panel" style="margin-bottom:12px;">'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">'
-      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-      +'<span style="font-size:20px;font-weight:800;color:#1f2937;">#'+p.nro_pedido+'</span>'
-      +carBadge+estBadge
-      +'<span style="font-weight:600;font-size:15px;">'+nomCli+'</span>'
-      +'<span style="color:#9ca3af;font-size:13px;">'+fmtF(p.fecha)+'</span>'
-      +(p.nota?'<span style="color:#9ca3af;font-size:12px;">📝 '+p.nota+'</span>':'')
+    // Prendas por tipo (resumen)
+    var tiposMap={};
+    items.forEach(function(it){
+      var k=it.prenda||'?';
+      tiposMap[k]=(tiposMap[k]||0)+Number(it.cantidad);
+    });
+    var tiposHtml=Object.keys(tiposMap).map(function(k){
+      return '<span style="font-size:11px;background:#f3f4f6;padding:2px 8px;border-radius:6px;color:#6b7280;">'+esc(k)+' ×'+tiposMap[k]+'</span>';
+    }).join('');
+
+    return '<div class="panel" style="margin-bottom:10px;">'
+      // — Fila 1: número, badges, botones
+      +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+          +'<span style="font-size:18px;font-weight:900;color:#1f2937;">#'+p.nro_pedido+'</span>'
+          +carBadge
+          +estBadge
+        +'</div>'
+        +'<div style="display:flex;gap:6px;flex-shrink:0;">'
+          +'<button class="btn btn-sm" style="background:#ede9fe;color:#6d28d9;border:none;" onclick="verSeguimientoPedido('+p.id+')">🔍 Seguimiento</button>'
+          +'<button class="btn btn-sm btn-gray" onclick="openPedidoModal('+p.id+')">✏️ Editar</button>'
+          +'<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;" onclick="deletePedido('+p.id+')">🗑️</button>'
+        +'</div>'
       +'</div>'
-      +'<div style="display:flex;gap:6px;">'
-      +'<button class="btn btn-sm" style="background:#ede9fe;color:#6d28d9;border:none;" onclick="verSeguimientoPedido('+p.id+')">🔍 Seguimiento</button>'
-      +'<button class="btn btn-sm btn-gray" onclick="openPedidoModal('+p.id+')">✏️ Editar</button>'
-      +'<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;" onclick="deletePedido('+p.id+')">🗑️</button>'
-      +'</div></div>'
-      +'<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">'
-      +pedChip('✂️ Tizada',pTizada,totCant)
-      +pedChip('🧵 Costura',pCostura,totCant)
-      +pedChip('📥 Recibido',pRecibido,totCant)
-      +pedChip('📦 Entregado',pEntregado,totCant)
-      +(pTela>0?'<span style="font-size:12px;background:#f3f4f6;padding:3px 10px;border-radius:20px;border:1px solid #e5e7eb;color:#6c7ae0;">🧶 '+pTela.toFixed(2)+' kg tela</span>':'')
+      // — Fila 2: cliente, fecha, nota
+      +'<div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">'
+        +'<span style="font-weight:700;font-size:14px;color:#374151;">'+esc(nomCli)+'</span>'
+        +'<span style="color:#9ca3af;font-size:12px;">'+fmtF(p.fecha)+'</span>'
+        +(p.nota?'<span style="color:#6b7280;font-size:11px;background:#f9fafb;padding:2px 8px;border-radius:6px;">📝 '+esc(p.nota)+'</span>':'')
+        +tiposHtml
       +'</div>'
-      +itemsHTML
+      // — Fila 3: barra de progreso
+      +'<div style="margin-top:10px;">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+          +'<span style="font-size:11px;color:#9ca3af;font-weight:600;">'+totCant+' prendas</span>'
+          +'<span style="font-size:13px;font-weight:800;color:'+barColor+';">'+pctAvance+'% entregado</span>'
+        +'</div>'
+        +'<div style="height:8px;background:#e5e7eb;border-radius:4px;">'
+          +'<div style="height:8px;background:'+barColor+';border-radius:4px;width:'+pctAvance+'%;"></div>'
+        +'</div>'
+      +'</div>'
+      // — Fila 4: pipeline chips
+      +'<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center;">'
+        +chip('✂️','tizada',pTizada,totCant)
+        +'<span style="color:#d1d5db;font-size:12px;">→</span>'
+        +chip('🧵','costura',pCostura,totCant)
+        +'<span style="color:#d1d5db;font-size:12px;">→</span>'
+        +chip('📥','recibido',pRecibido,totCant)
+        +'<span style="color:#d1d5db;font-size:12px;">→</span>'
+        +chip('📦','entregado',pEntregado,totCant)
+        +(pTela>0?'<span style="margin-left:6px;font-size:11px;background:#f3f4f6;padding:4px 10px;border-radius:8px;border:1px solid #e5e7eb;color:#6c7ae0;">🧶 '+pTela.toFixed(1)+' kg</span>':'')
+      +'</div>'
       +'</div>';
   }).join('');
 }
