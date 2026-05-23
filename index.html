@@ -3311,6 +3311,8 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <optgroup label="— Ingresos —" id="mm-opt-ing" style="display:none">
             <option>VENTA MAYORISTA</option>
             <option>VENTA MINORISTA</option>
+            <option>LOCAL LLAVALLOL</option>
+            <option>LOCAL MONTE GRANDE</option>
             <option>COBRO CLIENTE</option>
             <option>CHEQUES COBRADOS</option>
             <option>OTROS INGRESOS</option>
@@ -3386,7 +3388,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <!-- Proveedor -->
       <div class="field full" id="mm-proveedor-wrap" style="display:none;">
         <label>Proveedor</label>
-        <select id="mm-proveedor-id">
+        <select id="mm-proveedor-id" onchange="mm_onProveedor()">
           <option value="">— Seleccionar proveedor —</option>
         </select>
       </div>
@@ -12788,19 +12790,14 @@ function _aplicarPasteMonto(e,input){
   input.value=num||'';
 }
 
-// Aplicar automáticamente a todos los inputs numéricos cuyo ID contenga "monto" o "importe"
-document.addEventListener('DOMContentLoaded',function(){
-  document.body.addEventListener('paste',function(e){
-    var el=e.target;
-    if(el.tagName==='INPUT'&&el.type==='number'){
-      var id=el.id||'';
-      if(/monto|importe|cuota|cobrado/i.test(id)){
-        e.preventDefault();
-        _aplicarPasteMonto(e,el);
-      }
-    }
-  },true);
-});
+// Interceptar paste en todos los inputs numéricos (normaliza formato argentino 1.234,56)
+document.body.addEventListener('paste',function(e){
+  var el=e.target;
+  if(el.tagName==='INPUT'&&el.type==='number'){
+    e.preventDefault();
+    _aplicarPasteMonto(e,el);
+  }
+},true);
 
 function mm_onTipo(){
   var tipo=document.getElementById('mm-tipo').value;
@@ -12873,6 +12870,20 @@ function mm_onConcepto(){
     });
     if(prevProv)selProv.value=prevProv;
   }
+
+  // Auto-setear caja según local
+
+  // Gestionar campo detalle: readonly cuando hay selector específico
+  var conceptosAuto=['SUELDOS/JORNALES','COSTUREROS','MORATORIAS/PLANES','PROVEEDORES','MATERIALES/TELAS'];
+  var esAuto=conceptosAuto.indexOf(concepto)!==-1;
+  var detEl=document.getElementById('mm-detalle');
+  if(detEl){
+    detEl.readOnly=esAuto;
+    detEl.style.background=esAuto?'#f3f4f6':'';
+    detEl.style.color=esAuto?'#6b7280':'';
+    detEl.placeholder=esAuto?'(se completa automáticamente)':'A quién se le pagó o de quién viene';
+    if(esAuto) detEl.value='';
+  }
 }
 
 function mm_onMoratoria(){
@@ -12891,17 +12902,23 @@ function mm_onMoratoria(){
     '<br>Próx. vencimiento: '+prox+' &nbsp;·&nbsp; Pendiente total: '+$p(pendiente)+
     '<br><em style="font-size:11px;color:#15803d;">✅ Al guardar se registrará como cuota '+cuotaSig+' pagada y se avanzará el vencimiento</em>';
   info.style.display='';
-  // Pre-llenar monto si está vacío
+  // Pre-llenar monto y detalle
   var mmonto=document.getElementById('mm-monto');
   if(mmonto&&!mmonto.value)mmonto.value=m.monto_cuota||'';
+  mm_setDetalleAuto(m.nombre+(m.acreedor?' ('+m.acreedor+')':''));
 }
 
 function mm_onTallerista(){
   var id=parseInt(document.getElementById('mm-tallerista-id').value)||null;
   var t=id?TALLERISTAS.find(function(x){return x.id===id;}):null;
-  if(t&&t.precio_prenda_default){
-    document.getElementById('mm-precio-prenda').value=t.precio_prenda_default;
-    mm_calcMonto();
+  if(t){
+    if(t.precio_prenda_default){
+      document.getElementById('mm-precio-prenda').value=t.precio_prenda_default;
+      mm_calcMonto();
+    }
+    mm_setDetalleAuto('Costura — '+t.nombre);
+  } else {
+    mm_setDetalleAuto('');
   }
 }
 
@@ -12913,9 +12930,24 @@ function mm_onPersonal(){
     if(ref)ref.textContent='Sueldo semanal: '+$p(p.sueldo_semanal)+' · Equiv. mensual: '+$p(Math.round(p.sueldo_semanal*4.33));
     if(!document.getElementById('mm-monto').value)
       document.getElementById('mm-monto').value=p.sueldo_semanal;
+    mm_setDetalleAuto('Sueldo — '+p.nombre);
   } else {
     if(ref)ref.textContent='';
+    mm_setDetalleAuto('');
   }
+}
+
+function mm_onProveedor(){
+  var id=parseInt(document.getElementById('mm-proveedor-id').value)||null;
+  var p=id?PROVEEDORES.find(function(x){return x.id===id;}):null;
+  var concepto=document.getElementById('mm-concepto').value;
+  var prefijo=concepto==='MATERIALES/TELAS'?'Compra — ':'Pago — ';
+  mm_setDetalleAuto(p?prefijo+p.nombre:'');
+}
+
+function mm_setDetalleAuto(texto){
+  var el=document.getElementById('mm-detalle');
+  if(el) el.value=texto||'';
 }
 
 function mm_calcMonto(){
