@@ -4910,8 +4910,14 @@ function renderMargenReal(){
   var gastosFijos=GASTOS_FIJOS.filter(function(g){return g.activo;})
     .reduce(function(s,g){return s+Number(g.monto||0)/(FREC_MESES[g.frecuencia||'mensual']||1);},0);
 
+  var costoSueldos=PERSONAL.filter(function(p){return p.activo;})
+    .reduce(function(s,p){return s+Number(p.sueldo_semanal||0)*4.33;},0);
+
+  var costoMoratorias=MORATORIAS.filter(function(m){return m.estado==='activa'||m.estado==='en_mora';})
+    .reduce(function(s,m){return s+Number(m.cuota||0);},0);
+
   var costoMerch=facTotal*pctCosto/100;
-  var totalCostos=costoMerch+gastosFijos+otros;
+  var totalCostos=costoMerch+gastosFijos+costoSueldos+costoMoratorias+otros;
   var ganancia=facTotal-totalCostos;
   var margenPct=facTotal>0?ganancia/facTotal*100:0;
 
@@ -4949,11 +4955,15 @@ function renderMargenReal(){
     '<div class="panel" style="border-top:3px solid #dc2626;margin-bottom:0;">'+
       '<div style="font-size:11px;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📉 Costos del mes</div>'+
       '<div style="font-size:28px;font-weight:900;color:#1a1f36;margin-bottom:14px;">'+$p(Math.round(totalCostos))+'</div>'+
-      pctBar('🧵 Costo mercadería ('+pctCosto+'%)',costoMerch,facTotal,'#f87171')+
-      pctBar('📌 Gastos fijos',gastosFijos,facTotal,'#fbbf24')+
-      (otros>0?pctBar('➕ Otros variables',otros,facTotal,'#a78bfa'):'')+
-      '<div style="background:#fff5f5;border-radius:8px;padding:8px 12px;margin-top:10px;font-size:12px;color:#6b7280;">'+
-        'Gastos fijos: '+GASTOS_FIJOS.filter(function(g){return g.activo;}).length+' conceptos activos'+
+      pctBar('🧵 Mercadería ('+pctCosto+'%)',costoMerch,totalCostos,'#f87171')+
+      pctBar('👤 Sueldos ('+PERSONAL.filter(function(p){return p.activo;}).length+' empleados)',costoSueldos,totalCostos,'#6c7ae0')+
+      pctBar('📋 Moratorias ('+MORATORIAS.filter(function(m){return m.estado==='activa'||m.estado==='en_mora';}).length+' planes)',costoMoratorias,totalCostos,'#7c3aed')+
+      pctBar('📌 Gastos fijos',gastosFijos,totalCostos,'#fbbf24')+
+      (otros>0?pctBar('➕ Otros variables',otros,totalCostos,'#a78bfa'):'')+
+      '<div style="background:#fff5f5;border-radius:8px;padding:8px 12px;margin-top:10px;font-size:12px;color:#6b7280;line-height:1.7;">'+
+        '<div>📌 '+GASTOS_FIJOS.filter(function(g){return g.activo;}).length+' gastos fijos activos</div>'+
+        '<div>👤 Sueldos: '+$p(Math.round(costoSueldos))+'/mes (×4.33 sem.)</div>'+
+        '<div>📋 Moratorias: '+$p(Math.round(costoMoratorias))+'/mes</div>'+
       '</div>'+
     '</div>'+
 
