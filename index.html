@@ -1627,6 +1627,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <button class="tab" onclick="setPedTab('seguimiento',this)">🔍 Seguimiento</button>
       <button class="tab" onclick="setPedTab('insumos',this)">🧶 Insumos a utilizar</button>
       <button class="tab" onclick="setPedTab('sugeridas',this)">📐 Tizadas sugeridas</button>
+      <button class="tab" onclick="setPedTab('analisis',this)">📅 Análisis</button>
     </div>
 
     <!-- Tab Resumen -->
@@ -1683,6 +1684,37 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <!-- Tab Tizadas sugeridas -->
     <div id="ped-tab-sugeridas" style="display:none;">
       <div id="ped-sugeridas-cont"></div>
+    </div>
+
+    <!-- Tab Análisis de producción -->
+    <div id="ped-tab-analisis" style="display:none;">
+      <!-- Selector de período -->
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:20px;background:#f9fafb;border-radius:12px;padding:14px 18px;">
+        <div style="display:flex;gap:6px;background:#e5e7eb;border-radius:8px;padding:3px;">
+          <button id="pa-btn-mensual" class="btn btn-sm" style="background:#fff;border-radius:6px;font-weight:700;" onclick="paTipoPer('mensual')">Mensual</button>
+          <button id="pa-btn-anual"   class="btn btn-sm" style="background:transparent;border:none;color:#6b7280;font-weight:600;" onclick="paTipoPer('anual')">Anual</button>
+          <button id="pa-btn-periodo" class="btn btn-sm" style="background:transparent;border:none;color:#6b7280;font-weight:600;" onclick="paTipoPer('periodo')">Período libre</button>
+        </div>
+        <div id="pa-ctrl-mensual" style="display:flex;gap:8px;align-items:center;">
+          <select id="pa-mes" style="padding:7px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;">
+            <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+            <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+            <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+          <select id="pa-anio-m" style="padding:7px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;"></select>
+        </div>
+        <div id="pa-ctrl-anual" style="display:none;">
+          <select id="pa-anio-a" style="padding:7px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;"></select>
+        </div>
+        <div id="pa-ctrl-periodo" style="display:none;display:flex;gap:8px;align-items:center;">
+          <input type="date" id="pa-desde" style="padding:7px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;"/>
+          <span style="color:#9ca3af;">→</span>
+          <input type="date" id="pa-hasta" style="padding:7px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;"/>
+        </div>
+        <button class="btn" style="font-weight:700;" onclick="renderPedAnalisis()">Ver análisis</button>
+      </div>
+      <div id="pa-body"></div>
     </div>
   </div>
 
@@ -14375,7 +14407,7 @@ async function deleteTizada(id){
 // ══════════════════════════════════════════════════════════
 
 function setPedTab(tab, el){
-  ['resumen','lista','seguimiento','insumos','sugeridas'].forEach(function(t){
+  ['resumen','lista','seguimiento','insumos','sugeridas','analisis'].forEach(function(t){
     var d=document.getElementById('ped-tab-'+t);
     if(d)d.style.display=t===tab?'block':'none';
   });
@@ -14386,6 +14418,7 @@ function setPedTab(tab, el){
   if(tab==='seguimiento')initSegPedSel();
   if(tab==='insumos')renderInsumos();
   if(tab==='sugeridas')renderTizadasSugeridas();
+  if(tab==='analisis')initPedAnalisis();
 }
 
 // ── INSUMOS A UTILIZAR ──────────────────────────────────
@@ -15082,6 +15115,351 @@ function renderPedSeguimiento(pedId){
 
     // Ventas
     +ventasHTML;
+}
+
+// ════════════════════════════════════
+// ANÁLISIS DE PRODUCCIÓN POR PERÍODO
+// ════════════════════════════════════
+var _paTipo='mensual';
+
+function initPedAnalisis(){
+  // Poblar año en selects si vacíos
+  var now=new Date();
+  ['pa-anio-m','pa-anio-a'].forEach(function(id){
+    var s=document.getElementById(id); if(!s||s.options.length>0) return;
+    for(var y=now.getFullYear()+1;y>=2023;y--){
+      var o=document.createElement('option');o.value=y;o.textContent=y;
+      if(y===now.getFullYear())o.selected=true;
+      s.appendChild(o);
+    }
+  });
+  // Mes actual por defecto
+  var sm=document.getElementById('pa-mes'); if(sm&&!sm.value) sm.value=now.getMonth()+1;
+  // Fechas libres por defecto: primer y último día del mes
+  var fd=document.getElementById('pa-desde'),fh=document.getElementById('pa-hasta');
+  if(fd&&!fd.value){var d=new Date(now.getFullYear(),now.getMonth(),1);fd.value=d.toISOString().split('T')[0];}
+  if(fh&&!fh.value){var d2=new Date(now.getFullYear(),now.getMonth()+1,0);fh.value=d2.toISOString().split('T')[0];}
+  paTipoPer(_paTipo);
+  renderPedAnalisis();
+}
+
+function paTipoPer(tipo){
+  _paTipo=tipo;
+  ['mensual','anual','periodo'].forEach(function(t){
+    var b=document.getElementById('pa-btn-'+t);
+    var c=document.getElementById('pa-ctrl-'+t);
+    if(b) b.style.cssText=t===tipo?'background:#fff;border-radius:6px;font-weight:700;':'background:transparent;border:none;color:#6b7280;font-weight:600;';
+    if(c) c.style.display=t===tipo?'flex':'none';
+  });
+}
+
+function paGetRango(){
+  if(_paTipo==='mensual'){
+    var m=parseInt(document.getElementById('pa-mes').value);
+    var y=parseInt(document.getElementById('pa-anio-m').value);
+    var desde=new Date(y,m-1,1).toISOString().split('T')[0];
+    var hasta=new Date(y,m,0).toISOString().split('T')[0];
+    var label=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][m-1]+' '+y;
+    return{desde,hasta,label,tipo:'mensual',anio:y,mes:m};
+  }
+  if(_paTipo==='anual'){
+    var y2=parseInt(document.getElementById('pa-anio-a').value);
+    return{desde:y2+'-01-01',hasta:y2+'-12-31',label:'Año '+y2,tipo:'anual',anio:y2};
+  }
+  var desde2=document.getElementById('pa-desde').value;
+  var hasta2=document.getElementById('pa-hasta').value;
+  return{desde:desde2,hasta:hasta2,label:fmtF(desde2)+' → '+fmtF(hasta2),tipo:'periodo'};
+}
+
+function renderPedAnalisis(){
+  var body=document.getElementById('pa-body'); if(!body)return;
+  var rango=paGetRango();
+  if(!rango.desde||!rango.hasta){body.innerHTML='<div class="empty"><p>Seleccioná un período válido</p></div>';return;}
+
+  // Pedidos en el período (por fecha de creación del pedido)
+  var pedsPer=PEDIDOS.filter(function(p){return p.fecha>=rango.desde&&p.fecha<=rango.hasta;});
+
+  // Items de esos pedidos
+  var pedIds=pedsPer.map(function(p){return p.id;});
+  var itemsPer=PEDIDOS_ITEMS.filter(function(i){return pedIds.includes(i.pedido_id);});
+
+  // KPIs globales del período
+  var totPedidos=pedsPer.length;
+  var totCant=itemsPer.reduce(function(s,i){return s+Number(i.cantidad);},0);
+  var totTiz=itemsPer.reduce(function(s,i){return s+Number(i.tizada);},0);
+  var totCos=itemsPer.reduce(function(s,i){return s+Number(i.costura);},0);
+  var totRec=itemsPer.reduce(function(s,i){return s+Number(i.recibido);},0);
+  var totEnt=itemsPer.reduce(function(s,i){return s+Number(i.entregado);},0);
+  var totKg=itemsPer.reduce(function(s,i){return s+Number(i.peso_prenda)*Number(i.cantidad);},0);
+  var pctCumpl=totCant>0?Math.round(totEnt/totCant*100):0;
+
+  // Ventas vinculadas al período (por fecha de pedido)
+  var ventasPer=VENTAS.filter(function(v){return v.pedido_id&&pedIds.includes(v.pedido_id);});
+  var vtaTotal=ventasPer.reduce(function(s,v){return s+Number(v.total);},0);
+
+  // Color del pipeline según % de cumplimiento
+  var barColor=pctCumpl===100?'#16a34a':pctCumpl>=70?'#2563eb':pctCumpl>=40?'#f59e0b':'#dc2626';
+
+  function kpi(icon,label,val,sub,bgColor,textColor){
+    return '<div style="background:'+bgColor+';border-radius:14px;padding:16px 18px;text-align:center;">'
+      +'<div style="font-size:26px;margin-bottom:4px;">'+icon+'</div>'
+      +'<div style="font-size:11px;font-weight:800;color:'+textColor+';letter-spacing:.5px;opacity:.7;margin-bottom:4px;">'+label+'</div>'
+      +'<div style="font-size:28px;font-weight:900;color:'+textColor+';">'+val+'</div>'
+      +(sub?'<div style="font-size:11px;color:'+textColor+';opacity:.6;margin-top:2px;">'+sub+'</div>':'')
+      +'</div>';
+  }
+
+  function etapaPipe(icon,label,val,color,bgColor){
+    var pct=totCant>0?Math.min(Math.round(val/totCant*100),100):0;
+    return '<div style="flex:1;min-width:110px;background:'+bgColor+';border-radius:12px;padding:14px;text-align:center;">'
+      +'<div style="font-size:20px;">'+icon+'</div>'
+      +'<div style="font-size:10px;font-weight:800;color:'+color+';letter-spacing:.5px;margin:4px 0;">'+label+'</div>'
+      +'<div style="font-size:26px;font-weight:900;color:'+color+';">'+val+'</div>'
+      +'<div style="font-size:10px;color:'+color+';opacity:.7;">'+pct+'%</div>'
+      +'<div style="height:4px;background:rgba(0,0,0,.1);border-radius:2px;margin-top:6px;">'
+      +'<div style="height:4px;background:'+color+';width:'+pct+'%;opacity:.8;border-radius:2px;"></div></div>'
+      +'</div>';
+  }
+
+  // ─── Tabla mensual (solo para vista anual o período largo) ────
+  var tablaMensualHTML='';
+  if(rango.tipo==='anual'||(rango.tipo==='periodo'&&rango.desde&&rango.hasta&&((new Date(rango.hasta)-new Date(rango.desde))>60*24*3600*1000))){
+    var meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    // Agrupar todos los pedidos por mes
+    var mMap={};
+    PEDIDOS.forEach(function(p){
+      if(!p.fecha||p.fecha<rango.desde||p.fecha>rango.hasta) return;
+      var d=new Date(p.fecha+'T12:00:00');
+      var key=d.getFullYear()+'-'+(d.getMonth()+1);
+      if(!mMap[key])mMap[key]={label:meses[d.getMonth()]+' '+d.getFullYear(),mes:d.getMonth()+1,anio:d.getFullYear(),peds:[],cant:0,tiz:0,cos:0,rec:0,ent:0,kg:0};
+      mMap[key].peds.push(p.id);
+    });
+    // Calcular cantidades por mes
+    PEDIDOS_ITEMS.forEach(function(i){
+      Object.keys(mMap).forEach(function(k){
+        if(mMap[k].peds.includes(i.pedido_id)){
+          mMap[k].cant+=Number(i.cantidad);
+          mMap[k].tiz+=Number(i.tizada);
+          mMap[k].cos+=Number(i.costura);
+          mMap[k].rec+=Number(i.recibido);
+          mMap[k].ent+=Number(i.entregado);
+          mMap[k].kg+=Number(i.peso_prenda)*Number(i.cantidad);
+        }
+      });
+    });
+    var mKeys=Object.keys(mMap).sort();
+    if(mKeys.length>0){
+      tablaMensualHTML='<div class="panel" style="margin-top:20px;">'
+        +'<div class="panel-hdr"><h4>📆 Desglose mensual</h4></div>'
+        +'<div class="tbl"><table><thead><tr>'
+        +'<th>Mes</th><th style="text-align:right;">Pedidos</th>'
+        +'<th style="text-align:right;">Prendas</th>'
+        +'<th style="text-align:right;">✂️ Tizada</th>'
+        +'<th style="text-align:right;">🧵 Costura</th>'
+        +'<th style="text-align:right;">📥 Recibido</th>'
+        +'<th style="text-align:right;">📦 Entregado</th>'
+        +'<th style="text-align:right;">% Cumpl.</th>'
+        +'<th style="text-align:right;">Kg tela</th>'
+        +'</tr></thead><tbody>'
+        +mKeys.map(function(k){
+          var m=mMap[k];
+          var pct=m.cant>0?Math.round(m.ent/m.cant*100):0;
+          var bc=pct===100?'#16a34a':pct>=70?'#2563eb':pct>=40?'#f59e0b':'#dc2626';
+          return '<tr style="border-bottom:1px solid #f3f4f6;cursor:pointer;" onclick="paSaltarMes('+m.mes+','+m.anio+')">'
+            +'<td style="padding:8px;font-weight:700;">'+m.label+'</td>'
+            +'<td style="padding:8px;text-align:right;font-weight:600;">'+m.peds.length+'</td>'
+            +'<td style="padding:8px;text-align:right;font-weight:700;">'+m.cant+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#92400e;">'+m.tiz+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#1d4ed8;">'+m.cos+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#6d28d9;">'+m.rec+'</td>'
+            +'<td style="padding:8px;text-align:right;color:#065f46;font-weight:700;">'+m.ent+'</td>'
+            +'<td style="padding:8px;text-align:right;">'
+              +'<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;">'
+              +'<div style="width:60px;height:6px;background:#e5e7eb;border-radius:3px;">'
+              +'<div style="height:6px;background:'+bc+';width:'+pct+'%;border-radius:3px;"></div></div>'
+              +'<span style="font-weight:800;color:'+bc+';font-size:12px;">'+pct+'%</span>'
+              +'</div></td>'
+            +'<td style="padding:8px;text-align:right;color:#6b7280;">'+m.kg.toFixed(1)+' kg</td>'
+            +'</tr>';
+        }).join('')
+        +'</tbody></table></div></div>';
+    }
+  }
+
+  // ─── Por cliente ──────────────────────────────────────────────
+  var cliMap={};
+  pedsPer.forEach(function(p){
+    var cli=CLIENTES.find(function(c){return c.id===p.cliente_id;})||{nombre:'Sin cliente',id:null};
+    var k=cli.nombre;
+    if(!cliMap[k])cliMap[k]={nombre:k,count:0,cant:0,ent:0};
+    cliMap[k].count++;
+    var its=PEDIDOS_ITEMS.filter(function(i){return i.pedido_id===p.id;});
+    cliMap[k].cant+=its.reduce(function(s,i){return s+Number(i.cantidad);},0);
+    cliMap[k].ent+=its.reduce(function(s,i){return s+Number(i.entregado);},0);
+  });
+  var cliArr=Object.values(cliMap).sort(function(a,b){return b.cant-a.cant;});
+  var cliHTML='';
+  if(cliArr.length>0){
+    cliHTML='<div class="panel" style="margin-top:20px;">'
+      +'<div class="panel-hdr"><h4>👥 Por cliente</h4></div>'
+      +'<div class="tbl"><table><thead><tr>'
+      +'<th>Cliente</th><th style="text-align:right;">Pedidos</th>'
+      +'<th style="text-align:right;">Prendas</th>'
+      +'<th style="text-align:right;">Entregadas</th>'
+      +'<th>Avance</th>'
+      +'</tr></thead><tbody>'
+      +cliArr.map(function(c){
+        var pct=c.cant>0?Math.round(c.ent/c.cant*100):0;
+        var bc=pct===100?'#16a34a':pct>=70?'#2563eb':pct>=40?'#f59e0b':'#dc2626';
+        return '<tr style="border-bottom:1px solid #f3f4f6;">'
+          +'<td style="padding:8px;font-weight:700;">'+esc(c.nombre)+'</td>'
+          +'<td style="padding:8px;text-align:right;">'+c.count+'</td>'
+          +'<td style="padding:8px;text-align:right;font-weight:700;">'+c.cant+'</td>'
+          +'<td style="padding:8px;text-align:right;color:#065f46;font-weight:700;">'+c.ent+'</td>'
+          +'<td style="padding:8px;">'
+            +'<div style="display:flex;align-items:center;gap:8px;">'
+            +'<div style="flex:1;height:8px;background:#e5e7eb;border-radius:4px;min-width:80px;">'
+            +'<div style="height:8px;background:'+bc+';width:'+pct+'%;border-radius:4px;"></div></div>'
+            +'<span style="font-weight:800;color:'+bc+';font-size:12px;white-space:nowrap;">'+pct+'%</span>'
+            +'</div></td>'
+          +'</tr>';
+      }).join('')
+      +'</tbody></table></div></div>';
+  }
+
+  // ─── Por tipo de prenda ────────────────────────────────────────
+  var prendaMap={};
+  itemsPer.forEach(function(i){
+    var k=i.prenda||'?';
+    if(!prendaMap[k])prendaMap[k]={nombre:k,cant:0,ent:0};
+    prendaMap[k].cant+=Number(i.cantidad);
+    prendaMap[k].ent+=Number(i.entregado);
+  });
+  var prendaArr=Object.values(prendaMap).sort(function(a,b){return b.cant-a.cant;});
+  var prendaHTML='';
+  if(prendaArr.length>0){
+    prendaHTML='<div class="panel" style="margin-top:20px;">'
+      +'<div class="panel-hdr"><h4>👔 Por tipo de prenda</h4></div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:10px;padding:4px 0;">'
+      +prendaArr.map(function(pr){
+        var pct=pr.cant>0?Math.round(pr.ent/pr.cant*100):0;
+        var bc=pct===100?'#16a34a':pct>=70?'#2563eb':pct>=40?'#f59e0b':'#dc2626';
+        return '<div style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:12px;padding:12px 16px;min-width:140px;flex:1;">'
+          +'<div style="font-weight:800;font-size:14px;color:#1f2937;margin-bottom:4px;">'+esc(pr.nombre)+'</div>'
+          +'<div style="font-size:22px;font-weight:900;color:#1f2937;">'+pr.cant+'</div>'
+          +'<div style="font-size:11px;color:#9ca3af;margin-bottom:6px;">'+pr.ent+' entregadas</div>'
+          +'<div style="height:6px;background:#e5e7eb;border-radius:3px;">'
+          +'<div style="height:6px;background:'+bc+';width:'+pct+'%;border-radius:3px;"></div></div>'
+          +'<div style="font-size:11px;font-weight:700;color:'+bc+';margin-top:3px;">'+pct+'% entregado</div>'
+          +'</div>';
+      }).join('')
+      +'</div></div>';
+  }
+
+  // ─── Lista de pedidos del período ─────────────────────────────
+  var listaPedsHTML='';
+  if(pedsPer.length>0){
+    listaPedsHTML='<div class="panel" style="margin-top:20px;">'
+      +'<div class="panel-hdr"><h4>📋 Pedidos del período ('+pedsPer.length+')</h4></div>'
+      +'<div class="tbl"><table><thead><tr>'
+      +'<th>#</th><th>Fecha</th><th>Cliente</th><th>Caracter</th><th>Estado</th>'
+      +'<th style="text-align:right;">Prendas</th>'
+      +'<th style="text-align:right;">✂️</th>'
+      +'<th style="text-align:right;">🧵</th>'
+      +'<th style="text-align:right;">📥</th>'
+      +'<th style="text-align:right;">📦</th>'
+      +'<th>Avance</th>'
+      +'</tr></thead><tbody>'
+      +pedsPer.map(function(p){
+        var cli2=CLIENTES.find(function(c){return c.id===p.cliente_id;})||{};
+        var its=PEDIDOS_ITEMS.filter(function(i){return i.pedido_id===p.id;});
+        var cant=its.reduce(function(s,i){return s+Number(i.cantidad);},0);
+        var tiz=its.reduce(function(s,i){return s+Number(i.tizada);},0);
+        var cos=its.reduce(function(s,i){return s+Number(i.costura);},0);
+        var rec=its.reduce(function(s,i){return s+Number(i.recibido);},0);
+        var ent=its.reduce(function(s,i){return s+Number(i.entregado);},0);
+        var pct=cant>0?Math.round(ent/cant*100):0;
+        var bc=pct===100?'#16a34a':pct>=70?'#2563eb':pct>=40?'#f59e0b':'#dc2626';
+        var estM={en_proceso:{bg:'#fef3c7',c:'#92400e',t:'En proceso'},completado:{bg:'#d1fae5',c:'#065f46',t:'Completado'},cancelado:{bg:'#fee2e2',c:'#991b1b',t:'Cancelado'}};
+        var em2=estM[p.estado]||{bg:'#f3f4f6',c:'#374151',t:p.estado};
+        return '<tr style="border-bottom:1px solid #f3f4f6;cursor:pointer;" onclick="verSeguimientoPedido('+p.id+')">'
+          +'<td style="padding:8px;font-weight:800;color:#1f2937;">#'+p.nro_pedido+'</td>'
+          +'<td style="padding:8px;font-size:12px;color:#6b7280;">'+fmtF(p.fecha)+'</td>'
+          +'<td style="padding:8px;font-weight:600;">'+esc(cli2.nombre||'—')+'</td>'
+          +'<td style="padding:8px;font-size:11px;">'+(p.caracter||'—')+'</td>'
+          +'<td style="padding:8px;"><span style="background:'+em2.bg+';color:'+em2.c+';padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">'+em2.t+'</span></td>'
+          +'<td style="padding:8px;text-align:right;font-weight:700;">'+cant+'</td>'
+          +'<td style="padding:8px;text-align:right;color:#92400e;">'+tiz+'</td>'
+          +'<td style="padding:8px;text-align:right;color:#1d4ed8;">'+cos+'</td>'
+          +'<td style="padding:8px;text-align:right;color:#6d28d9;">'+rec+'</td>'
+          +'<td style="padding:8px;text-align:right;color:#065f46;font-weight:700;">'+ent+'</td>'
+          +'<td style="padding:8px;">'
+            +'<div style="display:flex;align-items:center;gap:6px;">'
+            +'<div style="width:70px;height:6px;background:#e5e7eb;border-radius:3px;">'
+            +'<div style="height:6px;background:'+bc+';width:'+pct+'%;border-radius:3px;"></div></div>'
+            +'<span style="font-weight:800;color:'+bc+';font-size:11px;">'+pct+'%</span>'
+            +'</div></td>'
+          +'</tr>';
+      }).join('')
+      +'</tbody></table></div>'
+      +'<div style="font-size:11px;color:#9ca3af;padding:8px 0 0;">Hacé clic en un pedido para ver su seguimiento completo</div>'
+      +'</div>';
+  }
+
+  // ─── Render ────────────────────────────────────────────────────
+  body.innerHTML=
+    // Título período
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">'
+    +'<h3 style="margin:0;font-size:20px;font-weight:900;color:#1f2937;">'+rango.label+'</h3>'
+    +(totPedidos===0?'<span style="background:#fee2e2;color:#991b1b;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;">Sin pedidos en este período</span>':'')
+    +'</div>'
+
+    +(totPedidos===0?'<div class="empty"><div class="ei">📋</div><p>No hay pedidos registrados en este período</p></div>':
+
+    // KPIs
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:20px;">'
+    +kpi('📋','PEDIDOS',totPedidos,'','#f3f4f6','#374151')
+    +kpi('👔','PRENDAS',totCant.toLocaleString('es-AR'),'pedidas','#fef9c3','#92400e')
+    +kpi('📦','ENTREGADAS',totEnt.toLocaleString('es-AR'),pctCumpl+'% cumplido','#d1fae5','#065f46')
+    +kpi('🧶','KG TELA',totKg.toFixed(1)+' kg','utilizado','#ede9fe','#6d28d9')
+    +(vtaTotal>0?kpi('💰','VENDIDO',$p(vtaTotal),'vinculado al período','#dbeafe','#1d4ed8'):'')
+    +'</div>'
+
+    // Barra avance global
+    +'<div style="background:#f9fafb;border-radius:14px;padding:16px 20px;margin-bottom:20px;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    +'<span style="font-size:12px;font-weight:800;color:#6b7280;letter-spacing:.5px;">CUMPLIMIENTO DEL PERÍODO</span>'
+    +'<span style="font-size:24px;font-weight:900;color:'+barColor+';">'+pctCumpl+'%</span></div>'
+    +'<div style="height:14px;background:#e5e7eb;border-radius:7px;">'
+    +'<div style="height:14px;background:'+barColor+';border-radius:7px;width:'+pctCumpl+'%;transition:width .5s;"></div></div>'
+    +'<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#9ca3af;">'
+    +'<span>'+totEnt+' entregadas</span><span>'+totCant+' pedidas</span></div>'
+    +'</div>'
+
+    // Pipeline
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:stretch;">'
+    +etapaPipe('✂️','TIZADA',totTiz,'#92400e','#fef3c7')
+    +'<div style="display:flex;align-items:center;font-size:16px;color:#d1d5db;">→</div>'
+    +etapaPipe('🧵','COSTURA',totCos,'#1d4ed8','#dbeafe')
+    +'<div style="display:flex;align-items:center;font-size:16px;color:#d1d5db;">→</div>'
+    +etapaPipe('📥','RECIBIDO',totRec,'#6d28d9','#ede9fe')
+    +'<div style="display:flex;align-items:center;font-size:16px;color:#d1d5db;">→</div>'
+    +etapaPipe('📦','ENTREGADO',totEnt,'#065f46','#d1fae5')
+    +'</div>'
+
+    +tablaMensualHTML
+    +prendaHTML
+    +cliHTML
+    +listaPedsHTML
+    );
+}
+
+function paSaltarMes(mes,anio){
+  // Ir a vista mensual de ese mes/año
+  paTipoPer('mensual');
+  var sm=document.getElementById('pa-mes'); if(sm) sm.value=mes;
+  var sa=document.getElementById('pa-anio-m'); if(sa) sa.value=anio;
+  renderPedAnalisis();
 }
 
 var editPedidoId=null;
