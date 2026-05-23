@@ -4914,7 +4914,7 @@ function renderMargenReal(){
     .reduce(function(s,p){return s+Number(p.sueldo_semanal||0)*4.33;},0);
 
   var costoMoratorias=MORATORIAS.filter(function(m){return m.estado==='activa'||m.estado==='en_mora';})
-    .reduce(function(s,m){return s+Number(m.cuota||0);},0);
+    .reduce(function(s,m){return s+Number(m.monto_cuota||0);},0);
 
   var costoMerch=facTotal*pctCosto/100;
   var totalCostos=costoMerch+gastosFijos+costoSueldos+costoMoratorias+otros;
