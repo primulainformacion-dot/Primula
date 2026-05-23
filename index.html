@@ -12767,6 +12767,41 @@ async function deletePer(id){
   await loadPersonal();renderPersonal();
 }
 
+function limpiarMontoPaste(e,input){
+  e.preventDefault();
+  _aplicarPasteMonto(e,input);
+}
+
+function _aplicarPasteMonto(e,input){
+  var raw=(e.clipboardData||window.clipboardData).getData('text')||'';
+  raw=raw.replace(/[^0-9.,\-]/g,'').trim();
+  if(raw.indexOf(',')!==-1){
+    // Formato argentino: 1.234,56
+    raw=raw.replace(/\./g,'').replace(',','.');
+  } else {
+    var partes=raw.split('.');
+    if(partes.length>2||(partes.length===2&&partes[1].length!==2)){
+      raw=raw.replace(/\./g,'');
+    }
+  }
+  var num=parseFloat(raw)||0;
+  input.value=num||'';
+}
+
+// Aplicar automáticamente a todos los inputs numéricos cuyo ID contenga "monto" o "importe"
+document.addEventListener('DOMContentLoaded',function(){
+  document.body.addEventListener('paste',function(e){
+    var el=e.target;
+    if(el.tagName==='INPUT'&&el.type==='number'){
+      var id=el.id||'';
+      if(/monto|importe|cuota|cobrado/i.test(id)){
+        e.preventDefault();
+        _aplicarPasteMonto(e,el);
+      }
+    }
+  },true);
+});
+
 function mm_onTipo(){
   var tipo=document.getElementById('mm-tipo').value;
   document.getElementById('mm-opt-egr').style.display=(tipo==='egreso'||tipo==='transferencia')?'':'none';
