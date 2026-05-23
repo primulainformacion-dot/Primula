@@ -1852,17 +1852,32 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="stat"><div class="stat-icon" style="background:#dbeafe;">⚙️</div><h3 id="tiz-stat-proceso">0</h3><p>En proceso</p></div>
       <div class="stat"><div class="stat-icon" style="background:#d1fae5;">✅</div><h3 id="tiz-stat-completadas">0</h3><p>Completadas</p></div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
-      <select id="tiz-fil-est" onchange="renderTizadas()" style="min-width:160px;">
-        <option value="">Todos los estados</option>
-        <option value="borrador">Borrador</option>
-        <option value="en_proceso">En proceso</option>
-        <option value="completado">Completado</option>
-      </select>
-      <button class="btn btn-gray btn-sm" onclick="renderTizadas()">↻ Actualizar</button>
-      <button class="btn" style="margin-left:auto;" onclick="openTizadaModal()">+ Nueva tizada</button>
+    <div class="tabs" id="tiz-tabs" style="margin-bottom:16px;">
+      <button class="tab active" onclick="setTizTab('activas',this)">✂️ Activas</button>
+      <button class="tab" onclick="setTizTab('historial',this)">📋 Historial</button>
     </div>
-    <div id="tiz-lista"></div>
+    <!-- Tab Activas -->
+    <div id="tiz-tab-activas">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+        <select id="tiz-fil-est" onchange="renderTizadas()" style="min-width:160px;">
+          <option value="">Borrador + En proceso</option>
+          <option value="borrador">Borrador</option>
+          <option value="en_proceso">En proceso</option>
+          <option value="completado">Completado</option>
+        </select>
+        <button class="btn btn-gray btn-sm" onclick="renderTizadas()">↻</button>
+        <button class="btn" style="margin-left:auto;" onclick="openTizadaModal()">+ Nueva tizada</button>
+      </div>
+      <div id="tiz-lista"></div>
+    </div>
+    <!-- Tab Historial -->
+    <div id="tiz-tab-historial" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <input type="month" id="tiz-hist-mes" style="width:160px;" onchange="renderTizHistorial()"/>
+        <button class="btn btn-gray btn-sm" onclick="renderTizHistorial()">↻</button>
+      </div>
+      <div id="tiz-hist-cont"></div>
+    </div>
   </div>
 
   <!-- ════════════ COSTURA / BORDADO ════════════ -->
@@ -1880,6 +1895,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="tabs" id="cos-tabs" style="margin-bottom:16px;">
       <button class="tab active" onclick="setCosTab('costura',this)">🧵 Costura</button>
       <button class="tab" onclick="setCosTab('bordado',this)">🎨 Bordado</button>
+      <button class="tab" onclick="setCosTab('historial',this)">📋 Historial</button>
     </div>
 
     <!-- Tab Costura -->
@@ -1916,6 +1932,15 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
       <div id="bor-lista"></div>
     </div>
+
+    <!-- Tab Historial Costura -->
+    <div id="cos-tab-historial" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <input type="month" id="cos-hist-mes" style="width:160px;" onchange="renderCosHistorial()"/>
+        <button class="btn btn-gray btn-sm" onclick="renderCosHistorial()">↻</button>
+      </div>
+      <div id="cos-hist-cont"></div>
+    </div>
   </div>
   <!-- ════════════ ENTREGAS ════════════ -->
   <div class="section" id="sec-entregas">
@@ -1925,15 +1950,30 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="stat"><div class="stat-icon" style="background:#fef3c7;">⏳</div><h3 id="ent-stat-pendientes">0</h3><p>Prendas listas p/ entregar</p></div>
       <div class="stat"><div class="stat-icon" style="background:#ede9fe;">✅</div><h3 id="ent-stat-completados">0</h3><p>Pedidos completados</p></div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
-      <select id="ent-fil-cli" onchange="renderEntregas()" style="min-width:200px;">
-        <option value="">Todos los clientes</option>
-      </select>
-      <input type="month" id="ent-fil-mes" onchange="renderEntregas()" style="width:160px;"/>
-      <button class="btn btn-gray btn-sm" onclick="renderEntregas()">↻</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEntregaModal()">+ Nueva entrega</button>
+    <div class="tabs" id="ent-tabs" style="margin-bottom:16px;">
+      <button class="tab active" onclick="setEntTab('activos',this)">📦 Activos</button>
+      <button class="tab" onclick="setEntTab('historial',this)">📋 Historial</button>
     </div>
-    <div id="ent-lista"></div>
+    <!-- Tab Activos -->
+    <div id="ent-tab-activos">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="ent-fil-cli" onchange="renderEntregas()" style="min-width:200px;">
+          <option value="">Todos los clientes</option>
+        </select>
+        <input type="month" id="ent-fil-mes" onchange="renderEntregas()" style="width:160px;"/>
+        <button class="btn btn-gray btn-sm" onclick="renderEntregas()">↻</button>
+        <button class="btn" style="margin-left:auto;" onclick="openEntregaModal()">+ Nueva entrega</button>
+      </div>
+      <div id="ent-lista"></div>
+    </div>
+    <!-- Tab Historial -->
+    <div id="ent-tab-historial" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <input type="month" id="ent-hist-mes" style="width:160px;" onchange="renderEntHistorial()"/>
+        <button class="btn btn-gray btn-sm" onclick="renderEntHistorial()">↻</button>
+      </div>
+      <div id="ent-hist-cont"></div>
+    </div>
   </div>
   <div class="section" id="sec-materiales">
     <!-- Stats -->
@@ -5227,9 +5267,9 @@ function nav(sec, el){
   if(sec==='productos'){renderResumenColegios();}
   if(sec==='materiales'){renderMateriales();}
   if(sec==='pedidos'){setPedTab('flujo',document.querySelector('#ped-tabs .tab'));}
-  if(sec==='tizada'){renderTizadas();}
+  if(sec==='tizada'){setTizTab('activas',document.querySelector('#tiz-tabs .tab'));}
   if(sec==='costura'){renderCostura();}
-  if(sec==='entregas'){renderEntregas();}
+  if(sec==='entregas'){setEntTab('activos',document.querySelector('#ent-tabs .tab'));}
   if(sec==='costos'){renderCostos();}
   if(sec==='compras'){renderCompras();}
   if(sec==='estrategia'){renderEstrategiaProgress();}
@@ -13942,6 +13982,57 @@ async function confirmImport(){
 // MÓDULO ENTREGAS
 // ══════════════════════════════════════════════════════════
 
+function setEntTab(tab, el){
+  ['activos','historial'].forEach(function(t){
+    var d=document.getElementById('ent-tab-'+t);
+    if(d)d.style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('#ent-tabs .tab').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  if(tab==='activos')renderEntregas();
+  if(tab==='historial')renderEntHistorial();
+}
+
+function renderEntHistorial(){
+  var cont=document.getElementById('ent-hist-cont');
+  if(!cont)return;
+  var mesEl=document.getElementById('ent-hist-mes');
+  if(mesEl&&!mesEl.value){var hoy=new Date();mesEl.value=hoy.getFullYear()+'-'+(String(hoy.getMonth()+1).padStart(2,'0'));}
+  var filMes=(mesEl||{}).value||'';
+  var list=ENTREGAS.slice();
+  if(filMes)list=list.filter(function(e){return (e.fecha||'').startsWith(filMes);});
+  list.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+  if(!list.length){
+    cont.innerHTML='<div class="empty"><div class="ei">📦</div><p>No hay entregas registradas en este mes.</p></div>';
+    return;
+  }
+  var html='<div class="panel"><div class="tbl"><table style="width:100%;">'
+    +'<thead><tr style="background:#f9fafb;">'
+    +'<th style="padding:8px 10px;text-align:left;">#</th>'
+    +'<th style="padding:8px 10px;text-align:left;">Fecha</th>'
+    +'<th style="padding:8px 10px;text-align:left;">Cliente</th>'
+    +'<th style="padding:8px 10px;text-align:left;">Pedido</th>'
+    +'<th style="padding:8px 10px;text-align:right;">Prendas</th>'
+    +'<th style="padding:8px 10px;text-align:left;">Nota</th>'
+    +'</tr></thead><tbody>'
+    +list.map(function(e){
+      var cli=CLIENTES.find(function(c){return c.id===e.cliente_id;});
+      var ped=PEDIDOS.find(function(p){return p.id===e.pedido_id;});
+      var items=ENTREGAS_ITEMS.filter(function(i){return i.entrega_id===e.id;});
+      var totPrendas=items.reduce(function(s,i){return s+Number(i.cantidad);},0);
+      return '<tr style="border-bottom:1px solid #f3f4f6;">'
+        +'<td style="padding:7px 10px;font-weight:700;color:#6c7ae0;">'+(e.nro_entrega?'#'+e.nro_entrega:'—')+'</td>'
+        +'<td style="padding:7px 10px;font-size:13px;white-space:nowrap;">'+fmtF(e.fecha)+'</td>'
+        +'<td style="padding:7px 10px;font-weight:600;">'+(cli?cli.nombre:'—')+'</td>'
+        +'<td style="padding:7px 10px;font-size:13px;">'+(ped?'#'+ped.nro_pedido:'—')+'</td>'
+        +'<td style="padding:7px 10px;text-align:right;font-weight:700;">'+totPrendas+'</td>'
+        +'<td style="padding:7px 10px;font-size:12px;color:#6b7280;">'+(e.nota||'')+'</td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table></div></div>';
+  cont.innerHTML=html;
+}
+
 function renderEntregas(){
   var cont=document.getElementById('ent-lista');
   if(!cont)return;
@@ -14213,7 +14304,7 @@ async function deleteEntrega(id){
 // ══════════════════════════════════════════════════════════
 
 function setCosTab(tab, el){
-  ['costura','bordado'].forEach(function(t){
+  ['costura','bordado','historial'].forEach(function(t){
     var d=document.getElementById('cos-tab-'+t);
     if(d)d.style.display=t===tab?'block':'none';
   });
@@ -14221,6 +14312,51 @@ function setCosTab(tab, el){
   if(el)el.classList.add('active');
   if(tab==='costura')renderEnviosCostura();
   if(tab==='bordado')renderEnviosBordado();
+  if(tab==='historial')renderCosHistorial();
+}
+
+function renderCosHistorial(){
+  var cont=document.getElementById('cos-hist-cont');
+  if(!cont)return;
+  var mesEl=document.getElementById('cos-hist-mes');
+  if(mesEl&&!mesEl.value){var hoy=new Date();mesEl.value=hoy.getFullYear()+'-'+(String(hoy.getMonth()+1).padStart(2,'0'));}
+  var filMes=(mesEl||{}).value||'';
+  var estMap={en_proceso:{bg:'#fef3c7',c:'#92400e',t:'En proceso'},parcial:{bg:'#fce7f3',c:'#9d174d',t:'Parcial'},recibido:{bg:'#d1fae5',c:'#065f46',t:'Recibido'},cancelado:{bg:'#fee2e2',c:'#991b1b',t:'Cancelado'}};
+  var list=ENVIOS_COSTURA.slice();
+  if(filMes)list=list.filter(function(e){return (e.fecha||'').startsWith(filMes);});
+  list.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+  if(!list.length){
+    cont.innerHTML='<div class="empty"><div class="ei">🧵</div><p>No hay envíos de costura en este mes.</p></div>';
+    return;
+  }
+  var html='<div class="panel"><div class="tbl"><table style="width:100%;">'
+    +'<thead><tr style="background:#f9fafb;">'
+    +'<th style="padding:8px 10px;text-align:left;">#</th>'
+    +'<th style="padding:8px 10px;text-align:left;">Fecha</th>'
+    +'<th style="padding:8px 10px;text-align:left;">Tallerista</th>'
+    +'<th style="padding:8px 10px;text-align:center;">Estado</th>'
+    +'<th style="padding:8px 10px;text-align:right;">Enviadas</th>'
+    +'<th style="padding:8px 10px;text-align:right;">Recibidas</th>'
+    +'<th style="padding:8px 10px;text-align:left;">Nota</th>'
+    +'</tr></thead><tbody>'
+    +list.map(function(e){
+      var items=ENVIOS_COSTURA_ITEMS.filter(function(i){return i.envio_id===e.id;});
+      var tal=TALLERISTAS.find(function(t){return t.id===e.tallerista_id;});
+      var em=estMap[e.estado]||{bg:'#f3f4f6',c:'#374151',t:e.estado};
+      var totEnv=items.reduce(function(s,i){return s+Number(i.cantidad_enviada);},0);
+      var totRec=items.reduce(function(s,i){return s+Number(i.cantidad_recibida);},0);
+      return '<tr style="border-bottom:1px solid #f3f4f6;">'
+        +'<td style="padding:7px 10px;font-weight:700;color:#6c7ae0;">'+(e.nro_envio?'#'+e.nro_envio:'—')+'</td>'
+        +'<td style="padding:7px 10px;font-size:13px;white-space:nowrap;">'+fmtF(e.fecha)+'</td>'
+        +'<td style="padding:7px 10px;font-weight:600;">'+(tal?tal.nombre:'—')+'</td>'
+        +'<td style="padding:7px 10px;text-align:center;"><span style="background:'+em.bg+';color:'+em.c+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">'+em.t+'</span></td>'
+        +'<td style="padding:7px 10px;text-align:right;font-weight:700;">'+totEnv+'</td>'
+        +'<td style="padding:7px 10px;text-align:right;color:#065f46;font-weight:700;">'+totRec+'</td>'
+        +'<td style="padding:7px 10px;font-size:12px;color:#6b7280;">'+(e.nota||'')+'</td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table></div></div>';
+  cont.innerHTML=html;
 }
 
 function renderCostura(){
@@ -14716,6 +14852,53 @@ async function deleteEnvioBordado(id){
 // ══════════════════════════════════════════════════════════
 // MÓDULO TIZADA / CORTE
 // ══════════════════════════════════════════════════════════
+
+function setTizTab(tab, el){
+  ['activas','historial'].forEach(function(t){
+    var d=document.getElementById('tiz-tab-'+t);
+    if(d)d.style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('#tiz-tabs .tab').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  if(tab==='activas')renderTizadas();
+  if(tab==='historial')renderTizHistorial();
+}
+
+function renderTizHistorial(){
+  var cont=document.getElementById('tiz-hist-cont');
+  if(!cont)return;
+  var mesEl=document.getElementById('tiz-hist-mes');
+  if(mesEl&&!mesEl.value){var hoy=new Date();mesEl.value=hoy.getFullYear()+'-'+(String(hoy.getMonth()+1).padStart(2,'0'));}
+  var filMes=(mesEl||{}).value||'';
+  var list=TIZADAS.filter(function(t){return t.estado==='completado';});
+  if(filMes)list=list.filter(function(t){return (t.fecha||'').startsWith(filMes);});
+  list.sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+  if(!list.length){
+    cont.innerHTML='<div class="empty"><div class="ei">📋</div><p>No hay tizadas completadas en este mes.</p></div>';
+    return;
+  }
+  var html='<div class="panel"><div class="tbl"><table style="width:100%;">'
+    +'<thead><tr style="background:#f9fafb;">'
+    +'<th style="padding:8px 10px;text-align:left;">Fecha</th>'
+    +'<th style="padding:8px 10px;text-align:left;">Prenda</th>'
+    +'<th style="padding:8px 10px;text-align:left;">Tela · Color</th>'
+    +'<th style="padding:8px 10px;text-align:right;">Tizadas</th>'
+    +'<th style="padding:8px 10px;text-align:right;">Cortadas</th>'
+    +'<th style="padding:8px 10px;text-align:left;">Nota</th>'
+    +'</tr></thead><tbody>'
+    +list.map(function(t){
+      return '<tr style="border-bottom:1px solid #f3f4f6;">'
+        +'<td style="padding:7px 10px;font-size:13px;white-space:nowrap;">'+fmtF(t.fecha)+'</td>'
+        +'<td style="padding:7px 10px;font-weight:600;">'+( t.prenda||'—')+'</td>'
+        +'<td style="padding:7px 10px;font-size:13px;">'+(t.tela||'—')+(t.color?' · '+t.color:'')+'</td>'
+        +'<td style="padding:7px 10px;text-align:right;font-weight:700;">'+(t.cantidad_tizada||0)+'</td>'
+        +'<td style="padding:7px 10px;text-align:right;color:#065f46;font-weight:700;">'+(t.cantidad_cortada||0)+'</td>'
+        +'<td style="padding:7px 10px;font-size:12px;color:#6b7280;">'+(t.nota||'')+'</td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table></div></div>';
+  cont.innerHTML=html;
+}
 
 function renderTizadas(){
   var cont=document.getElementById('tiz-lista');
