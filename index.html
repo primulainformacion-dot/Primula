@@ -8658,10 +8658,10 @@ function renderPanelGeneral(){
   var usd=saldoCaja('CAJA USD');
   var usdPesos=tipoCambioUSD>0?usd*tipoCambioUSD:0;
   var acobrar=VENTAS.filter(function(v){return v.estado!=='cobrado';}).reduce(function(s,v){return s+Number(v.saldo);},0);
-  var stockMay=calcStockValue(null,'mayorista');
+  var stockMay=calcStockValue('mayorista','mayorista');
   var stockLL=calcStockValue('llavallol','minorista');
   var stockMG=calcStockValue('montegrande','minorista');
-  var uMay=calcStockUnidades(null);
+  var uMay=calcStockUnidades('mayorista');
   var uLL=calcStockUnidades('llavallol');
   var uMG=calcStockUnidades('montegrande');
   // Cheques en cartera: valor real desde CHEQUES_CARTERA, no desde movimientos
@@ -8669,7 +8669,7 @@ function renderPanelGeneral(){
   var chqCartTotal=chqCartDisp.reduce(function(s,c){return s+saldoCheque(c.id);},0);
   var echeqPasivo=0;
   // Total usa stock a precio minorista (valor de realización retail)
-  var stockTotal=calcStockValue(null,'minorista');
+  var stockTotal=stockMay+stockLL+stockMG; // mayorista a precio mayorista, locales a precio minorista
   var byTipoMP=_telasByTipo();
   var valorMatPrima=Object.values(byTipoMP).reduce(function(s,d){return s+d.valor;},0);
   var totalActivos=efectivo+bancos+mp+usdPesos+chqCartTotal+acobrar+stockTotal+valorMatPrima;
