@@ -1094,11 +1094,22 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <h3 id="pg-mp">$0</h3><p>Mercado Pago</p>
             <div style="font-size:11px;color:#9ca3af;margin-top:4px;">QR · Tarjetas · Transferencias</div>
           </div>
-          <div class="stat" style="border-top:3px solid #166534;background:#f0fdf4;">
-            <div class="stat-icon" style="background:#dcfce7;">💰</div>
-            <h3 id="pg-saldo-liquido" style="color:#166534;">$0</h3>
-            <p style="color:#166534;font-weight:700;">Total disponible</p>
-            <div style="font-size:11px;color:#16a34a;margin-top:4px;">Efectivo + Bancos + MP</div>
+          <div class="stat" style="border-top:3px solid #16a34a;">
+            <div class="stat-icon" style="background:#dcfce7;">💲</div>
+            <h3 id="pg-usd" style="color:#16a34a;">$0</h3><p>$ CAJA USD</p>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Equivalente en pesos</div>
+          </div>
+
+          <!-- Franja: total líquido -->
+          <div class="stat" style="grid-column:span 4;border-top:3px solid #166534;background:#f0fdf4;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:14px 20px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="stat-icon" style="background:#dcfce7;margin:0;">💰</div>
+              <div>
+                <p style="color:#166534;font-weight:700;font-size:13px;margin:0;">Total disponible</p>
+                <div style="font-size:11px;color:#16a34a;margin-top:2px;">Efectivo + Bancos + MP + $ USD</div>
+              </div>
+            </div>
+            <h3 id="pg-saldo-liquido" style="color:#166534;font-size:26px;font-weight:800;margin:0;">$0</h3>
           </div>
 
           <!-- Fila 2: por cobrar -->
@@ -2151,7 +2162,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               <option>ECHEQ/CHEQUE</option>
               <option>LOCAL MONTE GRANDE</option>
               <option>LOCAL LLAVALLOL</option>
-              <option>CAJA USD</option>
+              <option value="CAJA USD">$ CAJA USD</option>
             </select>
             <select id="fin-tipo" onchange="renderFin()" style="width:130px;">
               <option value="">Ing. + Egr.</option>
@@ -2211,7 +2222,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
                 <option>BANCO SRL</option><option>BANCO POLY</option>
                 <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
                 <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
-                <option>CAJA USD</option>
+                <option value="CAJA USD">$ CAJA USD</option>
               </select>
             </div>
             <div style="text-align:center;font-size:22px;color:#6c7ae0;">↓</div>
@@ -2221,7 +2232,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
                 <option>EFECTIVO ADMINISTRACIÓN</option>
                 <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
                 <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
-                <option>CAJA USD</option>
+                <option value="CAJA USD">$ CAJA USD</option>
               </select>
             </div>
             <div class="field"><label>Monto *</label><input type="number" id="tr-monto" min="0" placeholder="0"/></div>
@@ -2242,7 +2253,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               <option>BANCO SRL</option><option>BANCO POLY</option>
               <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
               <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
-              <option>CAJA USD</option>
+              <option value="CAJA USD">$ CAJA USD</option>
             </select>
             <select id="tr-fil-mes" onchange="renderTransfHistorial()" style="width:140px;">
               <option value="">Todos los meses</option>
@@ -2339,7 +2350,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <option>BANCO SRL</option><option>BANCO POLY</option>
             <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
             <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
-            <option>CAJA USD</option>
+            <option value="CAJA USD">$ CAJA USD</option>
           </select>
         </div>
         <div id="cierre-historial"></div>
@@ -3522,7 +3533,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option>BANCO SRL</option><option>BANCO POLY</option>
           <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
           <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
-          <option>CAJA USD</option>
+          <option value="CAJA USD">$ CAJA USD</option>
         </select>
       </div>
       <div class="field"><label>Concepto *</label>
@@ -3683,7 +3694,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option>BANCO SRL</option><option>BANCO POLY</option>
           <option>MERCADO PAGO</option>
           <option>LOCAL LLAVALLOL</option><option>LOCAL MONTE GRANDE</option>
-          <option>CAJA USD</option>
+          <option value="CAJA USD">$ CAJA USD</option>
         </select>
       </div>
       <div class="field"><label>Fecha de pago</label><input type="date" id="mpago-fecha"/></div>
@@ -4046,7 +4057,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <option>EFECTIVO ADMINISTRACIÓN</option>
         <option>BANCO SRL</option><option>BANCO POLY</option>
         <option>MERCADO PAGO</option><option>LOCAL MONTE GRANDE</option>
-        <option>LOCAL LLAVALLOL</option><option>CAJA USD</option>
+        <option>LOCAL LLAVALLOL</option><option value="CAJA USD">$ CAJA USD</option>
       </select></div>
       <div class="field full"><label>Nota (opcional)</label><input id="gfp-nota" placeholder="Referencia, Nº de comprobante..."/></div>
       <div class="field full">
@@ -4468,7 +4479,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option value="BANCO SRL">BANCO SRL</option>
           <option value="BANCO POLY">BANCO POLY</option>
           <option value="EFECTIVO ADMINISTRACIÓN">EFECTIVO ADMINISTRACIÓN</option>
-          <option value="CAJA USD">CAJA USD</option>
+          <option value="CAJA USD">$ CAJA USD</option>
         </select>
       </div>
       <div class="field"><label>Descuento de la operación $</label>
@@ -4529,7 +4540,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option value="BANCO SRL">BANCO SRL</option>
           <option value="BANCO POLY">BANCO POLY</option>
           <option value="EFECTIVO ADMINISTRACIÓN">EFECTIVO ADMINISTRACIÓN</option>
-          <option value="CAJA USD">CAJA USD</option>
+          <option value="CAJA USD">$ CAJA USD</option>
         </select>
         <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Se generará un ingreso automático en esta caja</div>
       </div>
@@ -4640,7 +4651,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option>EFECTIVO ADMINISTRACIÓN</option>
           <option>LOCAL MONTE GRANDE</option>
           <option>LOCAL LLAVALLOL</option>
-          <option>CAJA USD</option>
+          <option value="CAJA USD">$ CAJA USD</option>
         </select>
       </div>
       <div class="field"><label>Fecha de acreditación *</label><input type="date" id="chqd-fecha"/></div>
@@ -5315,7 +5326,8 @@ function nav(sec, el){
   document.getElementById('pg-sub').textContent='';
   if(sec==='inicio'){renderAlertas();}
   if(sec==='panel'){renderPanelGeneral();}
-  if(sec==='finanzas'){renderFinCajas();renderFin();}
+  if(sec==='finanzas'){renderFinCajas();renderFin();var fab=document.getElementById('btn-fab-mov');if(fab)fab.style.display='flex';}
+  if(sec!=='finanzas'){var fab=document.getElementById('btn-fab-mov');if(fab)fab.style.display='none';}
   if(sec==='cheques'){renderChqResumen();renderChqCartera();renderChqPropios();}
   if(sec==='productos'){renderResumenColegios();}
   if(sec==='materiales'){renderMateriales();}
@@ -8398,8 +8410,11 @@ async function saveProd(){
 // ════════════════════════════════════
 // FINANZAS
 // ════════════════════════════════════
-var CAJAS_SISTEMA=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL','CAJA USD'];
-var CAJA_COLORES={'EFECTIVO ADMINISTRACIÓN':'#6c7ae0','BANCO SRL':'#0ea5e9','BANCO POLY':'#14b8a6','MERCADO PAGO':'#3b82f6','ECHEQ/CHEQUE':'#8b5cf6','LOCAL MONTE GRANDE':'#10b981','LOCAL LLAVALLOL':'#f59e0b','CAJA USD':'#16a34a'};
+var CAJAS_SISTEMA=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL','CAJA USD','CHEQUES AL COBRO'];
+var CAJA_COLORES={'EFECTIVO ADMINISTRACIÓN':'#6c7ae0','BANCO SRL':'#0ea5e9','BANCO POLY':'#14b8a6','MERCADO PAGO':'#3b82f6','ECHEQ/CHEQUE':'#8b5cf6','LOCAL MONTE GRANDE':'#10b981','LOCAL LLAVALLOL':'#f59e0b','CAJA USD':'#16a34a','CHEQUES AL COBRO':'#d97706'};
+// Etiquetas visuales (no afectan el valor guardado en la DB)
+var CAJA_LABELS={'CAJA USD':'$ CAJA USD'};
+function cajaNombre(c){return CAJA_LABELS[c]||c;}
 var MESES_ARR=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
 
 function saldoCaja(caja){
@@ -8421,7 +8436,7 @@ function renderFinCajas(){
     var color=CAJA_COLORES[caja]||'#6c7ae0';
     var pos=saldo>=0;
     return '<div class="stat" style="cursor:pointer;border-top:3px solid '+color+';" onclick="filtrarPorCaja(\''+caja+'\')">'+
-      '<div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">'+caja+'</div>'+
+      '<div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">'+cajaNombre(caja)+'</div>'+
       '<div style="font-size:20px;font-weight:800;color:'+(pos?'#1a1f36':'#dc2626')+';">'+$p(saldo)+'</div>'+
       '<div style="font-size:11px;color:#9ca3af;margin-top:3px;">'+(pos?'saldo disponible':'saldo negativo')+'</div>'+
     '</div>';
@@ -8441,6 +8456,8 @@ function setFinTab(tab,el){
   document.getElementById('ft-transferencia').style.display=tab==='transferencia'?'block':'none';
   document.getElementById('ft-gastosfijos').style.display=tab==='gastosfijos'?'block':'none';
   document.getElementById('ft-cierre').style.display=tab==='cierre'?'block':'none';
+  var fab=document.getElementById('btn-fab-mov');
+  if(fab)fab.style.display=tab==='movimientos'?'flex':'none';
   document.querySelectorAll('#sec-finanzas .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
   if(tab==='transferencia')renderTransfHistorial();
@@ -8484,7 +8501,7 @@ function renderFin(){
     return '<tr>'+
       '<td style="font-size:11px;color:#9ca3af;font-weight:600;white-space:nowrap;user-select:all;" title="ID interno del movimiento">#'+m.id+'</td>'+
       '<td style="white-space:nowrap;">'+fmtF(m.fecha)+'</td>'+
-      '<td style="min-width:150px;"><span style="font-size:11px;font-weight:700;color:'+(CAJA_COLORES[m.caja]||'#6b7280')+';">'+m.caja+'</span></td>'+
+      '<td style="min-width:150px;"><span style="font-size:11px;font-weight:700;color:'+(CAJA_COLORES[m.caja]||'#6b7280')+';">'+cajaNombre(m.caja)+'</span></td>'+
       '<td><span class="badge '+tipoBadge+'">'+m.tipo+'</span></td>'+
       '<td>'+(m.concepto||'—')+'</td>'+
       '<td>'+(m.detalle||'—')+'</td>'+
@@ -8623,6 +8640,7 @@ function renderPanelGeneral(){
   var efectivo=saldoCaja('EFECTIVO ADMINISTRACIÓN')+saldoCaja('LOCAL LLAVALLOL')+saldoCaja('LOCAL MONTE GRANDE');
   var bancos=saldoCaja('BANCO SRL')+saldoCaja('BANCO POLY');
   var mp=saldoCaja('MERCADO PAGO');
+  var usd=saldoCaja('CAJA USD');
   var acobrar=VENTAS.filter(function(v){return v.estado!=='cobrado';}).reduce(function(s,v){return s+Number(v.saldo);},0);
   var stockMay=calcStockValue(null,'mayorista');
   var stockLL=calcStockValue('llavallol','minorista');
@@ -8638,13 +8656,14 @@ function renderPanelGeneral(){
   var stockTotal=calcStockValue(null,'minorista');
   var byTipoMP=_telasByTipo();
   var valorMatPrima=Object.values(byTipoMP).reduce(function(s,d){return s+d.valor;},0);
-  var totalActivos=efectivo+bancos+mp+chqCartTotal+acobrar+stockTotal+valorMatPrima;
+  var totalActivos=efectivo+bancos+mp+usd+chqCartTotal+acobrar+stockTotal+valorMatPrima;
   var el=function(id){return document.getElementById(id);};
   if(!el('pg-efectivo'))return;
   el('pg-efectivo').textContent=$p(efectivo);
   el('pg-bancos').textContent=$p(bancos);
   el('pg-mp').textContent=$p(mp);
-  if(el('pg-saldo-liquido'))el('pg-saldo-liquido').textContent=$p(efectivo+bancos+mp);
+  if(el('pg-usd'))el('pg-usd').textContent=$p(usd);
+  if(el('pg-saldo-liquido'))el('pg-saldo-liquido').textContent=$p(efectivo+bancos+mp+usd);
   el('pg-echeq-act').textContent=$p(chqCartTotal);
   if(el('pg-chq-cartera-count'))el('pg-chq-cartera-count').textContent=chqCartDisp.length+' cheque'+(chqCartDisp.length!==1?'s':'')+' disponible'+(chqCartDisp.length!==1?'s':'');
   el('pg-acobrar').textContent=$p(acobrar);
@@ -8719,7 +8738,7 @@ function renderFlujoCajas(anio,mes){
     rows.map(function(r){
       var color=CAJA_COLORES[r.caja]||'#6b7280';
       return '<tr>'+
-        '<td><span style="font-weight:700;font-size:12px;color:'+color+';">'+r.caja+'</span></td>'+
+        '<td><span style="font-weight:700;font-size:12px;color:'+color+';">'+cajaNombre(r.caja)+'</span></td>'+
         '<td style="text-align:right;color:#16a34a;font-weight:600;">'+(r.ing>0?$p(r.ing):'—')+'</td>'+
         '<td style="text-align:right;color:#dc2626;font-weight:600;">'+(r.egr>0?$p(r.egr):'—')+'</td>'+
         '<td style="text-align:right;font-weight:700;color:'+(r.neto>0?'#16a34a':r.neto<0?'#dc2626':'#9ca3af')+'">'+(r.ing>0||r.egr>0?$p(r.neto):'—')+'</td>'+
@@ -11723,7 +11742,7 @@ function renderChqOperaciones(){
           (op.caja_destino
             ?'<span style="display:flex;align-items:center;gap:4px;">'+
               (op.mov_id?'<span style="color:#16a34a;font-size:10px;">✓</span>':'')+
-              '<span style="color:'+(CAJA_COLORES[op.caja_destino]||'#374151')+';font-weight:600;">'+op.caja_destino+'</span>'+
+              '<span style="color:'+(CAJA_COLORES[op.caja_destino]||'#374151')+';font-weight:600;">'+cajaNombre(op.caja_destino)+'</span>'+
             '</span>'
             :'<span style="color:#9ca3af;">—</span>')+
         '</td>'+
@@ -12464,7 +12483,7 @@ function renderCierreHistorial(){
           var ok=Math.abs(diff)<0.01;
           var diffColor=ok?'#16a34a':(diff>0?'#d97706':'#dc2626');
           return '<tr>'+
-            '<td style="font-weight:600;">'+c.caja+'</td>'+
+            '<td style="font-weight:600;">'+cajaNombre(c.caja)+'</td>'+
             '<td style="text-align:right;">'+$p(Number(c.saldo_calculado))+'</td>'+
             '<td style="text-align:right;font-weight:700;">'+$p(Number(c.saldo_real))+'</td>'+
             '<td style="text-align:right;font-weight:800;color:'+diffColor+';">'+(ok?'✓':(diff>0?'+':'')+$p(diff))+'</td>'+
@@ -13726,8 +13745,8 @@ function renderTransfHistorial(){
       var esc=function(s){return (s||'').replace(/'/g,"\\'");};
       var editCall="openEditTransf("+p.idEgr+","+p.idIng+",'"+esc(p.desde)+"','"+esc(p.hacia)+"',"+p.monto+",'"+p.fecha+"','"+esc(p.detalle)+"','"+esc(p.referencia)+"')";
       var delCall="deleteTransf("+p.idEgr+","+p.idIng+",'"+esc(p.desde)+"','"+esc(p.hacia)+"',"+p.monto+")";
-      var desdeLabel=p.desde?('<span style="font-size:11px;font-weight:700;color:'+colorD+';">'+p.desde+'</span>'):'<span style="font-size:11px;color:#dc2626;font-style:italic;">sin origen</span>';
-      var haciaLabel=p.hacia?('<span style="font-size:11px;font-weight:700;color:'+colorH+';">'+p.hacia+'</span>'):'<span style="font-size:11px;color:#dc2626;font-style:italic;">sin destino</span>';
+      var desdeLabel=p.desde?('<span style="font-size:11px;font-weight:700;color:'+colorD+';">'+cajaNombre(p.desde)+'</span>'):'<span style="font-size:11px;color:#dc2626;font-style:italic;">sin origen</span>';
+      var haciaLabel=p.hacia?('<span style="font-size:11px;font-weight:700;color:'+colorH+';">'+cajaNombre(p.hacia)+'</span>'):'<span style="font-size:11px;color:#dc2626;font-style:italic;">sin destino</span>';
       return '<tr style="'+(incompleto?'background:#fffbeb;':'')+'">'+
         '<td style="font-size:12px;white-space:nowrap;">'+fmtF(p.fecha)+(incompleto?'<br><span style="font-size:10px;color:#d97706;font-weight:700;">⚠ incompleto</span>':'')+'</td>'+
         '<td>'+desdeLabel+'</td>'+
@@ -14045,7 +14064,7 @@ function previewImport(input){
       return'<tr style="'+(ok?'':'background:#fff1f2;')+'">'+
         '<td style="font-size:11px;color:#9ca3af;">'+r.num+'</td>'+
         '<td>'+r.fecha+'</td>'+
-        '<td style="font-size:11px;color:'+(CAJA_COLORES[r.caja]||'#6b7280')+';font-weight:700;">'+r.caja+'</td>'+
+        '<td style="font-size:11px;color:'+(CAJA_COLORES[r.caja]||'#6b7280')+';font-weight:700;">'+cajaNombre(r.caja)+'</td>'+
         '<td><span class="badge '+tipoBadge+'">'+r.tipo+'</span></td>'+
         '<td style="font-size:11px;">'+(r.concepto||'—')+'</td>'+
         '<td>'+r.detalle+'</td>'+
@@ -18156,6 +18175,11 @@ function closeManual(){document.getElementById('man-overlay').classList.remove('
 <button id="btn-manual" onclick="openManual()">
   <div class="bm-icon">?</div>
   Manual
+</button>
+
+<!-- FAB: Nuevo movimiento (visible solo en Finanzas > Movimientos) -->
+<button id="btn-fab-mov" onclick="openMovModal()" style="position:fixed;bottom:150px;right:24px;z-index:9997;display:none;align-items:center;gap:8px;background:#6c7ae0;color:#fff;border:none;border-radius:14px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(108,122,224,.45);transition:background .18s,transform .15s;">
+  <span style="font-size:18px;line-height:1;">＋</span> Nuevo movimiento
 </button>
 
 <!-- ══ MANUAL OVERLAY ══════════════════════════════════ -->
