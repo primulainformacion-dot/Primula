@@ -6,6 +6,7 @@
 <title>Prímula ERP</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#333;}
@@ -430,6 +431,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               <option value="pagada">Pagadas</option>
               <option value="anulada">Anuladas</option>
             </select>
+            <button class="btn btn-gray" onclick="openImportFacturasModal()" title="Importar facturas desde Excel">📥 Importar Excel</button>
             <button class="btn" onclick="openFacturaModal()">+ Cargar factura</button>
           </div>
         </div>
@@ -4673,6 +4675,38 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 </div>
 
 <!-- Modal: factura de proveedor -->
+<!-- Modal importar facturas desde Excel -->
+<div class="modal-bg" id="m-import-facturas">
+  <div class="modal" style="max-width:960px;width:96vw;max-height:90vh;display:flex;flex-direction:column;">
+    <h3 style="margin-bottom:14px;">📥 Importar facturas desde Excel</h3>
+
+    <!-- Zona de carga -->
+    <div id="import-fact-upload" style="border:2px dashed #d1d5db;border-radius:12px;padding:28px;text-align:center;margin-bottom:14px;cursor:pointer;" onclick="document.getElementById('import-fact-file').click()">
+      <div style="font-size:32px;margin-bottom:8px;">📂</div>
+      <div style="font-weight:700;color:#374151;margin-bottom:4px;">Seleccioná el archivo Excel</div>
+      <div style="font-size:12px;color:#9ca3af;">Columnas esperadas: PROVEEDOR · FECHA · TI · PO · N° DE FACTURA · NETO GRAVADO · IVA · ARBA · DIA VENCIM</div>
+      <input type="file" id="import-fact-file" accept=".xlsx,.xls" style="display:none;" onchange="parseFacturasExcel(this)"/>
+    </div>
+
+    <!-- Filtros por tipo (aparecen después de parsear) -->
+    <div id="import-fact-filtros" style="display:none;margin-bottom:10px;padding:10px 14px;background:#f3f4f6;border-radius:10px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:12px;font-weight:700;color:#374151;">Importar tipos:</span>
+      <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="import-ti-factura" checked onchange="renderFacturasImportPreview()"/> Facturas</label>
+      <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="import-ti-nd" checked onchange="renderFacturasImportPreview()"/> Notas de débito</label>
+      <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="import-ti-remito" onchange="renderFacturasImportPreview()"/> Remitos</label>
+      <span id="import-fact-resumen" style="font-size:12px;color:#6c7ae0;font-weight:700;margin-left:auto;"></span>
+    </div>
+
+    <!-- Preview table -->
+    <div id="import-fact-preview" style="flex:1;overflow-y:auto;min-height:0;"></div>
+
+    <div class="modal-foot" style="margin-top:12px;">
+      <button class="btn btn-gray" onclick="closeM('m-import-facturas')">Cancelar</button>
+      <button class="btn" id="import-fact-btn" onclick="executeFacturasImport()" style="display:none;">Importar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="m-pfact">
   <div class="modal">
     <h3 id="m-pfact-title">Cargar factura de proveedor</h3>
@@ -4831,16 +4865,41 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option value="anulado">Anulado</option>
         </select>
       </div>
-      <div class="field full"><label>Proveedor (opcional)</label>
-        <select id="mchqp-proveedor">
-          <option value="">— Sin vincular —</option>
-        </select>
-      </div>
       <div class="field full"><label>Nota</label><textarea id="mchqp-nota" style="min-height:52px;" placeholder="Observaciones..."></textarea></div>
+    </div>
+    <!-- Imputación a facturas -->
+    <div style="margin-top:16px;border-top:1px solid #e5e7eb;padding-top:14px;">
+      <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;">📋 Imputar a facturas de proveedor <span style="font-weight:400;color:#9ca3af;">(opcional)</span></div>
+      <select id="mchqp-imp-prov" onchange="renderChqpImpFacturas()" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;margin-bottom:8px;">
+        <option value="">— Seleccionar proveedor —</option>
+      </select>
+      <div id="mchqp-imp-facturas"></div>
+      <div id="mchqp-imp-total" style="display:none;font-size:12px;font-weight:700;margin-top:6px;padding:7px 12px;border-radius:8px;"></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-chqp')">Cancelar</button>
       <button class="btn" onclick="saveChqPropio()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Debitar cheque propio -->
+<div class="modal-bg" id="m-chqp-debitar">
+  <div class="modal" style="max-width:480px;">
+    <h3>💳 Registrar débito de cheque</h3>
+    <div id="mchqd-info" style="background:#f3f4f6;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;line-height:1.6;"></div>
+    <div class="field">
+      <label>Fecha de débito *</label>
+      <input type="date" id="mchqd-fecha"/>
+      <div style="font-size:11px;color:#9ca3af;margin-top:3px;">Fecha en que el banco efectivamente debitó el cheque</div>
+    </div>
+    <div id="mchqd-facturas" style="margin-top:10px;margin-bottom:4px;"></div>
+    <div style="background:#fef3c7;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-top:10px;">
+      ⚡ Se creará automáticamente el egreso en el banco y las facturas imputadas quedarán pagadas.
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-chqp-debitar')">Cancelar</button>
+      <button class="btn" style="background:#dc2626;" onclick="saveChqDebitar()">Confirmar débito</button>
     </div>
   </div>
 </div>
@@ -4972,7 +5031,7 @@ var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[], ITEMS_VENTA=[], AVIOS=[], FICHAS_COSTO=[], FICHAS_COSTO_TELAS=[], FICHAS_COSTO_AVIOS=[], COMPRAS=[], COMPRAS_ITEMS=[], HISTORIAL_PRECIOS=[], TAL_RECEPCIONES=[], TAL_RECEPCIONES_ITEMS=[], TAL_PAGOS=[], MOVIMIENTOS_STOCK=[], DEVOLUCIONES=[], DEVOLUCIONES_ITEMS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CHQP_IMPUTACIONES=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[], ITEMS_VENTA=[], AVIOS=[], FICHAS_COSTO=[], FICHAS_COSTO_TELAS=[], FICHAS_COSTO_AVIOS=[], COMPRAS=[], COMPRAS_ITEMS=[], HISTORIAL_PRECIOS=[], TAL_RECEPCIONES=[], TAL_RECEPCIONES_ITEMS=[], TAL_PAGOS=[], MOVIMIENTOS_STOCK=[], DEVOLUCIONES=[], DEVOLUCIONES_ITEMS=[];
 var CONCEPTOS_POR_TIPO={
   'CONFESIÓN':['Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal','Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre','Chaleco Polar','Campera Polar','Campera Friza','Campera canguro','Sudadera','Joggins','Pantalón común','Cuellos','Bufandas / Cuellos','Reflectivo','Cofia','Arreglo'],
   'BORDADO':[],
@@ -5094,7 +5153,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems(),loadItemsVenta(),loadAvios(),loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios(),loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadTalRecepciones(),loadTalRecepcionesItems(),loadTalPagos(),loadMovimientosStock(),loadDevoluciones(),loadDevolucionesItems()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChqPropiosImputaciones(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems(),loadItemsVenta(),loadAvios(),loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios(),loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadTalRecepciones(),loadTalRecepcionesItems(),loadTalPagos(),loadMovimientosStock(),loadDevoluciones(),loadDevolucionesItems()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderAlertas(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -5109,6 +5168,7 @@ async function loadTalHistorial(){ var {data}=await sb.from('tallerista_precios_
 async function loadTalPreciosPrenda(){ var {data}=await sb.from('tallerista_precios_prenda').select('*'); TAL_PRECIOS_PRENDA=data||[]; }
 async function loadTalPreciosPrendaHist(){ var {data}=await sb.from('tallerista_precios_prenda_hist').select('*').order('created_at',{ascending:false}); TAL_PRECIOS_PRENDA_HIST=data||[]; }
 async function loadChequesPropios(){ var {data}=await sb.from('cheques_propios').select('*').order('fecha_pago',{ascending:true}); CHEQUES_PROPIOS=data||[]; }
+async function loadChqPropiosImputaciones(){ var {data}=await sb.from('cheques_propios_imputaciones').select('*'); CHQP_IMPUTACIONES=data||[]; }
 async function loadChequesCartera(){ var {data}=await sb.from('cheques_cartera').select('*').order('fecha_cobro',{ascending:true}); CHEQUES_CARTERA=data||[]; }
 async function loadChequeUsos(){ var {data}=await sb.from('cheque_usos').select('*'); CHEQUE_USOS=data||[]; }
 async function loadProvFacturas(){ var {data}=await sb.from('proveedor_facturas').select('*').order('fecha',{ascending:false}); PROV_FACTURAS=data||[]; }
@@ -6070,6 +6130,18 @@ function renderProvCC(){
           var estadoLabels={pendiente:'Pendiente',parcial:'Parcial',pagada:'Pagada',anulada:'Anulada'};
           var rowBg=vencida?'background:#fff5f5;':'';
           var pagosTxt=pagos.length?('<div style="font-size:10px;color:#6b7280;margin-top:3px;">'+pagos.map(function(p){return p.fecha+' · '+$p(p.monto)+(p.caja?' · '+p.caja:'');}).join(' | ')+'</div>'):'';
+          // Badge de cheque propio imputado pendiente
+          var chqpImpPend=CHQP_IMPUTACIONES.filter(function(i){
+            return i.factura_id===f.id&&(function(){
+              var chq=CHEQUES_PROPIOS.find(function(c){return c.id===i.cheque_id;});
+              return chq&&chq.estado==='pendiente';
+            })();
+          });
+          var chqpBadge=chqpImpPend.length?('<div style="font-size:10px;color:#6c7ae0;font-weight:700;margin-top:3px;">'+
+            chqpImpPend.map(function(i){
+              var chq=CHEQUES_PROPIOS.find(function(c){return c.id===i.cheque_id;})||{};
+              return '🔵 Cheque N°'+chq.numero+' · '+$p(Number(i.monto));
+            }).join(' | ')+'</div>'):'';
           return '<tr style="'+rowBg+'">'+
             '<td style="font-weight:600;">'+(f.numero||'—')+'</td>'+
             '<td style="font-size:12px;">'+f.fecha+'</td>'+
@@ -6078,7 +6150,7 @@ function renderProvCC(){
             '<td style="text-align:right;font-weight:700;">'+$p(Number(f.monto_total))+'</td>'+
             '<td style="text-align:right;color:#16a34a;font-weight:600;">'+(pagado>0?$p(pagado):'—')+'</td>'+
             '<td style="text-align:right;font-weight:800;color:'+(saldo>0?'#dc2626':'#9ca3af')+';">'+$p(saldo)+'</td>'+
-            '<td><span class="badge '+(estadoColors[f.estado]||'b-gray')+'">'+(estadoLabels[f.estado]||f.estado)+'</span>'+pagosTxt+'</td>'+
+            '<td><span class="badge '+(estadoColors[f.estado]||'b-gray')+'">'+(estadoLabels[f.estado]||f.estado)+'</span>'+pagosTxt+chqpBadge+'</td>'+
             '<td style="white-space:nowrap;">'+
               (f.estado!=='pagada'&&f.estado!=='anulada'?'<button class="btn btn-sm" onclick="openPagoFacturaModal('+f.id+')" title="Registrar pago">💸</button> ':'')+'<button class="btn btn-gray btn-sm" onclick="openFacturaModal('+f.id+')" title="Editar">✏️</button>'+
             '</td>'+
@@ -6086,6 +6158,289 @@ function renderProvCC(){
         }).join('')+'</tbody></table></div>'+
     '</div>';
   }).join('');
+}
+
+// ══════════════════════════════════════════════
+// IMPORTADOR DE FACTURAS DESDE EXCEL
+// ══════════════════════════════════════════════
+var importFacturasData=[];
+
+function openImportFacturasModal(){
+  importFacturasData=[];
+  document.getElementById('import-fact-file').value='';
+  document.getElementById('import-fact-upload').style.display='block';
+  document.getElementById('import-fact-filtros').style.display='none';
+  document.getElementById('import-fact-preview').innerHTML='';
+  document.getElementById('import-fact-btn').style.display='none';
+  openM('m-import-facturas');
+}
+
+function parseFacturasExcel(input){
+  var file=input.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=new Uint8Array(e.target.result);
+      var wb=XLSX.read(data,{type:'uint8array',cellDates:true});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
+      if(!rows.length){toast('El archivo está vacío o no tiene el formato esperado','err');return;}
+      procesarFilasFacturas(rows);
+      document.getElementById('import-fact-upload').style.display='none';
+    }catch(err){
+      toast('Error al leer el archivo: '+err.message,'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// Busca el valor de una columna con nombres alternativos
+function excelCol(row,alternativas){
+  for(var i=0;i<alternativas.length;i++){
+    var key=alternativas[i];
+    // Búsqueda exacta
+    if(row[key]!==undefined&&row[key]!=='')return row[key];
+    // Búsqueda case-insensitive
+    var keys=Object.keys(row);
+    for(var j=0;j<keys.length;j++){
+      if(keys[j].trim().toUpperCase()===key.toUpperCase()&&row[keys[j]]!==''){
+        return row[keys[j]];
+      }
+    }
+  }
+  return '';
+}
+
+function parsearNumero(v){
+  if(v===''||v===null||v===undefined)return 0;
+  var s=String(v).replace(/\./g,'').replace(',','.');
+  return parseFloat(s)||0;
+}
+
+function parsearFecha(v){
+  if(!v)return '';
+  if(v instanceof Date){
+    var y=v.getFullYear(),m=String(v.getMonth()+1).padStart(2,'0'),d=String(v.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+d;
+  }
+  var s=String(v).trim();
+  // DD/MM/YYYY
+  var m1=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m1)return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
+  // YYYY-MM-DD
+  if(s.match(/^\d{4}-\d{2}-\d{2}$/))return s;
+  return s;
+}
+
+function sumarDias(fechaStr,dias){
+  if(!fechaStr||!dias)return '';
+  var d=new Date(fechaStr+'T12:00:00');
+  d.setDate(d.getDate()+parseInt(dias)||0);
+  var y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+dd;
+}
+
+// Clasifica el tipo de comprobante
+function clasificarTipo(ti){
+  if(!ti)return 'otro';
+  var t=String(ti).toUpperCase().trim();
+  if(t.includes('REMITO')||t==='R'||t==='RE')return 'remito';
+  if(t.includes('DÉBITO')||t.includes('DEBITO')||t.includes('ND')||t==='D')return 'nd';
+  return 'factura'; // FA, FB, FC, A, B, C, etc.
+}
+
+function procesarFilasFacturas(rows){
+  var grupos={};
+  rows.forEach(function(row){
+    var prov=String(excelCol(row,['PROVEEDOR'])).trim();
+    var ti=String(excelCol(row,['TI','TIPO'])).trim();
+    var po=String(excelCol(row,['PO','PUNTO DE VENTA'])).trim();
+    var nfact=String(excelCol(row,['N° DE FACTURA','N DE FACTURA','NFACTURA','NUMERO'])).trim();
+    if(!prov||!nfact)return;
+    // Número formateado: TI-PO-NFACTURA
+    var poFmt=po?String(po).padStart(4,'0'):'';
+    var nFmt=nfact.padStart(8,'0');
+    var numero=ti+(poFmt?'-'+poFmt:'')+(nFmt?'-'+nFmt:'');
+    var key=prov+'||'+ti+'||'+po+'||'+nfact;
+    if(!grupos[key]){
+      var fecha=parsearFecha(excelCol(row,['FECHA']));
+      var diasVenc=parseInt(excelCol(row,['DIA VENCIM','DIAS VENCIM','DÍA VENCIM']))||0;
+      var venc=sumarDias(fecha,diasVenc);
+      grupos[key]={
+        proveedor_nombre:prov,
+        tipo:ti,
+        tipo_clase:clasificarTipo(ti),
+        po:po,
+        numero_raw:nfact,
+        numero:numero,
+        fecha:fecha,
+        fecha_vencimiento:venc,
+        neto_gravado:0,iva:0,arba:0,monto_total:0,
+        productos:[],
+        proveedor_id:null,
+        proveedor_id_sel:null, // selección manual si no matchea
+        estado:'nuevo' // nuevo | existe | sin_prov
+      };
+    }
+    var ng=parsearNumero(excelCol(row,['NETO GRAVADO','NETO']));
+    var iva=parsearNumero(excelCol(row,['IVA']));
+    var arba=parsearNumero(excelCol(row,['ARBA']));
+    grupos[key].neto_gravado+=ng;
+    grupos[key].iva+=iva;
+    grupos[key].arba+=arba;
+    grupos[key].monto_total+=ng+iva+arba;
+    var prod=String(excelCol(row,['PRODUCTO','DESCRIPCION'])).trim();
+    if(prod&&!grupos[key].productos.includes(prod))grupos[key].productos.push(prod);
+  });
+
+  importFacturasData=Object.values(grupos);
+  // Matching con proveedores
+  importFacturasData.forEach(function(inv){
+    var match=PROVEEDORES.find(function(p){
+      return p.nombre.trim().toUpperCase()===inv.proveedor_nombre.toUpperCase();
+    });
+    if(match){
+      inv.proveedor_id=match.id;
+      var dup=PROV_FACTURAS.find(function(f){
+        return f.proveedor_id===match.id&&f.numero===inv.numero;
+      });
+      inv.estado=dup?'existe':'nuevo';
+    } else {
+      inv.estado='sin_prov';
+    }
+  });
+
+  var filtrosEl=document.getElementById('import-fact-filtros');
+  if(filtrosEl)filtrosEl.style.display='flex';
+  renderFacturasImportPreview();
+}
+
+function getImportTiposFiltro(){
+  var ok=[];
+  if(document.getElementById('import-ti-factura')&&document.getElementById('import-ti-factura').checked)ok.push('factura');
+  if(document.getElementById('import-ti-nd')&&document.getElementById('import-ti-nd').checked)ok.push('nd');
+  if(document.getElementById('import-ti-remito')&&document.getElementById('import-ti-remito').checked)ok.push('remito');
+  return ok;
+}
+
+function renderFacturasImportPreview(){
+  var filtro=getImportTiposFiltro();
+  var visibles=importFacturasData.filter(function(inv){return filtro.includes(inv.tipo_clase);});
+  var aNuevo=visibles.filter(function(inv){return inv.estado==='nuevo'||(inv.estado==='sin_prov'&&(inv.proveedor_id_sel||inv.proveedor_id));});
+  var sinProv=visibles.filter(function(inv){return inv.estado==='sin_prov';}).length;
+  var yaExisten=visibles.filter(function(inv){return inv.estado==='existe';}).length;
+
+  var resEl=document.getElementById('import-fact-resumen');
+  if(resEl)resEl.textContent=visibles.length+' comprobantes · '+yaExisten+' ya existen · '+sinProv+' sin proveedor';
+
+  var btnEl=document.getElementById('import-fact-btn');
+  var importables=visibles.filter(function(inv){
+    return inv.estado==='nuevo'||(inv.estado==='sin_prov'&&inv.proveedor_id_sel);
+  }).length;
+  if(btnEl){
+    btnEl.style.display=importables>0?'':'none';
+    btnEl.textContent='Importar '+importables+' factura'+(importables!==1?'s':'');
+  }
+
+  var prev=document.getElementById('import-fact-preview');
+  if(!prev)return;
+  if(!visibles.length){prev.innerHTML='<div style="text-align:center;color:#9ca3af;padding:30px;font-size:13px;">Sin comprobantes para mostrar con los filtros actuales</div>';return;}
+
+  var tipoColor={factura:'#6c7ae0',nd:'#f59e0b',remito:'#9ca3af'};
+  var tipoLbl={factura:'Factura',nd:'Nota Déb.',remito:'Remito'};
+  var estadoColor={'nuevo':'#dcfce7','existe':'#fef3c7','sin_prov':'#fee2e2'};
+  var estadoIcon={'nuevo':'✅','existe':'⚠️','sin_prov':'❌'};
+
+  prev.innerHTML='<div class="tbl"><table style="width:100%;font-size:12px;"><thead>'+
+    '<tr style="background:#f3f4f6;">'+
+      '<th style="padding:7px 10px;text-align:left;">Tipo</th>'+
+      '<th style="padding:7px 10px;text-align:left;">Proveedor</th>'+
+      '<th style="padding:7px 10px;text-align:left;">N° Factura</th>'+
+      '<th style="padding:7px 10px;text-align:left;">Fecha</th>'+
+      '<th style="padding:7px 10px;text-align:left;">Vencim.</th>'+
+      '<th style="padding:7px 10px;text-align:right;">Neto Grav.</th>'+
+      '<th style="padding:7px 10px;text-align:right;">IVA</th>'+
+      '<th style="padding:7px 10px;text-align:right;">ARBA</th>'+
+      '<th style="padding:7px 10px;text-align:right;font-weight:800;">Total</th>'+
+      '<th style="padding:7px 10px;text-align:left;">Estado</th>'+
+    '</tr></thead><tbody>'+
+  visibles.map(function(inv,idx){
+    var globalIdx=importFacturasData.indexOf(inv);
+    var bg=estadoColor[inv.estado]||'';
+    var tipoC=tipoColor[inv.tipo_clase]||'#9ca3af';
+    // Celda proveedor: si sin_prov mostrar dropdown
+    var provCell='';
+    if(inv.estado==='sin_prov'){
+      var opts=PROVEEDORES.map(function(p){
+        return '<option value="'+p.id+'" '+(inv.proveedor_id_sel===p.id?'selected':'')+'>'+p.nombre+'</option>';
+      }).join('');
+      provCell='<div style="font-size:11px;color:#dc2626;font-weight:700;">'+inv.proveedor_nombre+'</div>'+
+        '<select style="font-size:11px;margin-top:3px;width:100%;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;" onchange="importFactSelProv('+globalIdx+',this.value)">'+
+        '<option value="">— Seleccionar —</option>'+opts+'</select>';
+    } else {
+      var p=PROVEEDORES.find(function(x){return x.id===inv.proveedor_id;})||{nombre:inv.proveedor_nombre};
+      provCell='<span style="font-weight:600;">'+p.nombre+'</span>';
+    }
+    var concepTxt=inv.productos.length?'<div style="font-size:10px;color:#9ca3af;margin-top:2px;">'+inv.productos.slice(0,2).join(', ')+(inv.productos.length>2?' +'+( inv.productos.length-2)+'…':'')+'</div>':'';
+    return '<tr style="background:'+bg+';border-bottom:1px solid #e5e7eb;">'+
+      '<td style="padding:7px 10px;"><span style="background:'+tipoC+'22;color:'+tipoC+';padding:2px 7px;border-radius:6px;font-weight:700;font-size:11px;">'+(tipoLbl[inv.tipo_clase]||inv.tipo)+' '+inv.tipo+'</span></td>'+
+      '<td style="padding:7px 10px;max-width:180px;">'+provCell+'</td>'+
+      '<td style="padding:7px 10px;font-weight:700;font-family:monospace;">'+inv.numero+'</td>'+
+      '<td style="padding:7px 10px;white-space:nowrap;">'+(inv.fecha||'—')+'</td>'+
+      '<td style="padding:7px 10px;white-space:nowrap;">'+(inv.fecha_vencimiento||'—')+'</td>'+
+      '<td style="padding:7px 10px;text-align:right;">'+$p(inv.neto_gravado)+'</td>'+
+      '<td style="padding:7px 10px;text-align:right;">'+$p(inv.iva)+'</td>'+
+      '<td style="padding:7px 10px;text-align:right;">'+$p(inv.arba)+'</td>'+
+      '<td style="padding:7px 10px;text-align:right;font-weight:800;">'+$p(inv.monto_total)+'</td>'+
+      '<td style="padding:7px 10px;white-space:nowrap;">'+estadoIcon[inv.estado]+' '+(inv.estado==='nuevo'?'Nuevo':inv.estado==='existe'?'Ya existe':'Sin proveedor')+'</td>'+
+    '</tr>';
+  }).join('')+'</tbody></table></div>';
+}
+
+function importFactSelProv(idx,provId){
+  if(!importFacturasData[idx])return;
+  importFacturasData[idx].proveedor_id_sel=parseInt(provId)||null;
+  renderFacturasImportPreview();
+}
+
+async function executeFacturasImport(){
+  var filtro=getImportTiposFiltro();
+  var visibles=importFacturasData.filter(function(inv){return filtro.includes(inv.tipo_clase);});
+  var aImportar=visibles.filter(function(inv){
+    return inv.estado==='nuevo'||(inv.estado==='sin_prov'&&inv.proveedor_id_sel);
+  });
+  if(!aImportar.length){toast('No hay facturas para importar','err');return;}
+
+  var btnEl=document.getElementById('import-fact-btn');
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='Importando...';}
+
+  var ok=0,err=0;
+  for(var i=0;i<aImportar.length;i++){
+    var inv=aImportar[i];
+    var provId=inv.proveedor_id||(inv.proveedor_id_sel)||null;
+    if(!provId){err++;continue;}
+    var concepto=inv.productos.join(' / ')||null;
+    var d={
+      proveedor_id:provId,
+      numero:inv.numero,
+      fecha:inv.fecha||null,
+      fecha_vencimiento:inv.fecha_vencimiento||null,
+      monto_total:Math.round(inv.monto_total*100)/100,
+      concepto:concepto,
+      tipo_comprobante:inv.tipo||null,
+      estado:'pendiente'
+    };
+    var r=await sb.from('proveedor_facturas').insert(d);
+    if(r.error){err++;console.warn('Error importando',inv.numero,r.error.message);}
+    else ok++;
+  }
+
+  if(btnEl){btnEl.disabled=false;}
+  toast(ok+' factura'+(ok!==1?'s':'')+' importada'+(ok!==1?'s':'')+(err?' · '+err+' error'+(err!==1?'es':''):''),'info');
+  await Promise.all([loadProvFacturas(),loadFacturaPagos()]);
+  renderProvCC();renderPanelGeneral();
+  closeM('m-import-facturas');
 }
 
 // ── CRUD Facturas ──
@@ -9850,20 +10205,29 @@ function renderChqPropios(){
     return;
   }
   var estadoClass={pendiente:'b-yellow',depositado:'b-green',rechazado:'b-red',anulado:'b-gray'};
+  var estadoLbl={pendiente:'🟡 Emitido',depositado:'✅ Debitado',rechazado:'❌ Rechazado',anulado:'⚫ Anulado'};
   var tb=document.getElementById('chqp-tbody');
   if(!tb)return;
   tb.innerHTML=sorted.map(function(c){
     var vencido=c.estado==='pendiente'&&c.fecha_pago&&c.fecha_pago<hoy;
+    var imps=CHQP_IMPUTACIONES.filter(function(i){return i.cheque_id===c.id;});
+    var impTxt='';
+    if(imps.length){
+      var totalImp=imps.reduce(function(s,i){return s+Number(i.monto);},0);
+      impTxt='<div style="font-size:10px;color:#6c7ae0;margin-top:2px;font-weight:600;">📋 '+imps.length+' factura'+(imps.length!==1?'s':'')+' · '+$p(totalImp)+'</div>';
+    }
+    var movTxt=c.movimiento_id?'<div style="font-size:10px;color:#16a34a;margin-top:2px;">→ Mov. #'+c.movimiento_id+'</div>':'';
     return '<tr>'+
       '<td style="font-weight:600;">'+c.numero+'</td>'+
       '<td style="font-size:12px;">'+c.banco+'</td>'+
-      '<td>'+c.destinatario+'</td>'+
+      '<td><div>'+c.destinatario+'</div>'+impTxt+'</td>'+
       '<td style="font-size:12px;color:#9ca3af;">'+(c.concepto||'—')+'</td>'+
       '<td style="text-align:right;font-weight:700;color:#dc2626;">'+$p(Number(c.monto))+'</td>'+
       '<td style="font-size:12px;">'+(c.fecha_emision||'—')+'</td>'+
       '<td style="font-size:12px;font-weight:600;color:'+(vencido?'#dc2626':'#374151')+'">'+(c.fecha_pago||'—')+(vencido?' ⚠️':'')+'</td>'+
-      '<td><span class="badge '+(estadoClass[c.estado]||'b-gray')+'">'+c.estado.charAt(0).toUpperCase()+c.estado.slice(1)+'</span></td>'+
+      '<td><span class="badge '+(estadoClass[c.estado]||'b-gray')+'">'+(estadoLbl[c.estado]||c.estado)+'</span>'+movTxt+'</td>'+
       '<td><div class="actions">'+
+        (c.estado==='pendiente'?'<button class="btn btn-sm" style="background:#dc2626;color:#fff;font-size:11px;padding:4px 8px;" onclick="openChqDebitarModal('+c.id+')" title="Registrar débito bancario">💳 Debitar</button> ':'')+
         '<button class="btn btn-sm btn-gray btn-icon" onclick="openChqPropioModal('+c.id+')">✏️</button>'+
         '<button class="btn btn-sm btn-red btn-icon" onclick="deleteChqPropio('+c.id+')">🗑️</button>'+
       '</div></td>'+
@@ -10056,6 +10420,137 @@ function renderChqResumen(){
   cont.innerHTML=html;
 }
 
+// ── Cheques propios: imputación a facturas ──
+var chqpImpSeleccionadas={}; // {factura_id: monto}
+
+function renderChqpImpFacturas(){
+  var provId=parseInt(document.getElementById('mchqp-imp-prov').value)||0;
+  var container=document.getElementById('mchqp-imp-facturas');
+  var totalDiv=document.getElementById('mchqp-imp-total');
+  if(!container)return;
+  if(!provId){container.innerHTML='';if(totalDiv)totalDiv.style.display='none';return;}
+  var facturas=PROV_FACTURAS.filter(function(f){
+    return f.proveedor_id===provId&&f.estado!=='pagada'&&f.estado!=='anulada';
+  });
+  if(!facturas.length){
+    container.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px 0;">Sin facturas pendientes para este proveedor</div>';
+    if(totalDiv)totalDiv.style.display='none';
+    return;
+  }
+  container.innerHTML=facturas.map(function(f){
+    var saldo=factSaldo(f.id);
+    var checked=chqpImpSeleccionadas[f.id]!==undefined;
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;cursor:pointer;background:'+(checked?'#ede9fe':'#f9fafb')+';border:1px solid '+(checked?'#6c7ae0':'#e5e7eb')+';transition:background .15s;">'+
+      '<input type="checkbox" value="'+f.id+'" '+(checked?'checked':'')+' onchange="toggleChqpImpFact('+f.id+','+saldo+')" style="width:15px;height:15px;cursor:pointer;"/>'+
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="font-size:12px;font-weight:700;color:#374151;">'+(f.numero||'Sin N°')+' &nbsp;·&nbsp; '+f.fecha+'</div>'+
+        (f.concepto?'<div style="font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+f.concepto+'</div>':'')+
+      '</div>'+
+      '<div style="font-size:13px;font-weight:800;color:#dc2626;white-space:nowrap;">'+$p(saldo)+'</div>'+
+    '</label>';
+  }).join('');
+  actualizarTotalImp();
+}
+
+function toggleChqpImpFact(factId,monto){
+  if(chqpImpSeleccionadas[factId]!==undefined){delete chqpImpSeleccionadas[factId];}
+  else{chqpImpSeleccionadas[factId]=monto;}
+  renderChqpImpFacturas();
+}
+
+function actualizarTotalImp(){
+  var totalDiv=document.getElementById('mchqp-imp-total');
+  if(!totalDiv)return;
+  var ids=Object.keys(chqpImpSeleccionadas);
+  if(!ids.length){totalDiv.style.display='none';return;}
+  var total=ids.reduce(function(s,id){return s+Number(chqpImpSeleccionadas[id]);},0);
+  var montoChq=parseFloat(document.getElementById('mchqp-monto').value)||0;
+  var diff=montoChq-total;
+  var ok=Math.abs(diff)<0.02;
+  totalDiv.style.display='block';
+  totalDiv.style.background=ok?'#dcfce7':'#fef3c7';
+  totalDiv.style.color=ok?'#166534':'#92400e';
+  totalDiv.innerHTML='📋 Facturas seleccionadas: <strong>'+$p(total)+'</strong>'+
+    (ok?' ✅ coincide con el monto del cheque':' — Cheque: '+$p(montoChq)+' · Diferencia: '+$p(Math.abs(diff)));
+}
+
+// ── Debitar cheque propio ──
+var chqDebitarId=null;
+function openChqDebitarModal(id){
+  chqDebitarId=id;
+  var c=CHEQUES_PROPIOS.find(function(x){return x.id===id;});
+  if(!c)return;
+  var imps=CHQP_IMPUTACIONES.filter(function(i){return i.cheque_id===id;});
+  var infoEl=document.getElementById('mchqd-info');
+  if(infoEl)infoEl.innerHTML=
+    '<strong>Cheque N° '+c.numero+'</strong> &nbsp;·&nbsp; '+c.banco+'<br/>'+
+    'Destinatario: <strong>'+c.destinatario+'</strong>'+(c.concepto?' &nbsp;·&nbsp; '+c.concepto:'')+
+    '<br/><span style="font-size:16px;font-weight:800;color:#dc2626;">'+$p(Number(c.monto))+'</span>';
+  document.getElementById('mchqd-fecha').value=today();
+  var factsEl=document.getElementById('mchqd-facturas');
+  if(factsEl){
+    if(imps.length){
+      factsEl.innerHTML='<div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px;">Facturas que quedarán pagadas:</div>'+
+        imps.map(function(imp){
+          var f=PROV_FACTURAS.find(function(x){return x.id===imp.factura_id;});
+          if(!f)return '';
+          var prov=PROVEEDORES.find(function(p){return p.id===f.proveedor_id;})||{nombre:'?'};
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#f9fafb;border-radius:6px;margin-bottom:3px;font-size:12px;">'+
+            '<span style="color:#374151;"><strong>'+prov.nombre+'</strong> · '+(f.numero||'Sin N°')+'</span>'+
+            '<strong style="color:#dc2626;">'+$p(Number(imp.monto))+'</strong>'+
+          '</div>';
+        }).join('');
+    } else {
+      factsEl.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:4px 0;">Sin facturas imputadas — solo se creará el movimiento de egreso.</div>';
+    }
+  }
+  openM('m-chqp-debitar');
+}
+
+async function saveChqDebitar(){
+  var fecha=document.getElementById('mchqd-fecha').value;
+  if(!fecha){toast('Ingresá la fecha de débito','err');return;}
+  var c=CHEQUES_PROPIOS.find(function(x){return x.id===chqDebitarId;});
+  if(!c)return;
+  var imps=CHQP_IMPUTACIONES.filter(function(i){return i.cheque_id===chqDebitarId;});
+  var detalle='Cheque propio N°'+c.numero+' — '+c.destinatario+(c.concepto?' · '+c.concepto:'');
+  // 1. Crear movimiento de egreso en el banco
+  var movR=await sb.from('movimientos').insert({
+    tipo:'egreso',caja:c.banco,fecha,ingreso:0,egreso:Number(c.monto),
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle,nota:c.nota||null
+  }).select('id').single();
+  if(movR.error){toast('Error al crear movimiento: '+movR.error.message,'err');return;}
+  var movId=movR.data.id;
+  // 2. Actualizar cheque: depositado + fecha_debito + movimiento_id
+  var chqR=await sb.from('cheques_propios').update({
+    estado:'depositado',fecha_debito:fecha,movimiento_id:movId,
+    updated_at:new Date().toISOString()
+  }).eq('id',chqDebitarId);
+  if(chqR.error){toast('Error al actualizar cheque','err');return;}
+  // 3. Para cada factura imputada: crear pago + actualizar estado factura
+  for(var i=0;i<imps.length;i++){
+    var imp=imps[i];
+    if(!imp.factura_id)continue;
+    var saldo=factSaldo(imp.factura_id);
+    var montoImp=Math.min(Number(imp.monto),saldo);
+    if(montoImp<=0)continue;
+    await sb.from('factura_pagos').insert({
+      factura_id:imp.factura_id,monto:montoImp,fecha,
+      caja:c.banco,cheque_propio_id:chqDebitarId,
+      nota:'Débito cheque N°'+c.numero
+    });
+    var nuevoSaldo=saldo-montoImp;
+    await sb.from('proveedor_facturas').update({
+      estado:nuevoSaldo<=0.01?'pagada':'parcial',
+      updated_at:new Date().toISOString()
+    }).eq('id',imp.factura_id);
+  }
+  toast('Débito registrado ✅ — Movimiento #'+movId+' creado');
+  closeM('m-chqp-debitar');
+  await Promise.all([loadChequesPropios(),loadChqPropiosImputaciones(),loadMovs(),loadProvFacturas(),loadFacturaPagos()]);
+  renderChqPropios();renderFin();renderPanelGeneral();renderProvCC();
+}
+
 function openChqPropioModal(id){
   editChqPropioId=id||null;
   document.getElementById('m-chqp-title').textContent=id?'Editar cheque':'Nuevo cheque emitido';
@@ -10070,14 +10565,31 @@ function openChqPropioModal(id){
   document.getElementById('mchqp-pago').value=c?c.fecha_pago||'':'';
   document.getElementById('mchqp-estado').value=c?c.estado:'pendiente';
   document.getElementById('mchqp-nota').value=c?c.nota||'':'';
-  // Poblar proveedores
-  var sel=document.getElementById('mchqp-proveedor');
-  sel.innerHTML='<option value="">— Sin vincular —</option>';
-  PROVEEDORES.forEach(function(p){
-    var o=document.createElement('option');o.value=p.id;o.textContent=p.nombre;
-    if(c&&c.proveedor_id===p.id)o.selected=true;
-    sel.appendChild(o);
-  });
+  // Resetear imputaciones
+  chqpImpSeleccionadas={};
+  if(id){
+    var impsExist=CHQP_IMPUTACIONES.filter(function(i){return i.cheque_id===id;});
+    impsExist.forEach(function(i){if(i.factura_id)chqpImpSeleccionadas[i.factura_id]=Number(i.monto);});
+  }
+  // Poblar proveedores del selector de imputación
+  var impSel=document.getElementById('mchqp-imp-prov');
+  if(impSel){
+    impSel.innerHTML='<option value="">— Seleccionar proveedor —</option>';
+    PROVEEDORES.forEach(function(p){
+      var o=document.createElement('option');
+      o.value=p.id;o.textContent=p.nombre;
+      impSel.appendChild(o);
+    });
+    // Si ya tiene imputaciones, pre-seleccionar el proveedor
+    if(id&&Object.keys(chqpImpSeleccionadas).length>0){
+      var firstFact=PROV_FACTURAS.find(function(f){return chqpImpSeleccionadas[f.id]!==undefined;});
+      if(firstFact)impSel.value=firstFact.proveedor_id;
+      renderChqpImpFacturas();
+    } else {
+      document.getElementById('mchqp-imp-facturas').innerHTML='';
+      var td=document.getElementById('mchqp-imp-total');if(td)td.style.display='none';
+    }
+  }
   openM('m-chqp');
 }
 
@@ -10089,7 +10601,6 @@ async function saveChqPropio(){
   var d={
     numero,banco:document.getElementById('mchqp-banco').value,
     destinatario,
-    proveedor_id:parseInt(document.getElementById('mchqp-proveedor').value)||null,
     monto,
     concepto:document.getElementById('mchqp-concepto').value.trim()||null,
     fecha_emision:document.getElementById('mchqp-emision').value,
@@ -10100,11 +10611,23 @@ async function saveChqPropio(){
   };
   var r=editChqPropioId
     ?await sb.from('cheques_propios').update(d).eq('id',editChqPropioId)
-    :await sb.from('cheques_propios').insert(d);
+    :await sb.from('cheques_propios').insert(d).select('id').single();
   if(r.error){toast('Error: '+r.error.message,'err');return;}
+  // Guardar imputaciones
+  var chqId=editChqPropioId||r.data.id;
+  // Borrar imputaciones existentes y reinsertar
+  await sb.from('cheques_propios_imputaciones').delete().eq('cheque_id',chqId);
+  var impIds=Object.keys(chqpImpSeleccionadas);
+  for(var i=0;i<impIds.length;i++){
+    var fid=parseInt(impIds[i]);
+    var imp_monto=Number(chqpImpSeleccionadas[fid]);
+    if(fid&&imp_monto>0){
+      await sb.from('cheques_propios_imputaciones').insert({cheque_id:chqId,factura_id:fid,tipo:'factura',monto:imp_monto});
+    }
+  }
   toast(editChqPropioId?'Cheque actualizado':'Cheque registrado');
   closeM('m-chqp');
-  await loadChequesPropios();
+  await Promise.all([loadChequesPropios(),loadChqPropiosImputaciones()]);
   renderChqPropios();
 }
 
