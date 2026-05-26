@@ -4607,9 +4607,28 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 </div>
 
 <!-- Modal: depositar cheque en banco -->
+<!-- Modal: depositar cheque al cobro (en_cartera → al_cobro, sin impacto bancario) -->
+<div class="modal-bg" id="m-chqalcobro">
+  <div class="modal" style="max-width:420px;">
+    <h3>🏦 Depositar al cobro</h3>
+    <div id="chqalcobro-info" style="background:#fef3c7;border-radius:8px;padding:10px 14px;margin-bottom:6px;font-size:13px;"></div>
+    <p style="font-size:11px;color:#9ca3af;margin-bottom:14px;">El dinero pasa a <strong>CHEQUES AL COBRO</strong>. El banco todavía no lo acreditó.</p>
+    <div class="grid2">
+      <div class="field"><label>Fecha de depósito *</label><input type="date" id="chqalcobro-fecha"/></div>
+      <div class="field"><label>Monto *</label><input type="number" id="chqalcobro-monto" min="0" step="0.01"/></div>
+      <div class="field full"><label>Nota (opcional)</label><input id="chqalcobro-nota" placeholder="Banco, referencia, etc."/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-chqalcobro')">Cancelar</button>
+      <button class="btn btn-amber" onclick="saveChqAlCobro()">Depositar al cobro →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: confirmar acreditación en banco (al_cobro → depositado, crea movimiento real) -->
 <div class="modal-bg" id="m-chqd">
   <div class="modal" style="max-width:420px;">
-    <h3>🏦 Depositar cheque en banco</h3>
+    <h3>✅ Confirmar acreditación en banco</h3>
     <div id="chqd-info" style="background:#dcfce7;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;"></div>
     <div class="grid2">
       <div class="field full"><label>Caja / Banco destino *</label>
@@ -4624,13 +4643,13 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option>CAJA USD</option>
         </select>
       </div>
-      <div class="field"><label>Fecha de depósito *</label><input type="date" id="chqd-fecha"/></div>
-      <div class="field"><label>Monto a depositar *</label><input type="number" id="chqd-monto" min="0" step="0.01"/></div>
+      <div class="field"><label>Fecha de acreditación *</label><input type="date" id="chqd-fecha"/></div>
+      <div class="field"><label>Monto acreditado *</label><input type="number" id="chqd-monto" min="0" step="0.01"/></div>
       <div class="field full"><label>Nota (opcional)</label><input id="chqd-nota" placeholder="Referencia, ticket, etc."/></div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-chqd')">Cancelar</button>
-      <button class="btn" onclick="saveChqDepositar()">Depositar y registrar ingreso</button>
+      <button class="btn btn-green" onclick="saveChqDepositar()">Confirmar acreditación</button>
     </div>
   </div>
 </div>
@@ -8443,7 +8462,7 @@ function renderFin(){
       &&(!caja||m.caja===caja)
       &&(!tipo||m.tipo===tipo)
       &&(!concepto||m.concepto===concepto)
-      &&(!q||(m.detalle||'').toLowerCase().includes(q)||(m.referencia||'').toLowerCase().includes(q)||(m.concepto||'').toLowerCase().includes(q));
+      &&(!q||(m.detalle||'').toLowerCase().includes(q)||(m.referencia||'').toLowerCase().includes(q)||(m.concepto||'').toLowerCase().includes(q)||String(m.id)===q.replace('#',''));
   });
   var ing=list.reduce(function(s,m){return s+Number(m.ingreso);},0);
   var egr=list.reduce(function(s,m){return s+Number(m.egreso);},0);
@@ -8459,10 +8478,11 @@ function renderFin(){
     return m[col]!=null?m[col]:'';
   });
   var tb=document.getElementById('fin-tbody');
-  if(!list.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><p>Sin movimientos en el período</p></div></td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><p>Sin movimientos en el período</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(m){
     var tipoBadge=m.tipo==='ingreso'?'b-green':m.tipo==='transferencia'?'b-purple':'b-red';
     return '<tr>'+
+      '<td style="font-size:11px;color:#9ca3af;font-weight:600;white-space:nowrap;user-select:all;" title="ID interno del movimiento">#'+m.id+'</td>'+
       '<td style="white-space:nowrap;">'+fmtF(m.fecha)+'</td>'+
       '<td style="min-width:150px;"><span style="font-size:11px;font-weight:700;color:'+(CAJA_COLORES[m.caja]||'#6b7280')+';">'+m.caja+'</span></td>'+
       '<td><span class="badge '+tipoBadge+'">'+m.tipo+'</span></td>'+
@@ -9653,12 +9673,19 @@ function renderChqCartera(){
   var enCarteraCnt=chqEnCartera.length;
   // Saldo real en cartera = monto - usos - imputaciones por cada cheque en_cartera
   var saldoEnCartera=chqEnCartera.reduce(function(s,c){return s+saldoCheque(c.id);},0);
+  var chqAlCobro=cheques.filter(function(c){return c.estado==='al_cobro';});
+  var alCobroCnt=chqAlCobro.length;
+  var saldoAlCobro=chqAlCobro.reduce(function(s,c){return s+saldoChequeUso(c.id);},0);
   var stats=document.getElementById('chq-stats');
   if(stats)stats.innerHTML=
     '<div style="background:#ede9fe;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
       '<div style="font-size:10px;font-weight:800;color:#7c3aed;margin-bottom:4px;letter-spacing:.5px;">EN CARTERA</div>'+
       '<div style="font-size:20px;font-weight:800;color:#7c3aed;">'+$p(saldoEnCartera)+'</div>'+
       '<div style="font-size:11px;color:#8b5cf6;margin-top:2px;">'+enCarteraCnt+' cheque'+(enCarteraCnt!==1?'s':'')+'</div></div>'+
+    '<div style="background:#fef3c7;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#92400e;margin-bottom:4px;letter-spacing:.5px;">AL COBRO</div>'+
+      '<div style="font-size:20px;font-weight:800;color:#d97706;">'+$p(saldoAlCobro)+'</div>'+
+      '<div style="font-size:11px;color:#b45309;margin-top:2px;">'+alCobroCnt+' en banco, sin acreditar</div></div>'+
     '<div style="background:#f0fdf4;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
       '<div style="font-size:10px;font-weight:800;color:#166534;margin-bottom:4px;letter-spacing:.5px;">TOTAL RECIBIDO</div>'+
       '<div style="font-size:20px;font-weight:800;color:#166534;">'+$p(totalMonto)+'</div>'+
@@ -9666,11 +9693,7 @@ function renderChqCartera(){
     '<div style="background:#fee2e2;border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
       '<div style="font-size:10px;font-weight:800;color:#991b1b;margin-bottom:4px;letter-spacing:.5px;">EGRESADO / USADO</div>'+
       '<div style="font-size:20px;font-weight:800;color:#991b1b;">'+$p(totalEgresado)+'</div>'+
-      '<div style="font-size:11px;color:#b91c1c;margin-top:2px;">depositados + vendidos + endosados</div></div>'+
-    '<div style="background:'+(saldoEnCartera>0?'#f0fdf4':'#f9fafb')+';border-radius:10px;padding:12px 18px;flex:1;min-width:130px;">'+
-      '<div style="font-size:10px;font-weight:800;color:'+(saldoEnCartera>0?'#166534':'#6b7280')+';margin-bottom:4px;letter-spacing:.5px;">DISPONIBLE HOY</div>'+
-      '<div style="font-size:20px;font-weight:800;color:'+(saldoEnCartera>0?'#166534':'#6b7280')+';">'+$p(saldoEnCartera)+'</div>'+
-      '<div style="font-size:11px;color:'+(saldoEnCartera>0?'#15803d':'#9ca3af')+';margin-top:2px;">sin imputar</div></div>';
+      '<div style="font-size:11px;color:#b91c1c;margin-top:2px;">acreditados + vendidos + endosados</div></div>';
   // ── Ordenar ──
   cheques.sort(function(a,b){
     var va=chqSortVal(a,chqSort.col), vb=chqSortVal(b,chqSort.col);
@@ -9685,8 +9708,8 @@ function renderChqCartera(){
   var tb=document.getElementById('chq-tbody');
   if(!tb)return;
   if(!cheques.length){tb.innerHTML='<tr><td colspan="14"><div class="empty"><p>Sin recibos para el período</p></div></td></tr>';return;}
-  var estadoColors={en_cartera:'b-purple',depositado:'b-green',vendido:'b-blue',endosado:'b-yellow',rechazado:'b-red'};
-  var estadoLabels={en_cartera:'En cartera',depositado:'Depositado',vendido:'Vendido',endosado:'Endosado',rechazado:'Rechazado'};
+  var estadoColors={en_cartera:'b-purple',al_cobro:'b-amber',depositado:'b-green',vendido:'b-blue',endosado:'b-yellow',rechazado:'b-red'};
+  var estadoLabels={en_cartera:'En cartera',al_cobro:'Al cobro',depositado:'Acreditado',vendido:'Vendido',endosado:'Endosado',rechazado:'Rechazado'};
   // Alerta de cupos a liberar al tope de la lista
   var cuposALiberar=CHEQUES_CARTERA.filter(function(c){return c.estado==='vendido'&&!c.cupo_liberado&&c.fecha_cobro&&c.fecha_cobro<hoy;});
   if(cuposALiberar.length){
@@ -9712,8 +9735,8 @@ function renderChqCartera(){
     var usado=usos.reduce(function(s,u){return s+Number(u.monto);},0);
     var saldo=Number(c.monto)-usado;
     var vto=c.fecha_cobro||'';
-    var vencido=vto&&vto<hoy&&c.estado==='en_cartera';
-    var pronto=vto&&!vencido&&c.estado==='en_cartera'&&vto<=new Date(Date.now()+7*86400000).toISOString().split('T')[0];
+    var vencido=vto&&vto<hoy&&(c.estado==='en_cartera'||c.estado==='al_cobro');
+    var pronto=vto&&!vencido&&(c.estado==='en_cartera'||c.estado==='al_cobro')&&vto<=new Date(Date.now()+7*86400000).toISOString().split('T')[0];
     var diasTxt='—';var diasColor='#9ca3af';
     if(vto){
       var d=Math.round((new Date(vto+'T12:00:00')-new Date(hoy+'T12:00:00'))/86400000);
@@ -9751,7 +9774,8 @@ function renderChqCartera(){
         usosHtml+
       '</td>'+
       '<td style="white-space:nowrap;">'+
-        (c.estado==='en_cartera'&&saldo>0?'<button class="btn btn-sm" onclick="openChqDepositarModal('+c.id+')" title="Depositar en banco" style="background:#dcfce7;color:#166534;border-color:#bbf7d0;">🏦</button> ':'')+
+        (c.estado==='en_cartera'&&saldo>0?'<button class="btn btn-sm" onclick="openChqAlCobroModal('+c.id+')" title="Depositar al cobro" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">🏦</button> ':'')+
+        (c.estado==='al_cobro'?'<button class="btn btn-sm" onclick="openChqDepositarModal('+c.id+')" title="Confirmar acreditación en banco" style="background:#dcfce7;color:#166534;border-color:#bbf7d0;">✅</button> ':'')+
         (cupoALiberar?'<button class="btn btn-sm" onclick="liberarCupo('+c.id+')" title="Confirmar liberación de cupo" style="background:#fef3c7;color:#92400e;border-color:#fbbf24;">🔓 Liberar</button> ':'')+
         (c.estado==='en_cartera'&&saldoCheque(c.id)>0?'<button class="btn btn-sm" onclick="openImputarModal('+c.id+')" title="Imputar a factura" style="background:#ede9fe;color:#7c3aed;border-color:#ddd6fe;">🔗 Imputar</button> ':'')+
         '<button class="btn btn-gray btn-sm" onclick="openChqUsoModal('+c.id+')" title="Registrar uso como pago">💸</button> '+
@@ -10536,7 +10560,7 @@ var talPreciosTipo='CONFESIÓN';
 var TAL_COLS=[{col:'nombre',label:'Nombre'},{col:'tipo',label:'Tipo'},{col:'precio_prenda',label:'Precio/prenda',r:true},{col:'telefono',label:'Teléfono'},{col:'nota',label:'Nota'},{col:'estado',label:'Estado'},{col:null,label:''}];
 
 var finSort={col:null,dir:'asc'};
-var FIN_COLS=[{col:'fecha',label:'Fecha'},{col:'caja',label:'Caja'},{col:'tipo',label:'Tipo'},{col:'concepto',label:'Concepto'},{col:'detalle',label:'Detalle'},{col:'ingreso',label:'Ingreso',r:true},{col:'egreso',label:'Egreso',r:true},{col:'referencia',label:'Referencia'},{col:'fecha_vencimiento',label:'Vto.'},{col:null,label:''}];
+var FIN_COLS=[{col:'id',label:'#'},{col:'fecha',label:'Fecha'},{col:'caja',label:'Caja'},{col:'tipo',label:'Tipo'},{col:'concepto',label:'Concepto'},{col:'detalle',label:'Detalle'},{col:'ingreso',label:'Ingreso',r:true},{col:'egreso',label:'Egreso',r:true},{col:'referencia',label:'Referencia'},{col:'fecha_vencimiento',label:'Vto.'},{col:null,label:''}];
 
 var chqSort={col:'fecha_recibido',dir:'desc'};
 var CHQ_SELECCION={}; // id → monto
@@ -10679,7 +10703,7 @@ function renderChqEditar(){
   if(!tbody)return;
   tbody.innerHTML=lista.map(function(c,i){
     var bg=i%2===0?'#fff':'#f9fafb';
-    var estadoOpts=['en_cartera','depositado','vendido','endosado','rechazado'].map(function(s){
+    var estadoOpts=['en_cartera','al_cobro','depositado','vendido','endosado','rechazado'].map(function(s){
       return '<option value="'+s+'"'+(c.estado===s?' selected':'')+'>'+s+'</option>';
     }).join('');
     var tipoOpts=['cheque','echeq'].map(function(s){
@@ -11040,7 +11064,7 @@ function openChqDepositarModal(chequeId){
   var saldo=saldoChequeUso(chequeId);
   var info=document.getElementById('chqd-info');
   if(info)info.innerHTML='<strong>'+(c.emisor||'')+'</strong>'+(c.numero?' · N° '+c.numero:'')+' · Saldo disponible: <strong>'+$p(saldo)+'</strong>';
-  document.getElementById('chqd-fecha').value=c.fecha_cobro||today();
+  document.getElementById('chqd-fecha').value=today();
   document.getElementById('chqd-monto').value=saldo>0?saldo:'';
   document.getElementById('chqd-caja').value='';
   document.getElementById('chqd-nota').value='';
@@ -11065,17 +11089,67 @@ async function saveChqDepositar(){
     concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleTexto,nota:notaDeposito
   });
   if(rMov.error){toast('Error al registrar movimiento: '+rMov.error.message,'err');return;}
-  // Egreso de la caja CHEQUES/ECHEQ
+  // Egreso de CHEQUES AL COBRO (el cheque ya estaba depositado, ahora se acredita)
   await sb.from('movimientos').insert({
-    tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:monto,
-    concepto:'CHEQUES/TRANSFERENCIAS',detalle:'Depositado en '+caja+' · '+detalle,nota:notaDeposito
+    tipo:'egreso',caja:'CHEQUES AL COBRO',fecha,ingreso:0,egreso:monto,
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle:'Acreditado en '+caja+' · '+detalle,nota:notaDeposito
   });
-  // Marcar cheque como depositado
+  // Marcar cheque como depositado/acreditado
   var nuevoEstado=monto>=saldo-0.01?'depositado':c.estado;
   await sb.from('cheques_cartera').update({estado:nuevoEstado,updated_at:new Date().toISOString()}).eq('id',chqdChequeId);
-  toast('Depósito registrado — ingreso en '+caja+', egreso de CHEQUES/ECHEQ');
+  toast('Acreditación registrada — ingreso en '+caja+', egreso de CHEQUES AL COBRO');
   closeM('m-chqd');
   await Promise.all([loadChequesCartera(),loadChequeUsos(),loadMovs()]);
+  renderChqCartera();renderPanelGeneral();
+}
+
+// ══════════════════════════════════════════════
+// DEPOSITAR AL COBRO (en_cartera → al_cobro)
+// Sin impacto bancario. Mueve CHEQUES/ECHEQ → CHEQUES AL COBRO
+// ══════════════════════════════════════════════
+var chqAlCobroId=null;
+function openChqAlCobroModal(id){
+  chqAlCobroId=id;
+  var c=CHEQUES_CARTERA.find(function(x){return x.id===id;});
+  if(!c)return;
+  var saldo=saldoChequeUso(id);
+  var info=document.getElementById('chqalcobro-info');
+  if(info)info.innerHTML='<strong>'+(c.emisor||'')+'</strong>'+(c.numero?' · N° '+c.numero:'')+' · Saldo: <strong>'+$p(saldo)+'</strong>';
+  document.getElementById('chqalcobro-fecha').value=today();
+  document.getElementById('chqalcobro-monto').value=saldo>0?saldo:'';
+  document.getElementById('chqalcobro-nota').value='';
+  openM('m-chqalcobro');
+}
+async function saveChqAlCobro(){
+  var fecha=document.getElementById('chqalcobro-fecha').value;
+  var monto=parseFloat(document.getElementById('chqalcobro-monto').value)||0;
+  if(!fecha||!monto){toast('Completá fecha y monto','err');return;}
+  var c=CHEQUES_CARTERA.find(function(x){return x.id===chqAlCobroId;});
+  if(!c){toast('Cheque no encontrado','err');return;}
+  var saldo=saldoChequeUso(chqAlCobroId);
+  if(monto>saldo+0.01){toast('El monto supera el saldo disponible ('+$p(saldo)+')','err');return;}
+  var nota=document.getElementById('chqalcobro-nota').value||null;
+  var detalle='Depósito al cobro · '+(c.emisor||'')+(c.numero?' N°'+c.numero:'');
+  // Egreso de CHEQUES/ECHEQ
+  var r1=await sb.from('movimientos').insert({
+    tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:monto,
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalle,nota
+  });
+  if(r1.error){toast('Error: '+r1.error.message,'err');return;}
+  // Ingreso en CHEQUES AL COBRO
+  await sb.from('movimientos').insert({
+    tipo:'ingreso',caja:'CHEQUES AL COBRO',fecha,ingreso:monto,egreso:0,
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalle,nota
+  });
+  // Actualizar estado del cheque
+  await sb.from('cheques_cartera').update({
+    estado:'al_cobro',
+    fecha_deposito:fecha,
+    updated_at:new Date().toISOString()
+  }).eq('id',chqAlCobroId);
+  toast('Cheque depositado al cobro → CHEQUES AL COBRO');
+  closeM('m-chqalcobro');
+  await Promise.all([loadChequesCartera(),loadMovs()]);
   renderChqCartera();renderPanelGeneral();
 }
 
@@ -13464,7 +13538,7 @@ var editMovId=null;
 
 function openMovModal(id){
   editMovId=id||null;
-  document.getElementById('m-mov-title').textContent=id?'Editar movimiento':'Nuevo movimiento';
+  document.getElementById('m-mov-title').textContent=id?'Editar movimiento #'+id:'Nuevo movimiento';
   document.getElementById('mm-auto-warn').style.display='none';
   document.getElementById('mm-transf-warn').style.display='none';
   // Mostrar/ocultar opción transferencia en el select
@@ -13499,8 +13573,9 @@ function openMovModal(id){
     if(m.personal_id)  document.getElementById('mm-personal-id').value=m.personal_id;
     if(m.proveedor_id) document.getElementById('mm-proveedor-id').value=m.proveedor_id;
   } else {
+    var cajaActiva=document.getElementById('fin-caja').value||'EFECTIVO ADMINISTRACIÓN';
     document.getElementById('mm-tipo').value='egreso';
-    document.getElementById('mm-caja').value='EFECTIVO ADMINISTRACIÓN';
+    document.getElementById('mm-caja').value=cajaActiva;
     document.getElementById('mm-fecha').value=today();
     document.getElementById('mm-concepto').value='SUELDOS/JORNALES';
     document.getElementById('mm-detalle').value='';
