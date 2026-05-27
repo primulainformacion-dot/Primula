@@ -236,7 +236,25 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
 
 @media(max-width:900px){.stats{grid-template-columns:1fr 1fr;}.two-col{grid-template-columns:1fr;}.grid2{grid-template-columns:1fr;}.grid2 .full{grid-column:1;}}
-@media(max-width:600px){.sidebar{width:0;overflow:hidden;}.main{margin-left:0;padding:14px;}.stats{grid-template-columns:1fr;}}
+
+/* ── MOBILE NAV ── */
+#mob-menu-btn{display:none;background:none;border:none;font-size:22px;cursor:pointer;color:#1a1f36;padding:4px 8px;border-radius:8px;line-height:1;flex-shrink:0;}
+#mob-menu-btn:hover{background:#f3f4f6;}
+#mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99;}
+@media(max-width:600px){
+  .sidebar{width:225px;transform:translateX(-230px);transition:transform .24s ease;z-index:101;overflow:hidden;}
+  .sidebar.mob-open{transform:translateX(0);overflow-y:auto;}
+  #mob-overlay.active{display:block;}
+  #mob-menu-btn{display:flex;align-items:center;}
+  .main{margin-left:0;padding:14px;}
+  .stats{grid-template-columns:1fr;}
+  .topbar{flex-wrap:nowrap;gap:8px;}
+  .topbar h1{font-size:16px;}
+  /* Tablas y modales en mobile */
+  .modal-box{width:calc(100vw - 24px);max-width:100%;margin:12px;}
+  table{font-size:12px;}
+  .btn{font-size:12px;padding:7px 12px;}
+}
 </style>
 </head>
 <body>
@@ -328,14 +346,18 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- OVERLAY mobile -->
+<div id="mob-overlay" onclick="closeMobMenu()"></div>
+
 <!-- MAIN -->
 <div class="main">
   <div class="topbar">
-    <div>
+    <button id="mob-menu-btn" onclick="toggleMobMenu()" title="Menú">☰</button>
+    <div style="flex:1;min-width:0;">
       <h1 id="pg-title">Inicio</h1>
       <div class="topbar-sub" id="pg-sub"></div>
     </div>
-    <div style="color:#9ca3af;font-size:13px;" id="pg-date"></div>
+    <div style="color:#9ca3af;font-size:13px;white-space:nowrap;" id="pg-date"></div>
   </div>
 
   <!-- ════════════ INICIO ════════════ -->
@@ -1915,6 +1937,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="tabs" id="cos-tabs" style="margin-bottom:16px;">
       <button class="tab active" onclick="setCosTab('costura',this)">🧵 Costura</button>
       <button class="tab" onclick="setCosTab('bordado',this)">🎨 Bordado</button>
+      <button class="tab" onclick="setCosTab('bordado-stock',this)">🏷️ Bordado Stock</button>
       <button class="tab" onclick="setCosTab('estampado',this)">🖨️ Estampado</button>
       <button class="tab" onclick="setCosTab('dtf',this)">🖼️ DTF</button>
       <button class="tab" onclick="setCosTab('historial',this)">📋 Historial</button>
@@ -1953,6 +1976,29 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <button class="btn" style="margin-left:auto;" onclick="openEnvioBordadoModal()">+ Nuevo envío bordado</button>
       </div>
       <div id="bor-lista"></div>
+    </div>
+
+    <!-- Tab Bordado Stock -->
+    <div id="cos-tab-bordado-stock" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="bst-fil-tal" onchange="renderBordStock()" style="min-width:180px;">
+          <option value="">Todos los talleristas</option>
+        </select>
+        <select id="bst-fil-est" onchange="renderBordStock()" style="min-width:150px;">
+          <option value="en_proceso">En proceso</option>
+          <option value="">Todos</option>
+          <option value="recibido">Recibido</option>
+        </select>
+        <button class="btn btn-gray btn-sm" onclick="renderBordStock()">↻</button>
+        <button class="btn" style="margin-left:auto;" onclick="openBordStockModal()">+ Nuevo lote bordado</button>
+      </div>
+      <!-- Stats rápidos -->
+      <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
+        <div class="stat"><div class="stat-icon" style="background:#ede9fe;">🏷️</div><h3 id="bst-stat-lotes">0</h3><p>Lotes activos</p></div>
+        <div class="stat"><div class="stat-icon" style="background:#fef3c7;">👕</div><h3 id="bst-stat-prendas">0</h3><p>Prendas en bordado</p></div>
+        <div class="stat"><div class="stat-icon" style="background:#fee2e2;">💰</div><h3 id="bst-stat-deuda">$0</h3><p>A liquidar</p></div>
+      </div>
+      <div id="bst-lista"></div>
     </div>
 
     <!-- Tab Estampado -->
@@ -3338,6 +3384,45 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-envio-bordado')">Cancelar</button>
       <button class="btn" onclick="saveEnvioBordado()">💾 Guardar envío</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Lote Bordado Stock -->
+<div class="modal-bg" id="m-bord-stock">
+  <div class="modal modal-wide">
+    <div class="modal-hdr">
+      <h3 id="m-bord-stock-title">Nuevo lote bordado</h3>
+      <button class="modal-close" onclick="closeM('m-bord-stock')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div>
+          <label>Tallerista bordador *</label>
+          <select id="mbst-tal" style="width:100%;"></select>
+        </div>
+        <div>
+          <label>Fecha envío *</label>
+          <input type="date" id="mbst-fecha" style="width:100%;"/>
+        </div>
+        <div>
+          <label>Nota</label>
+          <input type="text" id="mbst-nota" placeholder="Opcional..." style="width:100%;"/>
+        </div>
+      </div>
+      <!-- Items -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong style="font-size:13px;">Prendas a bordar</strong>
+        <button class="btn btn-sm btn-outline" onclick="bstAddItem()">+ Agregar prenda</button>
+      </div>
+      <div id="mbst-items"></div>
+      <div style="text-align:right;font-weight:700;margin-top:10px;font-size:14px;color:#6c7ae0;">
+        Total: <span id="mbst-total">$0</span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-bord-stock')">Cancelar</button>
+      <button id="mbst-save-btn" class="btn" onclick="saveLoteBordStock()">💾 Guardar lote</button>
     </div>
   </div>
 </div>
@@ -5107,7 +5192,7 @@ var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CHQP_IMPUTACIONES=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[], ITEMS_VENTA=[], AVIOS=[], FICHAS_COSTO=[], FICHAS_COSTO_TELAS=[], FICHAS_COSTO_AVIOS=[], COMPRAS=[], COMPRAS_ITEMS=[], HISTORIAL_PRECIOS=[], TAL_RECEPCIONES=[], TAL_RECEPCIONES_ITEMS=[], TAL_PAGOS=[], MOVIMIENTOS_STOCK=[], DEVOLUCIONES=[], DEVOLUCIONES_ITEMS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CHQP_IMPUTACIONES=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[], ITEMS_VENTA=[], AVIOS=[], FICHAS_COSTO=[], FICHAS_COSTO_TELAS=[], FICHAS_COSTO_AVIOS=[], COMPRAS=[], COMPRAS_ITEMS=[], HISTORIAL_PRECIOS=[], TAL_RECEPCIONES=[], TAL_RECEPCIONES_ITEMS=[], TAL_PAGOS=[], MOVIMIENTOS_STOCK=[], DEVOLUCIONES=[], DEVOLUCIONES_ITEMS=[], LOTES_BORD_STOCK=[], LOTES_BORD_STOCK_ITEMS=[];
 var CONCEPTOS_POR_TIPO={
   'CONFESIÓN':['Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal','Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre','Chaleco Polar','Campera Polar','Campera Friza','Campera canguro','Sudadera','Joggins','Pantalón común','Cuellos','Bufandas / Cuellos','Reflectivo','Cofia','Arreglo'],
   'BORDADO':[],
@@ -5229,7 +5314,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChqPropiosImputaciones(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems(),loadItemsVenta(),loadAvios(),loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios(),loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadTalRecepciones(),loadTalRecepcionesItems(),loadTalPagos(),loadMovimientosStock(),loadDevoluciones(),loadDevolucionesItems()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChqPropiosImputaciones(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems(),loadItemsVenta(),loadAvios(),loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios(),loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadTalRecepciones(),loadTalRecepcionesItems(),loadTalPagos(),loadMovimientosStock(),loadDevoluciones(),loadDevolucionesItems(),loadLotesBordStock(),loadLotesBordStockItems()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderAlertas(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -5459,8 +5544,27 @@ function renderEstrategiaProgress(){
   if(txt) txt.textContent=done.length+'/'+total+' acciones completadas ('+pct+'%)';
 }
 
+// ── MOBILE MENU ──
+function toggleMobMenu(){
+  var sb=document.querySelector('.sidebar');
+  var ov=document.getElementById('mob-overlay');
+  if(sb.classList.contains('mob-open')){
+    sb.classList.remove('mob-open');
+    if(ov)ov.classList.remove('active');
+  } else {
+    sb.classList.add('mob-open');
+    if(ov)ov.classList.add('active');
+  }
+}
+function closeMobMenu(){
+  document.querySelector('.sidebar').classList.remove('mob-open');
+  var ov=document.getElementById('mob-overlay');
+  if(ov)ov.classList.remove('active');
+}
+
 // ── NAV ──
 function nav(sec, el){
+  closeMobMenu();
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
   var s=document.getElementById('sec-'+sec); if(s) s.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
@@ -5484,6 +5588,7 @@ function nav(sec, el){
 }
 
 function navLocal(local, tab, el){
+  closeMobMenu();
   currentLocal=local;
   // Para llavallol y montegrande siempre arrancar desde el POS; mayorista va a nueva-venta
   if(local==='mayorista'&&tab==='ventas') tab='nueva-venta';
@@ -6728,6 +6833,12 @@ async function saveFactura(){
         await sb.from('movimientos_stock').insert({tipo:'entrada',producto_id:it.material_id,producto_nombre:prodNom,local:localProd,talle:it.material_talle||'',color:'',cantidad:Number(it.cantidad||0),origen:'compra',origen_id:compraId,fecha:fecha,nota:'Factura '+(document.getElementById('pfact-numero').value||'s/n')});
         await sb.from('historial_precios').insert({tipo:'producto',material_id:it.material_id,material_nombre:prodNom,fecha:fecha,precio_unit:it.precio_unit,compra_id:compraId});
       }
+      if(it.tipo==='mat_prima'&&it.material_id){
+        var matRec=MATERIALES.find(function(m){return m.id===it.material_id;});
+        if(matRec)await sb.from('materiales').update({cantidad:Number(matRec.cantidad||0)+Number(it.cantidad||0),precio_unitario:it.precio_unit,updated_at:new Date().toISOString()}).eq('id',it.material_id);
+        await sb.from('movimientos_stock').insert({tipo:'entrada',producto_id:null,producto_nombre:it.material_nombre||'',local:'deposito',talle:'',color:'',cantidad:Number(it.cantidad||0),origen:'compra',origen_id:compraId,fecha:fecha,nota:'Factura '+(document.getElementById('pfact-numero').value||'s/n')+' — mat. prima'});
+        await sb.from('historial_precios').insert({tipo:'mat_prima',material_id:it.material_id,material_nombre:it.material_nombre,fecha:fecha,precio_unit:it.precio_unit,compra_id:compraId});
+      }
     }
   }
   var nroFact=document.getElementById('pfact-numero').value||null;
@@ -6753,7 +6864,7 @@ async function saveFactura(){
   toast(editFacturaId?'Factura actualizada':'Factura cargada'+(itemsValidos.length>0?' — stock actualizado':''));
   closeM('m-pfact');
   if(btn){btn.disabled=false;btn.textContent='Guardar';}
-  await Promise.all([loadProvFacturas(),loadFacturaPagos(),loadCompras(),loadComprasItems(),loadAvios(),loadTelasTipos(),loadTelasStock(),loadFichasCostoTelas(),loadStock(),loadProductos(),loadHistorialPrecios(),loadMovimientosStock()]);
+  await Promise.all([loadProvFacturas(),loadFacturaPagos(),loadCompras(),loadComprasItems(),loadAvios(),loadTelasTipos(),loadTelasStock(),loadFichasCostoTelas(),loadStock(),loadProductos(),loadHistorialPrecios(),loadMovimientosStock(),loadMateriales()]);
   renderProvCC();renderPanelGeneral();renderCompras();
 }
 
@@ -6762,6 +6873,7 @@ function renderPfactItemsModal(){
   var avOpts=AVIOS.map(function(a){return '<option value="'+a.id+'">'+esc(a.nombre)+'</option>';}).join('');
   var telOpts=TELAS_TIPOS.map(function(t){return '<option value="'+esc(t.nombre)+'">'+esc(t.nombre)+'</option>';}).join('');
   var prodOpts=PRODUCTOS.map(function(p){return '<option value="'+p.id+'">'+esc(p.nombre)+(p.codigo?' ('+esc(p.codigo)+')':'')+'</option>';}).join('');
+  var matOpts=MATERIALES.filter(function(m){return m.activo!==false;}).map(function(m){return '<option value="'+m.id+'">'+esc(m.nombre)+(m.categoria?' — '+esc(m.categoria):'')+'</option>';}).join('');
   var html='';
   if(pfactItemsTemp.length===0){html='<div style="color:#9ca3af;font-size:13px;padding:8px 0;">Sin ítems — la factura se carga solo con el monto total.</div>';document.getElementById('pfact-items').innerHTML=html;pfactCalcTotal();return;}
   html='<table style="width:100%;"><thead><tr><th>Tipo</th><th>Material / Local</th><th>Color / Talle</th><th>Unidad</th><th style="width:70px;">Cant.</th><th style="width:100px;">Precio unit.</th><th>Subtotal</th><th></th></tr></thead><tbody>';
@@ -6780,6 +6892,8 @@ function renderPfactItemsModal(){
         +'<option value="llavallol"'+(localVal==='llavallol'?' selected':'')+'>🏪 Llavallol</option>'
         +'<option value="montegrande"'+(localVal==='montegrande'?' selected':'')+'>🏪 Monte Grande</option>'
         +'</select></div>';
+    } else if(it.tipo==='mat_prima'){
+      matHtml='<select onchange="pfactItemChange('+i+',\'mat\',this)" style="min-width:130px;"><option value="">— Mat. Prima —</option>'+matOpts+'</select>';
     } else {
       matHtml='<input placeholder="Descripción" value="'+esc(it.material_nombre||'')+'" oninput="pfactItemChange('+i+',\'desc\',this)" style="min-width:130px;"/>';
     }
@@ -6804,7 +6918,7 @@ function renderPfactItemsModal(){
       colorHtml='<span style="color:#d1d5db;">—</span>';
     }
     var pfactCantHtml=it.tipo==='tela'?(function(){var tela=TELAS_TIPOS.find(function(t){return t.nombre===it.material_nombre;});var kgPR=Number(tela&&tela.kg_por_rollo||20);var kg=Number(it.cantidad||0);var rollosStr=kg>0?(kg/kgPR).toFixed(1):'—';return '<td><input type="number" value="'+kg+'" min="0" step="0.01" oninput="pfactItemChange('+i+',\'cant\',this)" style="width:70px;"/><div id="pfact-rollos-'+i+'" style="font-size:11px;color:#6c7ae0;margin-top:2px;">≈ '+rollosStr+' rollos</div></td>';})():'<td><input type="number" value="'+(it.cantidad||0)+'" min="0" step="0.01" oninput="pfactItemChange('+i+',\'cant\',this)" style="width:70px;"/></td>';
-    html+='<tr id="pfact-row-'+i+'"><td><select onchange="pfactItemChangeTipo('+i+',this)" style="width:90px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="producto"'+(it.tipo==='producto'?' selected':'')+'>Producto</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td>'+colorHtml+'</td><td><input value="'+esc(it.unidad||'kg')+'" oninput="pfactItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td>'+pfactCantHtml+'<td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="pfactItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="pfact-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="pfactRemItem('+i+')">✕</button></td></tr>';
+    html+='<tr id="pfact-row-'+i+'"><td><select onchange="pfactItemChangeTipo('+i+',this)" style="width:100px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="producto"'+(it.tipo==='producto'?' selected':'')+'>Producto</option><option value="mat_prima"'+(it.tipo==='mat_prima'?' selected':'')+'>Mat. Prima</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td>'+colorHtml+'</td><td><input value="'+esc(it.unidad||'kg')+'" oninput="pfactItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td>'+pfactCantHtml+'<td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="pfactItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="pfact-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="pfactRemItem('+i+')">✕</button></td></tr>';
   });
   html+='</tbody></table>';
   document.getElementById('pfact-items').innerHTML=html;
@@ -6815,6 +6929,7 @@ function renderPfactItemsModal(){
     if(it.tipo==='avio'&&it.material_id)sels[1].value=it.material_id;
     if(it.tipo==='tela'&&it.material_nombre)sels[1].value=it.material_nombre;
     if(it.tipo==='producto'&&it.material_id)sels[1].value=it.material_id;
+    if(it.tipo==='mat_prima'&&it.material_id)sels[1].value=it.material_id;
   });
   pfactCalcTotal();
 }
@@ -6825,6 +6940,7 @@ function pfactItemChangeTipo(i,el){
   if(el.value==='avio')pfactItemsTemp[i].unidad='unidades';
   if(el.value==='tela')pfactItemsTemp[i].unidad='kg';
   if(el.value==='producto'){pfactItemsTemp[i].unidad='unidades';pfactItemsTemp[i].material_color='mayorista';}
+  if(el.value==='mat_prima')pfactItemsTemp[i].unidad='unidades';
   renderPfactItemsModal();
 }
 function pfactItemChange(i,field,el){
@@ -6833,6 +6949,7 @@ function pfactItemChange(i,field,el){
     if(tipo==='avio'){pfactItemsTemp[i].material_id=Number(el.value)||null;var av=AVIOS.find(function(a){return a.id===Number(el.value);});pfactItemsTemp[i].material_nombre=av?av.nombre:'';}
     if(tipo==='tela'){pfactItemsTemp[i].material_nombre=el.value;pfactItemsTemp[i].material_color='';_actualizarRollosHelper('pfact',i,pfactItemsTemp[i]);renderPfactItemsModal();return;}
     if(tipo==='producto'){pfactItemsTemp[i].material_id=Number(el.value)||null;var pr=PRODUCTOS.find(function(p){return p.id===Number(el.value);});pfactItemsTemp[i].material_nombre=pr?pr.nombre:'';}
+    if(tipo==='mat_prima'){pfactItemsTemp[i].material_id=Number(el.value)||null;var mp=MATERIALES.find(function(m){return m.id===Number(el.value);});pfactItemsTemp[i].material_nombre=mp?mp.nombre:'';}
   }
   if(field==='local')pfactItemsTemp[i].material_color=el.value;
   if(field==='talle')pfactItemsTemp[i].material_talle=el.value;
@@ -15453,7 +15570,7 @@ function entregaDesdeCostura(envioId){
 // ══════════════════════════════════════════════════════════
 
 function setCosTab(tab, el){
-  ['costura','bordado','estampado','dtf','historial'].forEach(function(t){
+  ['costura','bordado','bordado-stock','estampado','dtf','historial'].forEach(function(t){
     var d=document.getElementById('cos-tab-'+t);
     if(d)d.style.display=t===tab?'block':'none';
   });
@@ -15461,6 +15578,7 @@ function setCosTab(tab, el){
   if(el)el.classList.add('active');
   if(tab==='costura')renderEnviosCostura();
   if(tab==='bordado')renderEnviosBordado();
+  if(tab==='bordado-stock')renderBordStock();
   if(tab==='estampado')renderEnviosProceso('estampado');
   if(tab==='dtf')renderEnviosProceso('dtf');
   if(tab==='historial')renderCosHistorial();
@@ -15857,6 +15975,260 @@ async function deleteEnvioCostura(id){
   renderCostura();
   renderPedidos();
   renderPedResumen();
+}
+
+// ── BORDADO STOCK ──────────────────────────────────────────
+
+var bstItemsTemp=[], editBstId=null;
+
+function renderBordStock(){
+  // Poblar select tallerista en filtro
+  var filTalEl=document.getElementById('bst-fil-tal');
+  if(filTalEl&&filTalEl.options.length===1){
+    TALLERISTAS.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.nombre;filTalEl.appendChild(o);});
+  }
+  var filTal=((document.getElementById('bst-fil-tal')||{}).value)||'';
+  var filEst=((document.getElementById('bst-fil-est')||{}).value);
+  if(filEst===undefined)filEst='en_proceso';
+  var list=LOTES_BORD_STOCK.slice();
+  if(filTal)list=list.filter(function(l){return String(l.tallerista_id)===filTal;});
+  if(filEst!=='')list=list.filter(function(l){return l.estado===filEst;});
+  // Stats
+  var activos=LOTES_BORD_STOCK.filter(function(l){return l.estado==='en_proceso';});
+  var prendasEn=activos.reduce(function(s,l){
+    return s+LOTES_BORD_STOCK_ITEMS.filter(function(i){return i.lote_id===l.id;}).reduce(function(ss,i){return ss+Number(i.cantidad);},0);
+  },0);
+  var deudaPend=activos.reduce(function(s,l){
+    return s+LOTES_BORD_STOCK_ITEMS.filter(function(i){return i.lote_id===l.id;}).reduce(function(ss,i){return ss+Number(i.cantidad)*Number(i.precio_unit);},0);
+  },0);
+  var statLotes=document.getElementById('bst-stat-lotes'); if(statLotes)statLotes.textContent=activos.length;
+  var statPren=document.getElementById('bst-stat-prendas'); if(statPren)statPren.textContent=prendasEn;
+  var statDeuda=document.getElementById('bst-stat-deuda'); if(statDeuda)statDeuda.textContent=$p(deudaPend);
+  var cont=document.getElementById('bst-lista');
+  if(!cont)return;
+  if(!list.length){
+    cont.innerHTML='<div class="empty"><div class="ei">🏷️</div><p>No hay lotes de bordado'+(filEst==='en_proceso'?' en proceso':'')+'</p></div>';
+    return;
+  }
+  cont.innerHTML=list.map(function(l){
+    var items=LOTES_BORD_STOCK_ITEMS.filter(function(i){return i.lote_id===l.id;});
+    var tal=TALLERISTAS.find(function(t){return t.id===l.tallerista_id;});
+    var totalPrendas=items.reduce(function(s,i){return s+Number(i.cantidad);},0);
+    var totalVal=items.reduce(function(s,i){return s+Number(i.cantidad)*Number(i.precio_unit);},0);
+    var esRec=l.estado==='recibido';
+    var badge=esRec
+      ?'<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">Recibido</span>'
+      :'<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">En proceso</span>';
+    var itemsHtml='';
+    if(items.length){
+      itemsHtml='<div style="overflow-x:auto;margin-top:12px;"><table style="width:100%;font-size:12px;border-collapse:collapse;">'
+        +'<thead><tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">'
+        +'<th style="padding:5px 8px;text-align:left;">Producto</th>'
+        +'<th style="padding:5px 8px;">Talle</th><th style="padding:5px 8px;">Color</th>'
+        +'<th style="padding:5px 8px;text-align:right;">Cant.</th>'
+        +'<th style="padding:5px 8px;text-align:right;">Precio unit.</th>'
+        +'<th style="padding:5px 8px;text-align:right;">Subtotal</th>'
+        +'</tr></thead><tbody>'
+        +items.map(function(i){
+          return '<tr style="border-bottom:1px solid #f3f4f6;">'
+            +'<td style="padding:5px 8px;font-weight:600;">'+esc(i.producto_nombre||'—')+'</td>'
+            +'<td style="padding:5px 8px;text-align:center;">'+esc(i.talle||'—')+'</td>'
+            +'<td style="padding:5px 8px;text-align:center;">'+esc(i.color||'—')+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-weight:700;">'+i.cantidad+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;">'+$p(i.precio_unit)+'</td>'
+            +'<td style="padding:5px 8px;text-align:right;font-weight:700;">'+$p(Number(i.cantidad)*Number(i.precio_unit))+'</td>'
+            +'</tr>';
+        }).join('')
+        +'<tr style="background:#f9fafb;font-weight:700;border-top:2px solid #e5e7eb;">'
+        +'<td colspan="3" style="padding:5px 8px;">TOTAL</td>'
+        +'<td style="padding:5px 8px;text-align:right;">'+totalPrendas+'</td>'
+        +'<td></td>'
+        +'<td style="padding:5px 8px;text-align:right;color:#6c7ae0;">'+$p(totalVal)+'</td>'
+        +'</tr></tbody></table></div>';
+    }
+    var btns='';
+    if(!esRec){
+      btns+='<button class="btn btn-sm btn-outline" onclick="openBordStockModal('+l.id+')">✏️ Editar</button>';
+      btns+='<button class="btn btn-sm" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;" id="btn-bst-rec-'+l.id+'" onclick="recibirLoteBordStock('+l.id+')">📥 Marcar recibido</button>';
+    }
+    btns+='<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;" onclick="deleteLoteBordStock('+l.id+')">🗑</button>';
+    return '<div class="panel" style="margin-bottom:12px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">'
+      +'<div>'
+      +'<div style="font-weight:700;font-size:14px;color:#1a1f36;">🏷️ '+(tal?esc(tal.nombre):'Sin tallerista')
+      +(l.nota?' <span style="font-size:12px;color:#9ca3af;font-weight:400;">— '+esc(l.nota)+'</span>':'')+'</div>'
+      +'<div style="font-size:12px;color:#6b7280;margin-top:3px;">Enviado: '+fmtF(l.fecha_envio)
+      +(l.fecha_retorno?' · Recibido: '+fmtF(l.fecha_retorno):'')
+      +' · '+totalPrendas+' prenda'+(totalPrendas!==1?'s':'')+' · <strong>'+$p(totalVal)+'</strong></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">'+badge+btns+'</div>'
+      +'</div>'
+      +itemsHtml+'</div>';
+  }).join('');
+}
+
+function openBordStockModal(id){
+  editBstId=id||null;
+  var l=id?LOTES_BORD_STOCK.find(function(x){return x.id===id;}):null;
+  document.getElementById('m-bord-stock-title').textContent=id?'Editar lote bordado':'Nuevo lote bordado';
+  // Poblar talleristas
+  var sel=document.getElementById('mbst-tal');
+  sel.innerHTML='<option value="">— Tallerista —</option>'+TALLERISTAS.map(function(t){return '<option value="'+t.id+'">'+esc(t.nombre)+'</option>';}).join('');
+  document.getElementById('mbst-tal').value=l&&l.tallerista_id?l.tallerista_id:'';
+  document.getElementById('mbst-fecha').value=l?l.fecha_envio:today();
+  document.getElementById('mbst-nota').value=l?l.nota||'':'';
+  bstItemsTemp=id?LOTES_BORD_STOCK_ITEMS.filter(function(i){return i.lote_id===id;}).map(function(i){return Object.assign({},i);}):[];
+  renderBordStockItems();
+  openM('m-bord-stock');
+}
+
+function renderBordStockItems(){
+  var cont=document.getElementById('mbst-items');
+  if(!cont)return;
+  var prodOpts=PRODUCTOS.map(function(p){return '<option value="'+p.id+'">'+esc(p.nombre)+(p.codigo?' ('+esc(p.codigo)+')':'')+'</option>';}).join('');
+  if(!bstItemsTemp.length){
+    cont.innerHTML='<div style="color:#9ca3af;font-size:13px;padding:8px 0;">Sin prendas — hacé clic en "+ Agregar prenda"</div>';
+    document.getElementById('mbst-total').textContent='$0';
+    return;
+  }
+  var html='<table style="width:100%;"><thead><tr><th>Producto</th><th>Talle</th><th>Color</th><th style="width:70px;">Cant.</th><th style="width:110px;">Precio bordado</th><th style="width:90px;">Subtotal</th><th></th></tr></thead><tbody>';
+  bstItemsTemp.forEach(function(it,i){
+    var sub=Number(it.cantidad||0)*Number(it.precio_unit||0);
+    html+='<tr>'
+      +'<td><select onchange="bstItemChange('+i+',\'prod\',this)" style="min-width:150px;"><option value="">— Producto —</option>'+prodOpts+'</select></td>'
+      +'<td><input placeholder="Talle" value="'+esc(it.talle||'')+'" oninput="bstItemChange('+i+',\'talle\',this)" style="width:70px;"/></td>'
+      +'<td><input placeholder="Color" value="'+esc(it.color||'')+'" oninput="bstItemChange('+i+',\'color\',this)" style="width:80px;text-transform:uppercase;"/></td>'
+      +'<td><input type="number" value="'+(it.cantidad||'')+'" min="1" oninput="bstItemChange('+i+',\'qty\',this)" style="width:60px;"/></td>'
+      +'<td><input type="number" value="'+(it.precio_unit||'')+'" min="0" step="0.01" placeholder="0" oninput="bstItemChange('+i+',\'precio\',this)" style="width:100px;"/></td>'
+      +'<td style="text-align:right;font-weight:700;font-size:13px;">'+$p(sub)+'</td>'
+      +'<td><button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;padding:3px 7px;" onclick="bstRemItem('+i+')">✕</button></td>'
+      +'</tr>';
+    // Set selected product
+    setTimeout(function(){var s=document.querySelector('#mbst-items tbody tr:nth-child('+(i+1)+') select');if(s&&it.producto_id)s.value=it.producto_id;},0);
+  });
+  html+='</tbody></table>';
+  cont.innerHTML=html;
+  var total=bstItemsTemp.reduce(function(s,it){return s+Number(it.cantidad||0)*Number(it.precio_unit||0);},0);
+  document.getElementById('mbst-total').textContent=$p(total);
+}
+
+function bstAddItem(){
+  bstItemsTemp.push({producto_id:null,producto_nombre:'',talle:'',color:'',cantidad:0,precio_unit:0});
+  renderBordStockItems();
+}
+function bstRemItem(i){bstItemsTemp.splice(i,1);renderBordStockItems();}
+function bstItemChange(i,field,el){
+  var it=bstItemsTemp[i];
+  if(field==='prod'){
+    it.producto_id=el.value?Number(el.value):null;
+    var p=PRODUCTOS.find(function(x){return x.id===it.producto_id;});
+    it.producto_nombre=p?p.nombre:'';
+    it.precio_unit=p&&p.costo?Number(p.costo):it.precio_unit;
+  } else if(field==='talle'){it.talle=el.value.toUpperCase();}
+  else if(field==='color'){it.color=el.value.toUpperCase();}
+  else if(field==='qty'){it.cantidad=Number(el.value)||0;}
+  else if(field==='precio'){it.precio_unit=Number(el.value)||0;}
+  renderBordStockItems();
+}
+
+async function saveLoteBordStock(){
+  var btn=document.getElementById('mbst-save-btn');
+  if(btn&&btn.disabled)return;
+  if(btn){btn.disabled=true;btn.textContent='Guardando…';}
+  var unlock=function(){if(btn){btn.disabled=false;btn.textContent='💾 Guardar lote';}};
+  var talId=document.getElementById('mbst-tal').value;
+  var fecha=document.getElementById('mbst-fecha').value;
+  if(!talId||!fecha){unlock();toast('Completá tallerista y fecha','err');return;}
+  var items=bstItemsTemp.filter(function(i){return i.producto_id&&Number(i.cantidad)>0;});
+  if(!items.length){unlock();toast('Agregá al menos una prenda','err');return;}
+  var payload={tallerista_id:Number(talId),fecha_envio:fecha,nota:document.getElementById('mbst-nota').value||null,updated_at:new Date().toISOString()};
+  var loteId;
+  if(editBstId){
+    var r=await sb.from('lotes_bordado_stock').update(payload).eq('id',editBstId);
+    if(r.error){unlock();toast('Error: '+r.error.message,'err');return;}
+    loteId=editBstId;
+    await sb.from('lotes_bordado_stock_items').delete().eq('lote_id',loteId);
+    // Revertir movimientos anteriores (salida) antes de recrear
+    // Se re-insertan los nuevos movimientos sólo si hay cambios de cantidad
+  } else {
+    payload.estado='en_proceso';
+    var r=await sb.from('lotes_bordado_stock').insert(payload).select().single();
+    if(r.error){unlock();toast('Error: '+r.error.message,'err');return;}
+    loteId=r.data.id;
+  }
+  var ri=await sb.from('lotes_bordado_stock_items').insert(items.map(function(i){
+    return {lote_id:loteId,producto_id:i.producto_id,producto_nombre:i.producto_nombre,talle:i.talle||'',color:i.color||'',cantidad:Number(i.cantidad),precio_unit:Number(i.precio_unit||0)};
+  }));
+  if(ri.error){unlock();toast('Error en ítems: '+ri.error.message,'err');return;}
+  // Registrar salidas de stock (solo en creación nueva)
+  if(!editBstId){
+    var tal=TALLERISTAS.find(function(t){return t.id===Number(talId);});
+    for(var idx=0;idx<items.length;idx++){
+      var it=items[idx];
+      await sb.from('movimientos_stock').insert({
+        tipo:'salida',producto_id:it.producto_id,producto_nombre:it.producto_nombre,
+        local:'deposito',talle:it.talle||'',color:it.color||'',cantidad:Number(it.cantidad),
+        origen:'bordado_stock',origen_id:loteId,
+        fecha:fecha,nota:'Envío a bordado — '+(tal?tal.nombre:'')
+      });
+    }
+  }
+  toast(editBstId?'Lote actualizado':'Lote creado — stock descontado','ok');
+  closeM('m-bord-stock');
+  await Promise.all([loadLotesBordStock(),loadLotesBordStockItems(),loadMovimientosStock()]);
+  renderBordStock();
+}
+
+async function recibirLoteBordStock(id){
+  var btn=document.getElementById('btn-bst-rec-'+id);
+  if(btn&&btn.disabled)return;
+  if(btn){btn.disabled=true;btn.textContent='Procesando…';}
+  var lote=LOTES_BORD_STOCK.find(function(l){return l.id===id;});
+  var items=LOTES_BORD_STOCK_ITEMS.filter(function(i){return i.lote_id===id;});
+  if(!items.length){if(btn){btn.disabled=false;btn.textContent='📥 Marcar recibido';}toast('El lote no tiene ítems','err');return;}
+  var generarLiq=confirm('¿Generar la liquidación al tallerista por este bordado?');
+  var hoy=today();
+  // Actualizar lote
+  await sb.from('lotes_bordado_stock').update({estado:'recibido',fecha_retorno:hoy,updated_at:new Date().toISOString()}).eq('id',id);
+  // Entradas de stock
+  var tal=TALLERISTAS.find(function(t){return t.id===lote.tallerista_id;});
+  for(var idx=0;idx<items.length;idx++){
+    var it=items[idx];
+    await sb.from('movimientos_stock').insert({
+      tipo:'entrada',producto_id:it.producto_id,producto_nombre:it.producto_nombre,
+      local:'deposito',talle:it.talle||'',color:it.color||'',cantidad:Number(it.cantidad),
+      origen:'bordado_stock_retorno',origen_id:id,
+      fecha:hoy,nota:'Retorno bordado — '+(tal?tal.nombre:'')
+    });
+  }
+  // Generar recepción para liquidación tallerista
+  if(generarLiq&&lote.tallerista_id){
+    var rRec=await sb.from('tal_recepciones').insert({
+      tallerista_id:lote.tallerista_id,fecha:hoy,estado:'pendiente',
+      nota:'Bordado stock — lote #'+id+(lote.nota?' ('+lote.nota+')':''),
+      updated_at:new Date().toISOString()
+    }).select().single();
+    if(!rRec.error&&rRec.data){
+      var recId=rRec.data.id;
+      await sb.from('tal_recepciones_items').insert(items.map(function(i){
+        return {recepcion_id:recId,prenda:i.producto_nombre+(i.talle?' '+i.talle:'')+(i.color?' '+i.color:''),cantidad:Number(i.cantidad),precio_unit:Number(i.precio_unit||0)};
+      }));
+    }
+  }
+  toast('Lote recibido — stock actualizado'+(generarLiq?' y liquidación generada':''),'ok');
+  await Promise.all([loadLotesBordStock(),loadLotesBordStockItems(),loadMovimientosStock(),loadTalRecepciones(),loadTalRecepcionesItems()]);
+  renderBordStock();
+}
+
+async function deleteLoteBordStock(id){
+  var lote=LOTES_BORD_STOCK.find(function(l){return l.id===id;});
+  if(lote&&lote.estado==='recibido'){toast('No se puede eliminar un lote ya recibido','err');return;}
+  if(!confirm('¿Eliminar este lote de bordado?'))return;
+  await sb.from('lotes_bordado_stock_items').delete().eq('lote_id',id);
+  await sb.from('lotes_bordado_stock').delete().eq('id',id);
+  toast('Lote eliminado','info');
+  await Promise.all([loadLotesBordStock(),loadLotesBordStockItems()]);
+  renderBordStock();
 }
 
 // ── BORDADO ────────────────────────────────────────────────
@@ -18654,6 +19026,8 @@ async function saveMovStock(){
 async function loadTalRecepciones(){var {data}=await sb.from('tal_recepciones').select('*').order('fecha',{ascending:false});TAL_RECEPCIONES=data||[];}
 async function loadTalRecepcionesItems(){var {data}=await sb.from('tal_recepciones_items').select('*');TAL_RECEPCIONES_ITEMS=data||[];}
 async function loadTalPagos(){var {data}=await sb.from('tal_pagos').select('*').order('fecha',{ascending:false});TAL_PAGOS=data||[];}
+async function loadLotesBordStock(){var {data}=await sb.from('lotes_bordado_stock').select('*').order('fecha_envio',{ascending:false});LOTES_BORD_STOCK=data||[];}
+async function loadLotesBordStockItems(){var {data}=await sb.from('lotes_bordado_stock_items').select('*');LOTES_BORD_STOCK_ITEMS=data||[];}
 
 function talRecTotal(recId){
   return TAL_RECEPCIONES_ITEMS.filter(function(i){return i.recepcion_id===recId;}).reduce(function(s,i){return s+Number(i.cantidad||0)*Number(i.precio_unit||0);},0);
@@ -18996,6 +19370,7 @@ function renderCmpItemsModal(){
   var avOpts=AVIOS.map(function(a){return '<option value="'+a.id+'">'+esc(a.nombre)+'</option>';}).join('');
   var telOpts=TELAS_TIPOS.map(function(t){return '<option value="'+esc(t.nombre)+'">'+esc(t.nombre)+'</option>';}).join('');
   var prodOpts=PRODUCTOS.map(function(p){return '<option value="'+p.id+'">'+esc(p.nombre)+(p.codigo?' ('+esc(p.codigo)+')':'')+'</option>';}).join('');
+  var matOpts=MATERIALES.filter(function(m){return m.activo!==false;}).map(function(m){return '<option value="'+m.id+'">'+esc(m.nombre)+(m.color?' — '+esc(m.color):'')+'</option>';}).join('');
   var html='<table style="width:100%;"><thead><tr><th>Tipo</th><th>Material / Local</th><th>Color / Talle</th><th>Unidad</th><th style="width:70px;">Cant.</th><th style="width:100px;">Precio unit.</th><th>Subtotal</th><th></th></tr></thead><tbody>';
   cmpItemsTemp.forEach(function(it,i){
     var matHtml='';
@@ -19012,6 +19387,8 @@ function renderCmpItemsModal(){
         +'<option value="llavallol"'+(localVal==='llavallol'?' selected':'')+'>🏪 Llavallol</option>'
         +'<option value="montegrande"'+(localVal==='montegrande'?' selected':'')+'>🏪 Monte Grande</option>'
         +'</select></div>';
+    } else if(it.tipo==='mat_prima'){
+      matHtml='<select onchange="cmpItemChange('+i+',\'mat\',this)" style="min-width:130px;"><option value="">— Material —</option>'+matOpts+'</select>';
     } else {
       matHtml='<input placeholder="Descripción" value="'+esc(it.material_nombre||'')+'" oninput="cmpItemChange('+i+',\'desc\',this)" style="min-width:130px;"/>';
     }
@@ -19036,7 +19413,7 @@ function renderCmpItemsModal(){
       colorHtml='<span style="color:#d1d5db;">—</span>';
     }
     var cmpCantHtml=it.tipo==='tela'?(function(){var tela=TELAS_TIPOS.find(function(t){return t.nombre===it.material_nombre;});var kgPR=Number(tela&&tela.kg_por_rollo||20);var kg=Number(it.cantidad||0);var rollosStr=kg>0?(kg/kgPR).toFixed(1):'—';return '<td><input type="number" value="'+kg+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'cant\',this)" style="width:70px;"/><div id="cmp-rollos-'+i+'" style="font-size:11px;color:#6c7ae0;margin-top:2px;">≈ '+rollosStr+' rollos</div></td>';})():'<td><input type="number" value="'+(it.cantidad||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'cant\',this)" style="width:70px;"/></td>';
-    html+='<tr id="cmp-row-'+i+'"><td><select onchange="cmpItemChangeTipo('+i+',this)" style="width:90px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="producto"'+(it.tipo==='producto'?' selected':'')+'>Producto</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td>'+colorHtml+'</td><td><input value="'+esc(it.unidad||'kg')+'" oninput="cmpItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td>'+cmpCantHtml+'<td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="cmp-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="cmpRemItem('+i+')">✕</button></td></tr>';
+    html+='<tr id="cmp-row-'+i+'"><td><select onchange="cmpItemChangeTipo('+i+',this)" style="width:100px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="producto"'+(it.tipo==='producto'?' selected':'')+'>Producto</option><option value="mat_prima"'+(it.tipo==='mat_prima'?' selected':'')+'>Mat. Prima</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td>'+colorHtml+'</td><td><input value="'+esc(it.unidad||'kg')+'" oninput="cmpItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td>'+cmpCantHtml+'<td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="cmp-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="cmpRemItem('+i+')">✕</button></td></tr>';
   });
   html+='</tbody></table>';
   document.getElementById('mcmp-items').innerHTML=html;
@@ -19048,6 +19425,7 @@ function renderCmpItemsModal(){
     if(it.tipo==='avio'&&it.material_id)sels[1].value=it.material_id;
     if(it.tipo==='tela'&&it.material_nombre)sels[1].value=it.material_nombre;
     if(it.tipo==='producto'&&it.material_id)sels[1].value=it.material_id;
+    if(it.tipo==='mat_prima'&&it.material_id)sels[1].value=it.material_id;
   });
   cmpCalcTotal();
 }
@@ -19057,6 +19435,7 @@ function cmpItemChangeTipo(i,el){
   if(el.value==='avio')cmpItemsTemp[i].unidad='unidades';
   if(el.value==='tela')cmpItemsTemp[i].unidad='kg';
   if(el.value==='producto'){cmpItemsTemp[i].unidad='unidades';cmpItemsTemp[i].material_color='mayorista';}
+  if(el.value==='mat_prima')cmpItemsTemp[i].unidad='unidades';
   renderCmpItemsModal();
 }
 function cmpItemChange(i,field,el){
@@ -19065,6 +19444,7 @@ function cmpItemChange(i,field,el){
     if(tipo==='avio'){cmpItemsTemp[i].material_id=Number(el.value)||null;var av=AVIOS.find(function(a){return a.id===Number(el.value);});cmpItemsTemp[i].material_nombre=av?av.nombre:'';}
     if(tipo==='tela'){cmpItemsTemp[i].material_nombre=el.value;cmpItemsTemp[i].material_color='';_actualizarRollosHelper('cmp',i,cmpItemsTemp[i]);renderCmpItemsModal();return;}
     if(tipo==='producto'){cmpItemsTemp[i].material_id=Number(el.value)||null;var pr=PRODUCTOS.find(function(p){return p.id===Number(el.value);});cmpItemsTemp[i].material_nombre=pr?pr.nombre:'';}
+    if(tipo==='mat_prima'){cmpItemsTemp[i].material_id=Number(el.value)||null;var mp=MATERIALES.find(function(m){return m.id===Number(el.value);});cmpItemsTemp[i].material_nombre=mp?mp.nombre:'';}
   }
   if(field==='local')cmpItemsTemp[i].material_color=el.value;
   if(field==='talle')cmpItemsTemp[i].material_talle=el.value;
@@ -19154,8 +19534,9 @@ async function eliminarCompra(id){
   if(!compra)return;
   if(compra.estado==='recibida'||compra.estado==='confirmada'){toast('Solo se pueden eliminar borradores o canceladas','err');return;}
   if(!confirm('¿Eliminar definitivamente esta orden de compra? Esta acción no se puede deshacer.'))return;
-  // Eliminar ítems primero
-  await sb.from('compras_items').delete().eq('compra_id',id);
+  // Eliminar ítems primero — si falla, no se toca la compra
+  var ri=await sb.from('compras_items').delete().eq('compra_id',id);
+  if(ri.error){toast('Error al eliminar ítems: '+ri.error.message,'err');return;}
   var r=await sb.from('compras').delete().eq('id',id);
   if(r.error){toast('Error al eliminar: '+r.error.message,'err');return;}
   toast('Orden de compra eliminada','info');
@@ -19222,6 +19603,18 @@ async function recibirCompra(id){
       });
       await sb.from('historial_precios').insert({tipo:'producto',material_id:it.material_id,material_nombre:prodNom,fecha:compra.fecha,precio_unit:it.precio_unit,compra_id:id});
     }
+    if(it.tipo==='mat_prima'&&it.material_id){
+      var matRec=MATERIALES.find(function(m){return m.id===it.material_id;});
+      if(matRec){
+        await sb.from('materiales').update({cantidad:Number(matRec.cantidad||0)+Number(it.cantidad||0),precio_unitario:it.precio_unit,updated_at:new Date().toISOString()}).eq('id',it.material_id);
+      }
+      await sb.from('movimientos_stock').insert({
+        tipo:'entrada',producto_id:null,producto_nombre:it.material_nombre||'',
+        local:'deposito',talle:'',color:'',cantidad:Number(it.cantidad||0),
+        origen:'compra',origen_id:id,
+        fecha:compra.fecha,nota:'Compra mat. prima #'+id+(compra.nro_compra?' — '+compra.nro_compra:'')
+      });
+    }
     if(it.tipo!=='producto')await sb.from('historial_precios').insert({tipo:it.tipo,material_id:it.material_id||null,material_nombre:it.material_nombre,fecha:compra.fecha,precio_unit:it.precio_unit,compra_id:id});
   }
   await sb.from('compras').update({estado:'recibida',updated_at:new Date().toISOString()}).eq('id',id);
@@ -19231,7 +19624,7 @@ async function recibirCompra(id){
     await Promise.all([loadProvFacturas(),loadFacturaPagos()]);
   }
   toast('Compra recibida — stock y precios actualizados','ok');
-  await Promise.all([loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadAvios(),loadTelasTipos(),loadTelasStock(),loadFichasCostoTelas(),loadStock(),loadProductos()]);
+  await Promise.all([loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadAvios(),loadTelasTipos(),loadTelasStock(),loadFichasCostoTelas(),loadStock(),loadProductos(),loadMateriales()]);
   renderCompras();
 }
 
