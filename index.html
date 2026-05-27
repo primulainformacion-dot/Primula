@@ -7335,7 +7335,7 @@ async function saveLiqCheques(){
       if(!asigs.length)continue;
       var totalUsado=asigs.reduce(function(s,a){return s+Number(a.monto);},0);
       await sb.from('cheque_usos').insert({cheque_id:chq.cheque_id,proveedor_id:liqEntityId,destinatario:prov.nombre,monto:totalUsado,fecha,concepto:'Liquidación múltiple',nota:null});
-      await sb.from('movimientos').insert({tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:totalUsado,concepto:'CHEQUES/TRANSFERENCIAS',detalle:'Pago a '+prov.nombre+(chq.numero?' · Cheque N°'+chq.numero:''),nota:null});
+      await sb.from('movimientos').insert({tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:totalUsado,concepto:'CHEQUES/TRANSFERENCIAS',detalle:'Pago a '+prov.nombre+(chq.numero?' · Cheque N°'+chq.numero:'')});
       if(saldoChequeUso(chq.cheque_id)-totalUsado<=0.01)await sb.from('cheques_cartera').update({estado:'endosado',updated_at:new Date().toISOString()}).eq('id',chq.cheque_id);
     }
     // Una factura_pagos por cada asignación (preserva qué cheque pagó qué factura)
@@ -7365,7 +7365,7 @@ async function saveLiqCheques(){
       var {data:ins,error:eins}=await sb.from('cheques_cartera').insert({tipo:nc.chqTipo||'cheque',emisor:nc.emisor,numero:nc.numero||null,banco:nc.banco||null,monto:nc.monto,fecha_recibido:fecha,fecha_cobro:nc.fecha_cobro||null,estado:'en_cartera',nota:null}).select('id');
       if(eins){toast('Error al crear cheque: '+eins.message,'err');return;}
       chqIdMap.push(ins&&ins[0]?ins[0].id:null);
-      await sb.from('movimientos').insert({tipo:'ingreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:Number(nc.monto),egreso:0,concepto:'COBRO CLIENTE',detalle:'Cobro de '+cli2.nombre+(nc.numero?' · Cheque N°'+nc.numero:''),nota:null});
+      await sb.from('movimientos').insert({tipo:'ingreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:Number(nc.monto),egreso:0,concepto:'COBRO CLIENTE',detalle:'Cobro de '+cli2.nombre+(nc.numero?' · Cheque N°'+nc.numero:'')});
     }
     // Un cobro por cada asignación (trazabilidad por cheque y venta)
     for(var ai2=0;ai2<liqAsigArr.length;ai2++){
@@ -12224,13 +12224,13 @@ async function saveChqDepositar(){
   // Ingreso en el banco destino
   var rMov=await sb.from('movimientos').insert({
     tipo:'ingreso',caja,fecha,ingreso:monto,egreso:0,
-    concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleTexto,nota:notaDeposito
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleTexto
   });
   if(rMov.error){toast('Error al registrar movimiento: '+rMov.error.message,'err');return;}
   // Egreso de CHEQUES AL COBRO (el cheque ya estaba depositado, ahora se acredita)
   await sb.from('movimientos').insert({
     tipo:'egreso',caja:'CHEQUES AL COBRO',fecha,ingreso:0,egreso:monto,
-    concepto:'CHEQUES/TRANSFERENCIAS',detalle:'Acreditado en '+caja+' · '+detalle,nota:notaDeposito
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle:'Acreditado en '+caja+' · '+detalle
   });
   // Marcar cheque como depositado/acreditado
   var nuevoEstado=monto>=saldo-0.01?'depositado':c.estado;
@@ -12271,13 +12271,13 @@ async function saveChqAlCobro(){
   // Egreso de CHEQUES/ECHEQ
   var r1=await sb.from('movimientos').insert({
     tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:monto,
-    concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalle,nota
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalle
   });
   if(r1.error){toast('Error: '+r1.error.message,'err');return;}
   // Ingreso en CHEQUES AL COBRO
   await sb.from('movimientos').insert({
     tipo:'ingreso',caja:'CHEQUES AL COBRO',fecha,ingreso:monto,egreso:0,
-    concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalle,nota
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalle
   });
   // Actualizar estado del cheque
   await sb.from('cheques_cartera').update({
