@@ -4685,6 +4685,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div style="font-size:32px;margin-bottom:8px;">📂</div>
       <div style="font-weight:700;color:#374151;margin-bottom:4px;">Seleccioná el archivo Excel</div>
       <div style="font-size:12px;color:#9ca3af;">Columnas esperadas: PROVEEDOR · FECHA · TI · PO · N° DE FACTURA · NETO GRAVADO · IVA · ARBA · DIA VENCIM</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:4px;">TI puede ser: Factura (FA/FB/A/B) · Nota de débito (ND) · Remito (compras en negro)</div>
       <input type="file" id="import-fact-file" accept=".xlsx,.xls" style="display:none;" onchange="parseFacturasExcel(this)"/>
     </div>
 
@@ -4693,7 +4694,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <span style="font-size:12px;font-weight:700;color:#374151;">Importar tipos:</span>
       <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="import-ti-factura" checked onchange="renderFacturasImportPreview()"/> Facturas</label>
       <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="import-ti-nd" checked onchange="renderFacturasImportPreview()"/> Notas de débito</label>
-      <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="import-ti-remito" onchange="renderFacturasImportPreview()"/> Remitos</label>
+      <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="import-ti-remito" checked onchange="renderFacturasImportPreview()"/> Remitos <span style="font-size:11px;color:#9ca3af;">(compras en negro)</span></label>
       <span id="import-fact-resumen" style="font-size:12px;color:#6c7ae0;font-weight:700;margin-left:auto;"></span>
     </div>
 
@@ -6164,6 +6165,8 @@ function renderProvCC(){
 // IMPORTADOR DE FACTURAS DESDE EXCEL
 // ══════════════════════════════════════════════
 var importFacturasData=[];
+var importRowsData=[];    // filas crudas para precio por producto
+var importPreciosData=[]; // productos matcheados con precio nuevo
 
 function openImportFacturasModal(){
   importFacturasData=[];
@@ -6286,14 +6289,21 @@ function procesarFilasFacturas(rows){
     var ng=parsearNumero(excelCol(row,['NETO GRAVADO','NETO']));
     var iva=parsearNumero(excelCol(row,['IVA']));
     var arba=parsearNumero(excelCol(row,['ARBA']));
+    var precioNeto=parsearNumero(excelCol(row,['PRECIO NETO','PRECIO UNITARIO']));
     grupos[key].neto_gravado+=ng;
     grupos[key].iva+=iva;
     grupos[key].arba+=arba;
-    grupos[key].monto_total+=ng+iva+arba;
+    // Remitos (en negro): usar PRECIO NETO directo; facturas/ND: neto + IVA + ARBA
+    if(grupos[key].tipo_clase==='remito'){
+      grupos[key].monto_total+=precioNeto||ng;
+    } else {
+      grupos[key].monto_total+=ng+iva+arba;
+    }
     var prod=String(excelCol(row,['PRODUCTO','DESCRIPCION'])).trim();
     if(prod&&!grupos[key].productos.includes(prod))grupos[key].productos.push(prod);
   });
 
+  importRowsData=rows; // guardar filas crudas para historial de precios
   importFacturasData=Object.values(grupos);
   // Matching con proveedores
   importFacturasData.forEach(function(inv){
@@ -6311,9 +6321,40 @@ function procesarFilasFacturas(rows){
     }
   });
 
+  // Procesar precios de productos
+  procesarPreciosProductos(rows);
   var filtrosEl=document.getElementById('import-fact-filtros');
   if(filtrosEl)filtrosEl.style.display='flex';
   renderFacturasImportPreview();
+}
+
+function procesarPreciosProductos(rows){
+  var vistos={};
+  importPreciosData=[];
+  rows.forEach(function(row){
+    var nombre=String(excelCol(row,['PRODUCTO','DESCRIPCION'])).trim();
+    var precio=parsearNumero(excelCol(row,['PRECIO UNITARIO']));
+    if(!nombre||!precio)return;
+    var key=nombre.toUpperCase();
+    if(vistos[key]){
+      // Si aparece varias veces, tomar el precio más alto de la tanda
+      if(precio>vistos[key].precio_nuevo)vistos[key].precio_nuevo=precio;
+      return;
+    }
+    var match=PRODUCTOS.find(function(p){
+      return p.nombre.trim().toUpperCase()===key;
+    });
+    var entry={
+      nombre_excel:nombre,
+      precio_nuevo:precio,
+      producto_id:match?match.id:null,
+      producto_nombre:match?match.nombre:null,
+      costo_actual:match?(Number(match.costo)||0):null,
+      estado:match?'match':'sin_match'
+    };
+    importPreciosData.push(entry);
+    vistos[key]=entry;
+  });
 }
 
 function getImportTiposFiltro(){
@@ -6352,6 +6393,46 @@ function renderFacturasImportPreview(){
   var estadoColor={'nuevo':'#dcfce7','existe':'#fef3c7','sin_prov':'#fee2e2'};
   var estadoIcon={'nuevo':'✅','existe':'⚠️','sin_prov':'❌'};
 
+  // Sección precios de productos
+  var matcheados=importPreciosData.filter(function(p){return p.estado==='match';});
+  var sinMatch=importPreciosData.filter(function(p){return p.estado==='sin_match';});
+  var preciosSec='<div style="margin-top:16px;border-top:2px solid #e5e7eb;padding-top:14px;">'+
+    '<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px;">💲 Precios de productos a actualizar '+
+      '<span style="font-weight:400;color:#9ca3af;font-size:12px;">'+matcheados.length+' coinciden · '+sinMatch.length+' sin coincidencia</span></div>'+
+    (importPreciosData.length?
+      '<div class="tbl"><table style="width:100%;font-size:12px;"><thead>'+
+        '<tr style="background:#f3f4f6;">'+
+          '<th style="padding:6px 10px;text-align:left;">Producto Excel</th>'+
+          '<th style="padding:6px 10px;text-align:left;">Producto en catálogo</th>'+
+          '<th style="padding:6px 10px;text-align:right;">Costo actual</th>'+
+          '<th style="padding:6px 10px;text-align:right;">Precio nuevo</th>'+
+          '<th style="padding:6px 10px;text-align:center;">Cambio</th>'+
+        '</tr></thead><tbody>'+
+        importPreciosData.map(function(p){
+          var cambio='';
+          if(p.estado==='match'&&p.costo_actual!==null){
+            var diff=p.precio_nuevo-p.costo_actual;
+            if(Math.abs(diff)<0.01)cambio='<span style="color:#9ca3af;">Sin cambio</span>';
+            else if(diff>0)cambio='<span style="color:#dc2626;font-weight:700;">↑ +'+$p(diff)+'</span>';
+            else cambio='<span style="color:#16a34a;font-weight:700;">↓ '+$p(diff)+'</span>';
+          }
+          return '<tr style="border-bottom:1px solid #f3f4f6;">'+
+            '<td style="padding:6px 10px;font-weight:600;">'+p.nombre_excel+'</td>'+
+            '<td style="padding:6px 10px;">'+
+              (p.estado==='match'
+                ?'<span style="color:#16a34a;">✅ '+p.producto_nombre+'</span>'
+                :'<span style="color:#9ca3af;font-size:11px;">❌ Sin coincidencia en catálogo</span>')+
+            '</td>'+
+            '<td style="padding:6px 10px;text-align:right;color:#9ca3af;">'+
+              (p.costo_actual!==null?$p(p.costo_actual):'—')+
+            '</td>'+
+            '<td style="padding:6px 10px;text-align:right;font-weight:700;color:#6c7ae0;">'+$p(p.precio_nuevo)+'</td>'+
+            '<td style="padding:6px 10px;text-align:center;">'+cambio+'</td>'+
+          '</tr>';
+        }).join('')+'</tbody></table></div>'
+      :'<div style="font-size:12px;color:#9ca3af;">Sin productos con precio unitario detectados</div>')+
+  '</div>';
+
   prev.innerHTML='<div class="tbl"><table style="width:100%;font-size:12px;"><thead>'+
     '<tr style="background:#f3f4f6;">'+
       '<th style="padding:7px 10px;text-align:left;">Tipo</th>'+
@@ -6365,7 +6446,7 @@ function renderFacturasImportPreview(){
       '<th style="padding:7px 10px;text-align:right;font-weight:800;">Total</th>'+
       '<th style="padding:7px 10px;text-align:left;">Estado</th>'+
     '</tr></thead><tbody>'+
-  visibles.map(function(inv,idx){
+  visibles.map(function(inv){
     var globalIdx=importFacturasData.indexOf(inv);
     var bg=estadoColor[inv.estado]||'';
     var tipoC=tipoColor[inv.tipo_clase]||'#9ca3af';
@@ -6395,7 +6476,7 @@ function renderFacturasImportPreview(){
       '<td style="padding:7px 10px;text-align:right;font-weight:800;">'+$p(inv.monto_total)+'</td>'+
       '<td style="padding:7px 10px;white-space:nowrap;">'+estadoIcon[inv.estado]+' '+(inv.estado==='nuevo'?'Nuevo':inv.estado==='existe'?'Ya existe':'Sin proveedor')+'</td>'+
     '</tr>';
-  }).join('')+'</tbody></table></div>';
+  }).join('')+'</tbody></table></div>'+preciosSec;
 }
 
 function importFactSelProv(idx,provId){
@@ -6428,7 +6509,6 @@ async function executeFacturasImport(){
       fecha_vencimiento:inv.fecha_vencimiento||null,
       monto_total:Math.round(inv.monto_total*100)/100,
       concepto:concepto,
-      tipo_comprobante:inv.tipo||null,
       estado:'pendiente'
     };
     var r=await sb.from('proveedor_facturas').insert(d);
@@ -6436,9 +6516,32 @@ async function executeFacturasImport(){
     else ok++;
   }
 
+  // Actualizar precios de productos
+  var fechaRef=aImportar.length&&aImportar[0].fecha?aImportar[0].fecha:today();
+  var preciosOk=0;
+  var preciosActualizar=importPreciosData.filter(function(p){return p.estado==='match'&&p.precio_nuevo>0;});
+  for(var j=0;j<preciosActualizar.length;j++){
+    var p=preciosActualizar[j];
+    // Actualizar costo en productos
+    await sb.from('productos').update({costo:p.precio_nuevo,updated_at:new Date().toISOString()}).eq('id',p.producto_id);
+    // Guardar en historial_precios
+    await sb.from('historial_precios').insert({
+      tipo:'producto_compra',
+      material_nombre:p.nombre_excel,
+      material_id:null,
+      fecha:fechaRef,
+      precio_unit:p.precio_nuevo,
+      compra_id:null
+    });
+    preciosOk++;
+  }
+
   if(btnEl){btnEl.disabled=false;}
-  toast(ok+' factura'+(ok!==1?'s':'')+' importada'+(ok!==1?'s':'')+(err?' · '+err+' error'+(err!==1?'es':''):''),'info');
-  await Promise.all([loadProvFacturas(),loadFacturaPagos()]);
+  var msg=ok+' factura'+(ok!==1?'s':'')+' importada'+(ok!==1?'s':'');
+  if(preciosOk)msg+=' · '+preciosOk+' precio'+(preciosOk!==1?'s':'')+' actualizado'+(preciosOk!==1?'s':'');
+  if(err)msg+=' · '+err+' error'+(err!==1?'es':'');
+  toast(msg,'info');
+  await Promise.all([loadProvFacturas(),loadFacturaPagos(),loadProductos(),loadHistorialPrecios()]);
   renderProvCC();renderPanelGeneral();
   closeM('m-import-facturas');
 }
@@ -18577,36 +18680,55 @@ function openCompraModal(id){
 function renderCmpItemsModal(){
   var avOpts=AVIOS.map(function(a){return '<option value="'+a.id+'">'+esc(a.nombre)+'</option>';}).join('');
   var telOpts=TELAS_TIPOS.map(function(t){return '<option value="'+esc(t.nombre)+'">'+esc(t.nombre)+'</option>';}).join('');
-  var html='<table style="width:100%;"><thead><tr><th>Tipo</th><th>Material</th><th>Color</th><th>Unidad</th><th style="width:70px;">Cant.</th><th style="width:100px;">Precio unit.</th><th>Subtotal</th><th></th></tr></thead><tbody>';
+  var prodOpts=PRODUCTOS.map(function(p){return '<option value="'+p.id+'">'+esc(p.nombre)+(p.codigo?' ('+esc(p.codigo)+')':'')+'</option>';}).join('');
+  var html='<table style="width:100%;"><thead><tr><th>Tipo</th><th>Material / Local</th><th>Color / Talle</th><th>Unidad</th><th style="width:70px;">Cant.</th><th style="width:100px;">Precio unit.</th><th>Subtotal</th><th></th></tr></thead><tbody>';
   cmpItemsTemp.forEach(function(it,i){
     var matHtml='';
     if(it.tipo==='avio'){
       matHtml='<select onchange="cmpItemChange('+i+',\'mat\',this)" style="min-width:130px;"><option value="">— Avío —</option>'+avOpts+'</select>';
     } else if(it.tipo==='tela'){
       matHtml='<select onchange="cmpItemChange('+i+',\'mat\',this)" style="min-width:130px;"><option value="">— Tela —</option>'+telOpts+'</select>';
+    } else if(it.tipo==='producto'){
+      var localVal=it.material_color||'mayorista';
+      matHtml='<div style="display:flex;flex-direction:column;gap:4px;">'
+        +'<select onchange="cmpItemChange('+i+',\'mat\',this)" style="min-width:130px;"><option value="">— Producto —</option>'+prodOpts+'</select>'
+        +'<select onchange="cmpItemChange('+i+',\'local\',this)" style="min-width:130px;font-size:11px;padding:3px 6px;">'
+        +'<option value="mayorista"'+(localVal==='mayorista'?' selected':'')+'>📦 Mayorista</option>'
+        +'<option value="llavallol"'+(localVal==='llavallol'?' selected':'')+'>🏪 Llavallol</option>'
+        +'<option value="montegrande"'+(localVal==='montegrande'?' selected':'')+'>🏪 Monte Grande</option>'
+        +'</select></div>';
     } else {
       matHtml='<input placeholder="Descripción" value="'+esc(it.material_nombre||'')+'" oninput="cmpItemChange('+i+',\'desc\',this)" style="min-width:130px;"/>';
     }
-    var colorHtml=it.tipo==='tela'?'<input placeholder="Ej: MARINO" value="'+esc(it.material_color||'')+'" oninput="cmpItemChange('+i+',\'color\',this)" style="width:90px;text-transform:uppercase;"/>':'<span style="color:#d1d5db;">—</span>';
-    html+='<tr id="cmp-row-'+i+'"><td><select onchange="cmpItemChangeTipo('+i+',this)" style="width:82px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td>'+colorHtml+'</td><td><input value="'+esc(it.unidad||'unidades')+'" oninput="cmpItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td><td><input type="number" value="'+(it.cantidad||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'cant\',this)" style="width:70px;"/></td><td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="cmp-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="cmpRemItem('+i+')">✕</button></td></tr>';
+    var colorHtml='';
+    if(it.tipo==='tela'){
+      colorHtml='<input placeholder="Ej: MARINO" value="'+esc(it.material_color||'')+'" oninput="cmpItemChange('+i+',\'color\',this)" style="width:90px;text-transform:uppercase;"/>';
+    } else if(it.tipo==='producto'){
+      colorHtml='<input placeholder="Talle (opt.)" value="'+esc(it.material_talle||'')+'" oninput="cmpItemChange('+i+',\'talle\',this)" style="width:80px;"/>';
+    } else {
+      colorHtml='<span style="color:#d1d5db;">—</span>';
+    }
+    html+='<tr id="cmp-row-'+i+'"><td><select onchange="cmpItemChangeTipo('+i+',this)" style="width:90px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="producto"'+(it.tipo==='producto'?' selected':'')+'>Producto</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td>'+colorHtml+'</td><td><input value="'+esc(it.unidad||'unidades')+'" oninput="cmpItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td><td><input type="number" value="'+(it.cantidad||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'cant\',this)" style="width:70px;"/></td><td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="cmp-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="cmpRemItem('+i+')">✕</button></td></tr>';
   });
   html+='</tbody></table>';
   document.getElementById('mcmp-items').innerHTML=html;
-  // Restaurar valores de selects para avíos y telas
+  // Restaurar valores de selects para avíos, telas y productos
   cmpItemsTemp.forEach(function(it,i){
     var row=document.getElementById('cmp-row-'+i);if(!row)return;
     var sels=row.querySelectorAll('select');
     if(sels.length<2)return;
     if(it.tipo==='avio'&&it.material_id)sels[1].value=it.material_id;
     if(it.tipo==='tela'&&it.material_nombre)sels[1].value=it.material_nombre;
+    if(it.tipo==='producto'&&it.material_id)sels[1].value=it.material_id;
   });
   cmpCalcTotal();
 }
 
 function cmpItemChangeTipo(i,el){
-  cmpItemsTemp[i].tipo=el.value;cmpItemsTemp[i].material_id=null;cmpItemsTemp[i].material_nombre='';cmpItemsTemp[i].material_color='';
+  cmpItemsTemp[i].tipo=el.value;cmpItemsTemp[i].material_id=null;cmpItemsTemp[i].material_nombre='';cmpItemsTemp[i].material_color='';cmpItemsTemp[i].material_talle='';
   if(el.value==='avio')cmpItemsTemp[i].unidad='unidades';
   if(el.value==='tela')cmpItemsTemp[i].unidad='rollos';
+  if(el.value==='producto'){cmpItemsTemp[i].unidad='unidades';cmpItemsTemp[i].material_color='mayorista';}
   renderCmpItemsModal();
 }
 function cmpItemChange(i,field,el){
@@ -18614,7 +18736,10 @@ function cmpItemChange(i,field,el){
     var tipo=cmpItemsTemp[i].tipo;
     if(tipo==='avio'){cmpItemsTemp[i].material_id=Number(el.value)||null;var av=AVIOS.find(function(a){return a.id===Number(el.value);});cmpItemsTemp[i].material_nombre=av?av.nombre:'';}
     if(tipo==='tela'){cmpItemsTemp[i].material_nombre=el.value;}
+    if(tipo==='producto'){cmpItemsTemp[i].material_id=Number(el.value)||null;var pr=PRODUCTOS.find(function(p){return p.id===Number(el.value);});cmpItemsTemp[i].material_nombre=pr?pr.nombre:'';}
   }
+  if(field==='local')cmpItemsTemp[i].material_color=el.value;
+  if(field==='talle')cmpItemsTemp[i].material_talle=el.value;
   if(field==='color')cmpItemsTemp[i].material_color=el.value.toUpperCase();
   if(field==='desc')cmpItemsTemp[i].material_nombre=el.value;
   if(field==='unidad')cmpItemsTemp[i].unidad=el.value;
@@ -18696,7 +18821,24 @@ async function recibirCompra(id){
         await sb.from('telas_stock').upsert({color:it.material_color,tipo_tela:it.material_nombre,rollos:nuevosRollos,updated_at:new Date().toISOString()},{onConflict:'color,tipo_tela'});
       }
     }
-    await sb.from('historial_precios').insert({tipo:it.tipo,material_id:it.material_id||null,material_nombre:it.material_nombre,fecha:compra.fecha,precio_unit:it.precio_unit,compra_id:id});
+    if(it.tipo==='producto'&&it.material_id){
+      var localProd=it.material_color||'mayorista';
+      var stActProd=STOCK.filter(function(s){return s.producto_id===it.material_id&&s.local===localProd&&(s.talle||'')===(it.material_talle||'')&&(s.color||'')==='';});
+      var qActProd=stActProd.reduce(function(s,x){return s+x.cantidad;},0);
+      await sb.from('stock').upsert(
+        {producto_id:it.material_id,local:localProd,talle:it.material_talle||'',color:'',cantidad:qActProd+Number(it.cantidad||0)},
+        {onConflict:'producto_id,local,talle,color'}
+      );
+      await sb.from('productos').update({costo:it.precio_unit,updated_at:new Date().toISOString()}).eq('id',it.material_id);
+      var prodNom=(PRODUCTOS.find(function(p){return p.id===it.material_id;})||{}).nombre||it.material_nombre||'';
+      await sb.from('movimientos_stock').insert({
+        tipo:'entrada',producto_id:it.material_id,producto_nombre:prodNom,
+        local:localProd,talle:it.material_talle||'',color:'',cantidad:Number(it.cantidad||0),
+        origen:'compra',origen_id:id,
+        fecha:compra.fecha,nota:'Compra #'+id+(compra.nro_compra?' — '+compra.nro_compra:'')
+      });
+    }
+    if(it.tipo!=='producto')await sb.from('historial_precios').insert({tipo:it.tipo,material_id:it.material_id||null,material_nombre:it.material_nombre,fecha:compra.fecha,precio_unit:it.precio_unit,compra_id:id});
   }
   await sb.from('compras').update({estado:'recibida',updated_at:new Date().toISOString()}).eq('id',id);
   if(regCC&&compra.proveedor_id){
@@ -18705,7 +18847,7 @@ async function recibirCompra(id){
     await Promise.all([loadProvFacturas(),loadFacturaPagos()]);
   }
   toast('Compra recibida — stock y precios actualizados','ok');
-  await Promise.all([loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadAvios(),loadTelasTipos(),loadTelasStock(),loadFichasCostoTelas()]);
+  await Promise.all([loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadAvios(),loadTelasTipos(),loadTelasStock(),loadFichasCostoTelas(),loadStock(),loadProductos()]);
   renderCompras();
 }
 
