@@ -11075,7 +11075,7 @@ async function saveChqDebitar(){
   // 1. Crear movimiento de egreso en el banco
   var movR=await sb.from('movimientos').insert({
     tipo:'egreso',caja:c.banco,fecha,ingreso:0,egreso:Number(c.monto),
-    concepto:'CHEQUES/TRANSFERENCIAS',detalle,nota:c.nota||null
+    concepto:'CHEQUES/TRANSFERENCIAS',detalle
   }).select('id').single();
   if(movR.error){toast('Error al crear movimiento: '+movR.error.message,'err');return;}
   var movId=movR.data.id;
