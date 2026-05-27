@@ -4718,11 +4718,15 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </select>
       </div>
       <div class="field"><label>N° Factura</label><input id="pfact-numero" placeholder="A-0001-00001234"/></div>
-      <div class="field"><label>Tipo</label>
-        <select id="pfact-tipo">
-          <option value="factura">Factura</option>
+      <div class="field"><label>Tipo de comprobante</label>
+        <select id="pfact-tipo" onchange="pfact_onTipo()">
+          <option value="A">Factura A</option>
+          <option value="B">Factura B</option>
+          <option value="C">Factura C</option>
+          <option value="X">Comprobante X</option>
+          <option value="ND">Nota de Débito</option>
+          <option value="NC">Nota de Crédito</option>
           <option value="remito">Remito</option>
-          <option value="nota_debito">Nota de débito</option>
         </select>
       </div>
       <div class="field"><label>Fecha *</label><input type="date" id="pfact-fecha"/></div>
@@ -4737,6 +4741,44 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
       <div class="field full"><label>Concepto</label><input id="pfact-concepto" placeholder="Materiales, telas, servicios..."/></div>
       <div class="field full"><label>Nota</label><input id="pfact-nota" placeholder="Observaciones opcionales"/></div>
+    </div>
+
+    <!-- Impuestos (solo Factura A) -->
+    <div id="pfact-impuestos-sect" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">🧾 Desglose impositivo — Factura A</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px;">
+        <div class="field" style="margin:0;">
+          <label style="font-size:12px;">Neto gravado $</label>
+          <input type="number" id="pfact-neto" min="0" step="0.01" placeholder="0" oninput="pfactAutoIva()"/>
+        </div>
+        <div class="field" style="margin:0;">
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;">
+            IVA $
+            <select id="pfact-iva-tasa" onchange="pfactAutoIva()" style="font-size:11px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;">
+              <option value="0.21">21%</option>
+              <option value="0.105">10.5%</option>
+              <option value="0.27">27%</option>
+              <option value="0">0% (exento)</option>
+            </select>
+          </label>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <input type="number" id="pfact-iva" min="0" step="0.01" placeholder="0" oninput="pfactCalcImpuestos()" style="flex:1;"/>
+            <button type="button" onclick="pfactAutoIva()" class="btn btn-sm btn-gray" title="Calcular desde neto" style="padding:4px 7px;font-size:11px;">= auto</button>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:#92400e;margin-bottom:8px;">Percepciones</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+        <div class="field" style="margin:0;"><label style="font-size:12px;">Percepción IIBB $</label><input type="number" id="pfact-iibb" min="0" step="0.01" placeholder="0" oninput="pfactCalcImpuestos()"/></div>
+        <div class="field" style="margin:0;"><label style="font-size:12px;">Percepción IVA $</label><input type="number" id="pfact-perc-iva" min="0" step="0.01" placeholder="0" oninput="pfactCalcImpuestos()"/></div>
+        <div class="field" style="margin:0;"><label style="font-size:12px;">Otras $</label><input type="number" id="pfact-otras-perc" min="0" step="0.01" placeholder="0" oninput="pfactCalcImpuestos()"/></div>
+      </div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid #fde68a;display:flex;gap:24px;font-size:13px;flex-wrap:wrap;">
+        <span style="color:#92400e;">Neto: <strong id="pfact-lbl-neto">$0</strong></span>
+        <span style="color:#92400e;">IVA: <strong id="pfact-lbl-iva">$0</strong></span>
+        <span style="color:#92400e;">Percepciones: <strong id="pfact-lbl-perc">$0</strong></span>
+        <span style="color:#92400e;font-weight:800;">Total: <strong id="pfact-total-impuestos">$0</strong></span>
+      </div>
     </div>
 
     <!-- Ítems -->
@@ -6607,7 +6649,9 @@ function openFacturaModal(id,provId){
     document.getElementById('pfact-estado').value='pendiente';
     document.getElementById('pfact-concepto').value='';
     document.getElementById('pfact-nota').value='';
+    ['pfact-neto','pfact-iva','pfact-iibb','pfact-perc-iva','pfact-otras-perc'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
   }
+  pfact_onTipo();
   renderPfactItemsModal();
   openM('m-pfact');
 }
@@ -6646,11 +6690,15 @@ async function saveFactura(){
         await sb.from('telas_tipos').update({precio_kg:it.precio_unit}).eq('nombre',it.material_nombre);
         await sb.from('fichas_costo_telas').update({costo_unit:it.precio_unit}).eq('nombre_tela',it.material_nombre);
         if(it.material_color){
+          var telaT=TELAS_TIPOS.find(function(t){return t.nombre===it.material_nombre;});
+          var kgPRF=Number(telaT&&telaT.kg_por_rollo||20);
+          var cantRollosF=(it.unidad==='kg')?Number(it.cantidad||0)/kgPRF:Number(it.cantidad||0);
           var stockExist=TELAS_STOCK.find(function(t){return t.tipo_tela===it.material_nombre&&t.color===it.material_color;});
-          var nuevosRollos=Math.round(Number(stockExist?stockExist.rollos:0)+Number(it.cantidad||0));
+          var nuevosRollos=Math.round(Number(stockExist?stockExist.rollos:0)+cantRollosF);
           await sb.from('telas_stock').upsert({color:it.material_color,tipo_tela:it.material_nombre,rollos:nuevosRollos,updated_at:new Date().toISOString()},{onConflict:'color,tipo_tela'});
         }
-        await sb.from('movimientos_stock').insert({tipo:'entrada',producto_id:null,producto_nombre:it.material_nombre+(it.material_color?' — '+it.material_color:''),local:'deposito',talle:'',color:it.material_color||'',cantidad:Number(it.cantidad||0),origen:'compra',origen_id:compraId,fecha:fecha,nota:'Factura '+(document.getElementById('pfact-numero').value||'s/n')});
+        var cantMovF=(it.unidad==='kg')?Number(it.cantidad||0):Number(it.cantidad||0);
+        await sb.from('movimientos_stock').insert({tipo:'entrada',producto_id:null,producto_nombre:it.material_nombre+(it.material_color?' — '+it.material_color:''),local:'deposito',talle:'',color:it.material_color||'',cantidad:cantMovF,origen:'compra',origen_id:compraId,fecha:fecha,nota:'Factura '+(document.getElementById('pfact-numero').value||'s/n')+' ('+cantMovF+'kg)'});
         await sb.from('historial_precios').insert({tipo:'tela',material_id:null,material_nombre:it.material_nombre,fecha:fecha,precio_unit:it.precio_unit,compra_id:compraId});
       }
       if(it.tipo==='producto'&&it.material_id){
@@ -6718,13 +6766,26 @@ function renderPfactItemsModal(){
     }
     var colorHtml='';
     if(it.tipo==='tela'){
-      colorHtml='<input placeholder="Ej: MARINO" value="'+esc(it.material_color||'')+'" oninput="pfactItemChange('+i+',\'color\',this)" style="width:90px;text-transform:uppercase;"/>';
+      var coloresTela=TELAS_STOCK.filter(function(t){return t.tipo_tela===it.material_nombre;}).map(function(t){return t.color;}).filter(Boolean).sort();
+      if(coloresTela.length>0){
+        var colOpts=coloresTela.map(function(c){return '<option value="'+esc(c)+'"'+(it.material_color===c?' selected':'')+'>'+esc(c)+'</option>';}).join('');
+        colorHtml='<div style="display:flex;flex-direction:column;gap:3px;">'
+          +'<select id="pfact-col-sel-'+i+'" onchange="pfactItemChange('+i+',\'color-sel\',this)" style="width:110px;">'
+          +'<option value="">— Color —</option>'+colOpts
+          +'<option value="__nuevo__">+ Nuevo color</option>'
+          +'</select>'
+          +'<input id="pfact-col-inp-'+i+'" placeholder="Nuevo color" value="" oninput="pfactItemChange('+i+',\'color\',this)" style="width:110px;text-transform:uppercase;display:'+(it.material_color&&coloresTela.indexOf(it.material_color)===-1?'block':'none')+'"/>'
+          +'</div>';
+      } else {
+        colorHtml='<input placeholder="Ej: MARINO" value="'+esc(it.material_color||'')+'" oninput="pfactItemChange('+i+',\'color\',this)" style="width:100px;text-transform:uppercase;"/>';
+      }
     } else if(it.tipo==='producto'){
       colorHtml='<input placeholder="Talle (opt.)" value="'+esc(it.material_talle||'')+'" oninput="pfactItemChange('+i+',\'talle\',this)" style="width:80px;"/>';
     } else {
       colorHtml='<span style="color:#d1d5db;">—</span>';
     }
-    html+='<tr id="pfact-row-'+i+'"><td><select onchange="pfactItemChangeTipo('+i+',this)" style="width:90px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="producto"'+(it.tipo==='producto'?' selected':'')+'>Producto</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td>'+colorHtml+'</td><td><input value="'+esc(it.unidad||'unidades')+'" oninput="pfactItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td><td><input type="number" value="'+(it.cantidad||0)+'" min="0" step="0.01" oninput="pfactItemChange('+i+',\'cant\',this)" style="width:70px;"/></td><td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="pfactItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="pfact-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="pfactRemItem('+i+')">✕</button></td></tr>';
+    var pfactCantHtml=it.tipo==='tela'?(function(){var tela=TELAS_TIPOS.find(function(t){return t.nombre===it.material_nombre;});var kgPR=Number(tela&&tela.kg_por_rollo||20);var kg=Number(it.cantidad||0);var rollosStr=kg>0?(kg/kgPR).toFixed(1):'—';return '<td><input type="number" value="'+kg+'" min="0" step="0.01" oninput="pfactItemChange('+i+',\'cant\',this)" style="width:70px;"/><div id="pfact-rollos-'+i+'" style="font-size:11px;color:#6c7ae0;margin-top:2px;">≈ '+rollosStr+' rollos</div></td>';})():'<td><input type="number" value="'+(it.cantidad||0)+'" min="0" step="0.01" oninput="pfactItemChange('+i+',\'cant\',this)" style="width:70px;"/></td>';
+    html+='<tr id="pfact-row-'+i+'"><td><select onchange="pfactItemChangeTipo('+i+',this)" style="width:90px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="producto"'+(it.tipo==='producto'?' selected':'')+'>Producto</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td>'+colorHtml+'</td><td><input value="'+esc(it.unidad||'kg')+'" oninput="pfactItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td>'+pfactCantHtml+'<td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="pfactItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="pfact-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="pfactRemItem('+i+')">✕</button></td></tr>';
   });
   html+='</tbody></table>';
   document.getElementById('pfact-items').innerHTML=html;
@@ -6738,12 +6799,12 @@ function renderPfactItemsModal(){
   });
   pfactCalcTotal();
 }
-function pfactAddItem(){pfactItemsTemp.push({tipo:'tela',material_id:null,material_nombre:'',material_color:'',unidad:'rollos',cantidad:0,precio_unit:0});renderPfactItemsModal();}
+function pfactAddItem(){pfactItemsTemp.push({tipo:'tela',material_id:null,material_nombre:'',material_color:'',unidad:'kg',cantidad:0,precio_unit:0});renderPfactItemsModal();}
 function pfactRemItem(i){pfactItemsTemp.splice(i,1);renderPfactItemsModal();}
 function pfactItemChangeTipo(i,el){
   pfactItemsTemp[i].tipo=el.value;pfactItemsTemp[i].material_id=null;pfactItemsTemp[i].material_nombre='';pfactItemsTemp[i].material_color='';pfactItemsTemp[i].material_talle='';
   if(el.value==='avio')pfactItemsTemp[i].unidad='unidades';
-  if(el.value==='tela')pfactItemsTemp[i].unidad='rollos';
+  if(el.value==='tela')pfactItemsTemp[i].unidad='kg';
   if(el.value==='producto'){pfactItemsTemp[i].unidad='unidades';pfactItemsTemp[i].material_color='mayorista';}
   renderPfactItemsModal();
 }
@@ -6751,15 +6812,24 @@ function pfactItemChange(i,field,el){
   if(field==='mat'){
     var tipo=pfactItemsTemp[i].tipo;
     if(tipo==='avio'){pfactItemsTemp[i].material_id=Number(el.value)||null;var av=AVIOS.find(function(a){return a.id===Number(el.value);});pfactItemsTemp[i].material_nombre=av?av.nombre:'';}
-    if(tipo==='tela'){pfactItemsTemp[i].material_nombre=el.value;}
+    if(tipo==='tela'){pfactItemsTemp[i].material_nombre=el.value;pfactItemsTemp[i].material_color='';_actualizarRollosHelper('pfact',i,pfactItemsTemp[i]);renderPfactItemsModal();return;}
     if(tipo==='producto'){pfactItemsTemp[i].material_id=Number(el.value)||null;var pr=PRODUCTOS.find(function(p){return p.id===Number(el.value);});pfactItemsTemp[i].material_nombre=pr?pr.nombre:'';}
   }
   if(field==='local')pfactItemsTemp[i].material_color=el.value;
   if(field==='talle')pfactItemsTemp[i].material_talle=el.value;
+  if(field==='color-sel'){
+    if(el.value==='__nuevo__'){
+      var inpN=document.getElementById('pfact-col-inp-'+i);if(inpN){inpN.style.display='block';inpN.focus();}
+      pfactItemsTemp[i].material_color='';
+    } else {
+      pfactItemsTemp[i].material_color=el.value;
+      var inpN2=document.getElementById('pfact-col-inp-'+i);if(inpN2)inpN2.style.display='none';
+    }
+  }
   if(field==='color')pfactItemsTemp[i].material_color=el.value.toUpperCase();
   if(field==='desc')pfactItemsTemp[i].material_nombre=el.value;
   if(field==='unidad')pfactItemsTemp[i].unidad=el.value;
-  if(field==='cant')pfactItemsTemp[i].cantidad=Number(el.value)||0;
+  if(field==='cant'){pfactItemsTemp[i].cantidad=Number(el.value)||0;if(pfactItemsTemp[i].tipo==='tela')_actualizarRollosHelper('pfact',i,pfactItemsTemp[i]);}
   if(field==='precio')pfactItemsTemp[i].precio_unit=Number(el.value)||0;
   var sub=document.getElementById('pfact-sub-'+i);
   if(sub)sub.textContent=$p(Number(pfactItemsTemp[i].cantidad||0)*Number(pfactItemsTemp[i].precio_unit||0));
@@ -6771,6 +6841,32 @@ function pfactCalcTotal(){
   // Auto-completar monto si el campo está vacío o en cero
   var montoEl=document.getElementById('pfact-monto');
   if(montoEl&&(montoEl.value===''||Number(montoEl.value)===0)&&total>0)montoEl.value=total;
+  pfactCalcImpuestos();
+}
+function pfact_onTipo(){
+  var tipo=(document.getElementById('pfact-tipo')||{}).value||'';
+  var sect=document.getElementById('pfact-impuestos-sect');
+  if(sect)sect.style.display=(tipo==='A')?'block':'none';
+}
+function pfactAutoIva(){
+  var neto=Number((document.getElementById('pfact-neto')||{}).value)||0;
+  var tasa=Number((document.getElementById('pfact-iva-tasa')||{}).value)||0.21;
+  var ivaEl=document.getElementById('pfact-iva');
+  if(ivaEl&&neto>0)ivaEl.value=Math.round(neto*tasa*100)/100;
+  pfactCalcImpuestos();
+}
+function pfactCalcImpuestos(){
+  var neto=Number((document.getElementById('pfact-neto')||{}).value)||0;
+  var iva=Number((document.getElementById('pfact-iva')||{}).value)||0;
+  var iibb=Number((document.getElementById('pfact-iibb')||{}).value)||0;
+  var percIva=Number((document.getElementById('pfact-perc-iva')||{}).value)||0;
+  var otras=Number((document.getElementById('pfact-otras-perc')||{}).value)||0;
+  var totalPerc=iibb+percIva+otras;
+  var totalFact=neto+iva+totalPerc;
+  var _s=function(id,v){var e=document.getElementById(id);if(e)e.textContent=$p(v);};
+  _s('pfact-lbl-neto',neto);_s('pfact-lbl-iva',iva);_s('pfact-lbl-perc',totalPerc);_s('pfact-total-impuestos',totalFact);
+  var montoEl=document.getElementById('pfact-monto');
+  if(montoEl&&totalFact>0)montoEl.value=Math.round(totalFact*100)/100;
 }
 async function deleteFactura(){
   if(!editFacturaId)return;
@@ -18875,13 +18971,26 @@ function renderCmpItemsModal(){
     }
     var colorHtml='';
     if(it.tipo==='tela'){
-      colorHtml='<input placeholder="Ej: MARINO" value="'+esc(it.material_color||'')+'" oninput="cmpItemChange('+i+',\'color\',this)" style="width:90px;text-transform:uppercase;"/>';
+      var coloresCmp=TELAS_STOCK.filter(function(t){return t.tipo_tela===it.material_nombre;}).map(function(t){return t.color;}).filter(Boolean).sort();
+      if(coloresCmp.length>0){
+        var colOptsCmp=coloresCmp.map(function(c){return '<option value="'+esc(c)+'"'+(it.material_color===c?' selected':'')+'>'+esc(c)+'</option>';}).join('');
+        colorHtml='<div style="display:flex;flex-direction:column;gap:3px;">'
+          +'<select id="cmp-col-sel-'+i+'" onchange="cmpItemChange('+i+',\'color-sel\',this)" style="width:110px;">'
+          +'<option value="">— Color —</option>'+colOptsCmp
+          +'<option value="__nuevo__">+ Nuevo color</option>'
+          +'</select>'
+          +'<input id="cmp-col-inp-'+i+'" placeholder="Nuevo color" value="" oninput="cmpItemChange('+i+',\'color\',this)" style="width:110px;text-transform:uppercase;display:'+(it.material_color&&coloresCmp.indexOf(it.material_color)===-1?'block':'none')+'"/>'
+          +'</div>';
+      } else {
+        colorHtml='<input placeholder="Ej: MARINO" value="'+esc(it.material_color||'')+'" oninput="cmpItemChange('+i+',\'color\',this)" style="width:100px;text-transform:uppercase;"/>';
+      }
     } else if(it.tipo==='producto'){
       colorHtml='<input placeholder="Talle (opt.)" value="'+esc(it.material_talle||'')+'" oninput="cmpItemChange('+i+',\'talle\',this)" style="width:80px;"/>';
     } else {
       colorHtml='<span style="color:#d1d5db;">—</span>';
     }
-    html+='<tr id="cmp-row-'+i+'"><td><select onchange="cmpItemChangeTipo('+i+',this)" style="width:90px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="producto"'+(it.tipo==='producto'?' selected':'')+'>Producto</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td>'+colorHtml+'</td><td><input value="'+esc(it.unidad||'unidades')+'" oninput="cmpItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td><td><input type="number" value="'+(it.cantidad||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'cant\',this)" style="width:70px;"/></td><td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="cmp-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="cmpRemItem('+i+')">✕</button></td></tr>';
+    var cmpCantHtml=it.tipo==='tela'?(function(){var tela=TELAS_TIPOS.find(function(t){return t.nombre===it.material_nombre;});var kgPR=Number(tela&&tela.kg_por_rollo||20);var kg=Number(it.cantidad||0);var rollosStr=kg>0?(kg/kgPR).toFixed(1):'—';return '<td><input type="number" value="'+kg+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'cant\',this)" style="width:70px;"/><div id="cmp-rollos-'+i+'" style="font-size:11px;color:#6c7ae0;margin-top:2px;">≈ '+rollosStr+' rollos</div></td>';})():'<td><input type="number" value="'+(it.cantidad||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'cant\',this)" style="width:70px;"/></td>';
+    html+='<tr id="cmp-row-'+i+'"><td><select onchange="cmpItemChangeTipo('+i+',this)" style="width:90px;"><option value="avio"'+(it.tipo==='avio'?' selected':'')+'>Avío</option><option value="tela"'+(it.tipo==='tela'?' selected':'')+'>Tela</option><option value="producto"'+(it.tipo==='producto'?' selected':'')+'>Producto</option><option value="otro"'+(it.tipo==='otro'?' selected':'')+'>Otro</option></select></td><td>'+matHtml+'</td><td>'+colorHtml+'</td><td><input value="'+esc(it.unidad||'kg')+'" oninput="cmpItemChange('+i+',\'unidad\',this)" style="width:80px;"/></td>'+cmpCantHtml+'<td><input type="number" value="'+(it.precio_unit||0)+'" min="0" step="0.01" oninput="cmpItemChange('+i+',\'precio\',this)" style="width:90px;"/></td><td id="cmp-sub-'+i+'" style="font-weight:700;">'+$p(Number(it.cantidad||0)*Number(it.precio_unit||0))+'</td><td><button class="btn btn-red btn-sm btn-icon" onclick="cmpRemItem('+i+')">✕</button></td></tr>';
   });
   html+='</tbody></table>';
   document.getElementById('mcmp-items').innerHTML=html;
@@ -18900,7 +19009,7 @@ function renderCmpItemsModal(){
 function cmpItemChangeTipo(i,el){
   cmpItemsTemp[i].tipo=el.value;cmpItemsTemp[i].material_id=null;cmpItemsTemp[i].material_nombre='';cmpItemsTemp[i].material_color='';cmpItemsTemp[i].material_talle='';
   if(el.value==='avio')cmpItemsTemp[i].unidad='unidades';
-  if(el.value==='tela')cmpItemsTemp[i].unidad='rollos';
+  if(el.value==='tela')cmpItemsTemp[i].unidad='kg';
   if(el.value==='producto'){cmpItemsTemp[i].unidad='unidades';cmpItemsTemp[i].material_color='mayorista';}
   renderCmpItemsModal();
 }
@@ -18908,19 +19017,35 @@ function cmpItemChange(i,field,el){
   if(field==='mat'){
     var tipo=cmpItemsTemp[i].tipo;
     if(tipo==='avio'){cmpItemsTemp[i].material_id=Number(el.value)||null;var av=AVIOS.find(function(a){return a.id===Number(el.value);});cmpItemsTemp[i].material_nombre=av?av.nombre:'';}
-    if(tipo==='tela'){cmpItemsTemp[i].material_nombre=el.value;}
+    if(tipo==='tela'){cmpItemsTemp[i].material_nombre=el.value;cmpItemsTemp[i].material_color='';_actualizarRollosHelper('cmp',i,cmpItemsTemp[i]);renderCmpItemsModal();return;}
     if(tipo==='producto'){cmpItemsTemp[i].material_id=Number(el.value)||null;var pr=PRODUCTOS.find(function(p){return p.id===Number(el.value);});cmpItemsTemp[i].material_nombre=pr?pr.nombre:'';}
   }
   if(field==='local')cmpItemsTemp[i].material_color=el.value;
   if(field==='talle')cmpItemsTemp[i].material_talle=el.value;
+  if(field==='color-sel'){
+    if(el.value==='__nuevo__'){
+      var inpC=document.getElementById('cmp-col-inp-'+i);if(inpC){inpC.style.display='block';inpC.focus();}
+      cmpItemsTemp[i].material_color='';
+    } else {
+      cmpItemsTemp[i].material_color=el.value;
+      var inpC2=document.getElementById('cmp-col-inp-'+i);if(inpC2)inpC2.style.display='none';
+    }
+  }
   if(field==='color')cmpItemsTemp[i].material_color=el.value.toUpperCase();
   if(field==='desc')cmpItemsTemp[i].material_nombre=el.value;
   if(field==='unidad')cmpItemsTemp[i].unidad=el.value;
-  if(field==='cant')cmpItemsTemp[i].cantidad=Number(el.value)||0;
+  if(field==='cant'){cmpItemsTemp[i].cantidad=Number(el.value)||0;if(cmpItemsTemp[i].tipo==='tela')_actualizarRollosHelper('cmp',i,cmpItemsTemp[i]);}
   if(field==='precio')cmpItemsTemp[i].precio_unit=Number(el.value)||0;
   var sub=document.getElementById('cmp-sub-'+i);
   if(sub)sub.textContent=$p(Number(cmpItemsTemp[i].cantidad||0)*Number(cmpItemsTemp[i].precio_unit||0));
   cmpCalcTotal();
+}
+function _actualizarRollosHelper(prefix,i,it){
+  var el=document.getElementById(prefix+'-rollos-'+i);if(!el)return;
+  var tela=TELAS_TIPOS.find(function(t){return t.nombre===it.material_nombre;});
+  var kgPR=Number(tela&&tela.kg_por_rollo||20);
+  var kg=Number(it.cantidad||0);
+  el.textContent='≈ '+(kg>0?(kg/kgPR).toFixed(1):'—')+' rollos';
 }
 function cmpAddItem(){cmpItemsTemp.push({tipo:'avio',material_id:null,material_nombre:'',unidad:'unidades',cantidad:0,precio_unit:0});renderCmpItemsModal();}
 function cmpRemItem(i){cmpItemsTemp.splice(i,1);renderCmpItemsModal();}
@@ -18995,15 +19120,19 @@ async function recibirCompra(id){
       await sb.from('telas_tipos').update({precio_kg:it.precio_unit}).eq('nombre',it.material_nombre);
       await sb.from('fichas_costo_telas').update({costo_unit:it.precio_unit}).eq('nombre_tela',it.material_nombre);
       if(it.material_color){
+        var telaTR=TELAS_TIPOS.find(function(t){return t.nombre===it.material_nombre;});
+        var kgPRR=Number(telaTR&&telaTR.kg_por_rollo||20);
+        var cantRollosR=(it.unidad==='kg')?Number(it.cantidad||0)/kgPRR:Number(it.cantidad||0);
         var stockExist=TELAS_STOCK.find(function(t){return t.tipo_tela===it.material_nombre&&t.color===it.material_color;});
-        var nuevosRollos=Math.round(Number(stockExist?stockExist.rollos:0)+Number(it.cantidad||0));
+        var nuevosRollos=Math.round(Number(stockExist?stockExist.rollos:0)+cantRollosR);
         await sb.from('telas_stock').upsert({color:it.material_color,tipo_tela:it.material_nombre,rollos:nuevosRollos,updated_at:new Date().toISOString()},{onConflict:'color,tipo_tela'});
       }
+      var cantMovR=Number(it.cantidad||0);
       await sb.from('movimientos_stock').insert({
         tipo:'entrada',producto_id:null,producto_nombre:it.material_nombre+(it.material_color?' — '+it.material_color:''),
-        local:'deposito',talle:'',color:it.material_color||'',cantidad:Number(it.cantidad||0),
+        local:'deposito',talle:'',color:it.material_color||'',cantidad:cantMovR,
         origen:'compra',origen_id:id,
-        fecha:compra.fecha,nota:'Compra tela #'+id+(compra.nro_compra?' — '+compra.nro_compra:'')
+        fecha:compra.fecha,nota:'Compra tela #'+id+(compra.nro_compra?' — '+compra.nro_compra:'')+(it.unidad==='kg'?' ('+cantMovR+'kg)':'')
       });
     }
     if(it.tipo==='producto'&&it.material_id){
