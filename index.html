@@ -3934,8 +3934,8 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-compra')">Cancelar</button>
-      <button class="btn btn-outline" onclick="saveCompra('borrador')">Guardar borrador</button>
-      <button class="btn btn-green" onclick="saveCompra('confirmada')">Confirmar orden</button>
+      <button id="mcmp-btn-borrador" class="btn btn-outline" onclick="saveCompra('borrador')">Guardar borrador</button>
+      <button id="mcmp-btn-confirmar" class="btn btn-green" onclick="saveCompra('confirmada')">Confirmar orden</button>
     </div>
   </div>
 </div>
@@ -4743,12 +4743,19 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="field full"><label>Nota</label><input id="pfact-nota" placeholder="Observaciones opcionales"/></div>
     </div>
 
-    <!-- Impuestos (solo Factura A) -->
+    <!-- Ítems -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong style="font-size:13px;color:#1a1f36;">Detalle de ítems <span style="font-size:11px;font-weight:400;color:#9ca3af;">(opcional — actualiza stock al guardar)</span></strong>
+      <button class="btn btn-sm btn-outline" onclick="pfactAddItem()">+ Agregar ítem</button>
+    </div>
+    <div id="pfact-items" style="overflow-x:auto;margin-bottom:10px;min-height:32px;"></div>
+
+    <!-- Impuestos (solo Factura A) — va DESPUÉS de los ítems -->
     <div id="pfact-impuestos-sect" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
       <div style="font-size:12px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">🧾 Desglose impositivo — Factura A</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px;">
         <div class="field" style="margin:0;">
-          <label style="font-size:12px;">Neto gravado $</label>
+          <label style="font-size:12px;">Neto gravado $ <span style="font-weight:400;color:#9ca3af;">(= subtotal ítems)</span></label>
           <input type="number" id="pfact-neto" min="0" step="0.01" placeholder="0" oninput="pfactAutoIva()"/>
         </div>
         <div class="field" style="margin:0;">
@@ -4763,7 +4770,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           </label>
           <div style="display:flex;gap:4px;align-items:center;">
             <input type="number" id="pfact-iva" min="0" step="0.01" placeholder="0" oninput="pfactCalcImpuestos()" style="flex:1;"/>
-            <button type="button" onclick="pfactAutoIva()" class="btn btn-sm btn-gray" title="Calcular desde neto" style="padding:4px 7px;font-size:11px;">= auto</button>
+            <button type="button" onclick="pfactAutoIva()" class="btn btn-sm btn-gray" title="Calcular IVA desde neto" style="padding:4px 7px;font-size:11px;">= auto</button>
           </div>
         </div>
       </div>
@@ -4781,13 +4788,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
     </div>
 
-    <!-- Ítems -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <strong style="font-size:13px;color:#1a1f36;">Detalle de ítems <span style="font-size:11px;font-weight:400;color:#9ca3af;">(opcional — actualiza stock al guardar)</span></strong>
-      <button class="btn btn-sm btn-outline" onclick="pfactAddItem()">+ Agregar ítem</button>
-    </div>
-    <div id="pfact-items" style="overflow-x:auto;margin-bottom:10px;min-height:32px;"></div>
-
     <div style="display:flex;justify-content:flex-end;align-items:center;gap:20px;margin-bottom:16px;flex-wrap:wrap;">
       <div style="font-size:13px;color:#6b7280;">Subtotal ítems: <strong id="pfact-subtotal" style="color:#1a1f36;">$0</strong></div>
       <div class="field" style="margin:0;">
@@ -4799,7 +4799,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="modal-footer">
       <button class="btn btn-gray" onclick="closeM('m-pfact')">Cancelar</button>
       <button id="m-pfact-del" class="btn btn-red" style="display:none;" onclick="deleteFactura()">Eliminar</button>
-      <button class="btn" onclick="saveFactura()">Guardar</button>
+      <button id="m-pfact-save" class="btn" onclick="saveFactura()">Guardar</button>
     </div>
   </div>
 </div>
@@ -6668,10 +6668,16 @@ function openFacturaModal(id,provId){
 }
 
 async function saveFactura(){
+  var btn=document.getElementById('m-pfact-save');
+  if(btn&&btn.disabled)return;
+  if(btn){btn.disabled=true;btn.textContent='Guardando…';}
   var provId=parseInt(document.getElementById('pfact-prov-id').value)||null;
   var monto=parseFloat(document.getElementById('pfact-monto').value)||0;
   var fecha=document.getElementById('pfact-fecha').value;
-  if(!provId||!monto||!fecha){toast('Completá proveedor, monto y fecha','err');return;}
+  if(!provId||!monto||!fecha){
+    if(btn){btn.disabled=false;btn.textContent='Guardar';}
+    toast('Completá proveedor, monto y fecha','err');return;
+  }
   var itemsValidos=pfactItemsTemp.filter(function(it){return it.material_nombre||it.material_id;});
   var compraId=pfactLinkedCompraId||null;
   // Si hay ítems y no tiene compra vinculada: crear compra + items + actualizar stock
@@ -6682,13 +6688,13 @@ async function saveFactura(){
       nota:document.getElementById('pfact-nota').value||null,
       estado:'recibida',updated_at:new Date().toISOString()
     }).select().single();
-    if(rCmp.error){toast('Error al crear compra: '+rCmp.error.message,'err');return;}
+    if(rCmp.error){if(btn){btn.disabled=false;btn.textContent='Guardar';}toast('Error al crear compra: '+rCmp.error.message,'err');return;}
     compraId=rCmp.data.id;
     var items=itemsValidos.map(function(it){
       return {compra_id:compraId,tipo:it.tipo,material_id:it.material_id||null,material_nombre:it.material_nombre||'',material_color:it.material_color||null,unidad:it.unidad||'unidades',cantidad:Number(it.cantidad)||0,precio_unit:Number(it.precio_unit)||0};
     });
     var ri=await sb.from('compras_items').insert(items);
-    if(ri.error){toast('Error en ítems: '+ri.error.message,'err');return;}
+    if(ri.error){if(btn){btn.disabled=false;btn.textContent='Guardar';}toast('Error en ítems: '+ri.error.message,'err');return;}
     // Actualizar stock por cada ítem
     for(var idx=0;idx<itemsValidos.length;idx++){
       var it=itemsValidos[idx];
@@ -6743,9 +6749,10 @@ async function saveFactura(){
     updated_at:new Date().toISOString()
   };
   var r=editFacturaId?await sb.from('proveedor_facturas').update(d).eq('id',editFacturaId):await sb.from('proveedor_facturas').insert(d);
-  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  if(r.error){if(btn){btn.disabled=false;btn.textContent='Guardar';}toast('Error: '+r.error.message,'err');return;}
   toast(editFacturaId?'Factura actualizada':'Factura cargada'+(itemsValidos.length>0?' — stock actualizado':''));
   closeM('m-pfact');
+  if(btn){btn.disabled=false;btn.textContent='Guardar';}
   await Promise.all([loadProvFacturas(),loadFacturaPagos(),loadCompras(),loadComprasItems(),loadAvios(),loadTelasTipos(),loadTelasStock(),loadFichasCostoTelas(),loadStock(),loadProductos(),loadHistorialPrecios(),loadMovimientosStock()]);
   renderProvCC();renderPanelGeneral();renderCompras();
 }
@@ -6850,9 +6857,15 @@ function pfactItemChange(i,field,el){
 function pfactCalcTotal(){
   var total=pfactItemsTemp.reduce(function(s,it){return s+Number(it.cantidad||0)*Number(it.precio_unit||0);},0);
   var subEl=document.getElementById('pfact-subtotal');if(subEl)subEl.textContent=$p(total);
-  // Auto-completar monto si el campo está vacío o en cero
+  // Si es Factura A, auto-completar neto con el subtotal de ítems
+  var tipo=(document.getElementById('pfact-tipo')||{}).value||'';
+  if(tipo==='A'&&total>0){
+    var netoEl=document.getElementById('pfact-neto');
+    if(netoEl)netoEl.value=Math.round(total*100)/100;
+  }
+  // Auto-completar monto si el campo está vacío o en cero (solo para no-A)
   var montoEl=document.getElementById('pfact-monto');
-  if(montoEl&&(montoEl.value===''||Number(montoEl.value)===0)&&total>0)montoEl.value=total;
+  if(montoEl&&tipo!=='A'&&(montoEl.value===''||Number(montoEl.value)===0)&&total>0)montoEl.value=total;
   pfactCalcImpuestos();
 }
 function pfact_onTipo(){
@@ -18912,9 +18925,10 @@ function renderComprasOrdenes(){
     var badge=ECOL[c.estado]||'b-gray';
     var label=ELAB[c.estado]||c.estado;
     var btnEdit=(c.estado==='borrador'||c.estado==='confirmada')?'<button class="btn btn-sm btn-outline" onclick="openCompraModal('+c.id+')">Editar</button>':'';
-    var btnRecibir=c.estado==='confirmada'?'<button class="btn btn-sm btn-green" onclick="recibirCompra('+c.id+')">Marcar recibida</button>':'';
+    var btnRecibir=c.estado==='confirmada'?'<button class="btn btn-sm btn-green" id="btn-recibir-'+c.id+'" onclick="recibirCompra('+c.id+')">Marcar recibida</button>':'';
     var btnConfirmar=c.estado==='borrador'?'<button class="btn btn-sm btn-amber" onclick="confirmarCompra('+c.id+')">Confirmar</button>':'';
     var btnCancel=(c.estado!=='recibida'&&c.estado!=='cancelada')?'<button class="btn btn-sm btn-red" onclick="cancelarCompra('+c.id+')">Cancelar</button>':'';
+    var btnDel=(c.estado==='borrador'||c.estado==='cancelada')?'<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;" onclick="eliminarCompra('+c.id+')">🗑 Eliminar</button>':'';
     var itemsHtml='';
     if(items.length>0){
       itemsHtml='<div style="margin-top:12px;border-top:1px solid #f3f4f6;padding-top:10px;overflow-x:auto;"><table style="width:100%;"><thead><tr><th>Tipo</th><th>Material</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead><tbody>';
@@ -18923,7 +18937,7 @@ function renderComprasOrdenes(){
       });
       itemsHtml+='</tbody></table></div>';
     }
-    html+='<div class="panel" style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;"><div><div style="font-weight:700;font-size:14px;color:#1a1f36;">'+esc(prov?prov.nombre:'Sin proveedor')+(c.nro_compra?'<span style="color:#9ca3af;font-size:12px;margin-left:6px;">#'+esc(c.nro_compra)+'</span>':'')+'</div><div style="font-size:12px;color:#6b7280;margin-top:3px;">'+fmtF(c.fecha)+' · '+items.length+' ítem'+(items.length!==1?'s':'')+' · <strong>'+$p(total)+'</strong></div>'+(c.nota?'<div style="font-size:12px;color:#9ca3af;margin-top:2px;">'+esc(c.nota)+'</div>':'')+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"><span class="badge '+badge+'">'+label+'</span>'+btnEdit+btnConfirmar+btnRecibir+btnCancel+'</div></div>'+itemsHtml+'</div>';
+    html+='<div class="panel" style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;"><div><div style="font-weight:700;font-size:14px;color:#1a1f36;">'+esc(prov?prov.nombre:'Sin proveedor')+(c.nro_compra?'<span style="color:#9ca3af;font-size:12px;margin-left:6px;">#'+esc(c.nro_compra)+'</span>':'')+'</div><div style="font-size:12px;color:#6b7280;margin-top:3px;">'+fmtF(c.fecha)+' · '+items.length+' ítem'+(items.length!==1?'s':'')+' · <strong>'+$p(total)+'</strong></div>'+(c.nota?'<div style="font-size:12px;color:#9ca3af;margin-top:2px;">'+esc(c.nota)+'</div>':'')+'</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"><span class="badge '+badge+'">'+label+'</span>'+btnEdit+btnConfirmar+btnRecibir+btnCancel+btnDel+'</div></div>'+itemsHtml+'</div>';
   });
   if(!rows.length)html='<div style="text-align:center;color:#9ca3af;padding:40px;">Sin órdenes de compra</div>';
   document.getElementById('cmp-ordenes-cont').innerHTML=html;
@@ -19087,27 +19101,33 @@ function cmpCalcTotal(){
 }
 
 async function saveCompra(estado){
+  var btnB=document.getElementById('mcmp-btn-borrador');
+  var btnC=document.getElementById('mcmp-btn-confirmar');
+  if(btnB&&btnB.disabled)return;
+  if(btnB){btnB.disabled=true;}
+  if(btnC){btnC.disabled=true;}
+  var unlock=function(){if(btnB){btnB.disabled=false;}if(btnC){btnC.disabled=false;}};
   var prov=document.getElementById('mcmp-prov').value;
   var fecha=document.getElementById('mcmp-fecha').value;
-  if(!fecha){toast('Ingresá la fecha','err');return;}
+  if(!fecha){unlock();toast('Ingresá la fecha','err');return;}
   var nro=document.getElementById('mcmp-nro').value.trim();
   var nota=document.getElementById('mcmp-nota').value.trim();
   var payload={fecha,proveedor_id:prov?Number(prov):null,nro_compra:nro||null,nota:nota||null,estado:estado,updated_at:new Date().toISOString()};
   var compraId;
   if(editCmpId){
     var r=await sb.from('compras').update(payload).eq('id',editCmpId);
-    if(r.error){toast('Error: '+r.error.message,'err');return;}
+    if(r.error){unlock();toast('Error: '+r.error.message,'err');return;}
     compraId=editCmpId;
     await sb.from('compras_items').delete().eq('compra_id',compraId);
   } else {
     var r=await sb.from('compras').insert(payload).select().single();
-    if(r.error){toast('Error: '+r.error.message,'err');return;}
+    if(r.error){unlock();toast('Error: '+r.error.message,'err');return;}
     compraId=r.data.id;
   }
   var items=cmpItemsTemp.filter(function(it){return it.material_nombre||it.material_id;}).map(function(it){
     return {compra_id:compraId,tipo:it.tipo,material_id:it.material_id||null,material_nombre:it.material_nombre||'',material_color:it.material_color||null,unidad:it.unidad||'unidades',cantidad:Number(it.cantidad)||0,precio_unit:Number(it.precio_unit)||0};
   });
-  if(items.length>0){var ri=await sb.from('compras_items').insert(items);if(ri.error){toast('Error en ítems: '+ri.error.message,'err');return;}}
+  if(items.length>0){var ri=await sb.from('compras_items').insert(items);if(ri.error){unlock();toast('Error en ítems: '+ri.error.message,'err');return;}}
   toast(editCmpId?'Compra actualizada':'Compra creada','ok');
   closeM('m-compra');
   await Promise.all([loadCompras(),loadComprasItems()]);
@@ -19129,10 +19149,27 @@ async function cancelarCompra(id){
   await loadCompras();renderCompras();
 }
 
+async function eliminarCompra(id){
+  var compra=COMPRAS.find(function(c){return c.id===id;});
+  if(!compra)return;
+  if(compra.estado==='recibida'||compra.estado==='confirmada'){toast('Solo se pueden eliminar borradores o canceladas','err');return;}
+  if(!confirm('¿Eliminar definitivamente esta orden de compra? Esta acción no se puede deshacer.'))return;
+  // Eliminar ítems primero
+  await sb.from('compras_items').delete().eq('compra_id',id);
+  var r=await sb.from('compras').delete().eq('id',id);
+  if(r.error){toast('Error al eliminar: '+r.error.message,'err');return;}
+  toast('Orden de compra eliminada','info');
+  await Promise.all([loadCompras(),loadComprasItems()]);
+  renderCompras();
+}
+
 async function recibirCompra(id){
+  var btnR=document.getElementById('btn-recibir-'+id);
+  if(btnR&&btnR.disabled)return;
+  if(btnR){btnR.disabled=true;btnR.textContent='Procesando…';}
   var compra=COMPRAS.find(function(c){return c.id===id;});
   var items=COMPRAS_ITEMS.filter(function(i){return i.compra_id===id;});
-  if(!items.length){toast('La compra no tiene ítems','err');return;}
+  if(!items.length){if(btnR){btnR.disabled=false;btnR.textContent='Marcar recibida';}toast('La compra no tiene ítems','err');return;}
   var regCC=confirm('¿Registrar el monto en la cuenta corriente del proveedor?');
   for(var idx=0;idx<items.length;idx++){
     var it=items[idx];
