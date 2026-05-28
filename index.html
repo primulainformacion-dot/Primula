@@ -414,6 +414,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div id="cli-tab-cc" style="display:none;">
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-start;">
         <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1;" id="cli-cc-stats"></div>
+        <button class="btn btn-sm btn-gray" onclick="exportarCCMayoristas()" title="Exportar a Excel">📥 Excel</button>
         <button class="btn btn-sm btn-gray" onclick="recalcularSaldosVentas()" title="Recalcula saldo de todas las ventas con saldo incorrecto (negativo o mayor al total)">🔧 Recalcular saldos</button>
       </div>
       <div id="cli-cc-cont"></div>
@@ -1371,7 +1372,10 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               <option value="parcial">Parcial</option><option value="cobrado">Cobrado</option>
             </select>
           </div>
-          <button class="btn" onclick="openNuevaVenta()">+ Nueva venta</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-sm btn-gray" onclick="exportarVentasLocal()">📥 Excel</button>
+            <button class="btn" onclick="openNuevaVenta()">+ Nueva venta</button>
+          </div>
         </div>
         <div class="tbl"><table>
           <thead><tr><th>N°</th><th>FAC</th><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Total</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
@@ -1486,6 +1490,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <option value="11">Noviembre</option><option value="12">Diciembre</option>
           </select>
           <button class="btn btn-sm" onclick="renderLocalResumen()">Ver</button>
+          <button class="btn btn-sm btn-gray" onclick="exportarResumenPivot()">📥 Excel</button>
         </div>
       </div>
       <div id="lres-contenido"></div>
@@ -5793,6 +5798,94 @@ function navLocal(local, tab, el){
 // ── UTILS ──
 function $p(n){ return '$'+Number(n||0).toLocaleString('es-AR'); }
 function fmtF(s){ if(!s)return '—'; var p=s.slice(0,10).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+
+// ── EXPORTAR EXCEL ──
+function exportarExcel(hojas, nombreArchivo){
+  // hojas: [{nombre, filas: [[cabecera...],[dato...],...]}, ...]
+  var wb=XLSX.utils.book_new();
+  hojas.forEach(function(h){
+    var ws=XLSX.utils.aoa_to_sheet(h.filas);
+    // Ancho automático por columna
+    var cols=h.filas[0]?h.filas[0].map(function(_,ci){
+      var max=h.filas.reduce(function(m,r){return Math.max(m,String(r[ci]||'').length);},10);
+      return {wch:Math.min(max+2,40)};
+    }):[];
+    ws['!cols']=cols;
+    XLSX.utils.book_append_sheet(wb,ws,h.nombre.slice(0,31));
+  });
+  XLSX.writeFile(wb,nombreArchivo+'.xlsx');
+}
+
+function exportarCCMayoristas(){
+  var filas=[['Cliente','Teléfono','Total facturado','Cobrado','Deuda','Ventas pendientes']];
+  var mayClientes=CLIENTES.filter(function(c){return c.tipo==='mayorista';}).sort(function(a,b){return a.nombre.localeCompare(b.nombre);});
+  mayClientes.forEach(function(c){
+    var ventasCli=VENTAS.filter(function(v){return v.cliente_id===c.id&&Number(v.total)>0;});
+    var total=ventasCli.reduce(function(s,v){return s+Number(v.total||0);},0);
+    var cobrado=ventasCli.reduce(function(s,v){return s+(Number(v.total||0)-Number(v.saldo||0));},0);
+    var deuda=Math.max(0,VENTAS.filter(function(v){return v.cliente_id===c.id&&v.estado!=='cobrado';}).reduce(function(s,v){return s+Number(v.saldo||0);},0));
+    var pend=ventasCli.filter(function(v){return v.estado!=='cobrado';}).length;
+    filas.push([c.nombre,c.telefono||'',total,cobrado,deuda,pend]);
+  });
+  exportarExcel([{nombre:'CC Mayoristas',filas:filas}],'CC_Mayoristas_'+today());
+}
+
+function exportarVentasLocal(){
+  var filas=[['#','N° Factura','Fecha','Cliente','Local','Total','Saldo','Estado']];
+  var list=VENTAS.filter(function(v){return v.local===currentLocal&&Number(v.total)>0;});
+  list.forEach(function(v){
+    filas.push([v.id,v.nro_factura||'',fmtF(v.fecha),v.cliente_nombre||'Mostrador',v.local,Number(v.total),Number(v.saldo),v.estado]);
+  });
+  exportarExcel([{nombre:'Ventas',filas:filas}],'Ventas_'+currentLocal+'_'+today());
+}
+
+function exportarResumenPivot(){
+  var ML=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var MESES_NUM=[1,2,3,4,5,6,7,8,9,10,11,12];
+  var ventasTodas=VENTAS.filter(function(v){return v.local===currentLocal&&v.fecha;});
+  // Construir pivots
+  var revPivot={},undPivot={},allYearsSet={};
+  var idToTotal={};ventasTodas.forEach(function(v){idToTotal[v.id]=Number(v.total||0);});
+  ventasTodas.forEach(function(v){
+    var yr=v.fecha.slice(0,4);var mo=parseInt(v.fecha.slice(5,7));
+    allYearsSet[yr]=1;
+    if(!revPivot[yr])revPivot[yr]={};
+    revPivot[yr][mo]=(revPivot[yr][mo]||0)+Number(v.total||0);
+  });
+  ITEMS_VENTA.filter(function(it){return idToTotal[it.venta_id]!==undefined;}).forEach(function(it){
+    var v=ventasTodas.find(function(x){return x.id===it.venta_id;});if(!v)return;
+    var yr=v.fecha.slice(0,4);var mo=parseInt(v.fecha.slice(5,7));
+    if(!undPivot[yr])undPivot[yr]={};
+    var esNC=(idToTotal[it.venta_id]||0)<0;
+    var cant=esNC?-Number(it.cantidad||0):Number(it.cantidad||0);
+    undPivot[yr][mo]=(undPivot[yr][mo]||0)+cant;
+  });
+  for(var _y=2013;_y<=new Date().getFullYear();_y++)allYearsSet[String(_y)]=1;
+  var years=Object.keys(allYearsSet).sort();
+
+  function buildPivotRows(pivot,label){
+    var rows=[['Mes'].concat(years).concat(['Total'])];
+    var colTot={};years.forEach(function(y){colTot[y]=0;});
+    MESES_NUM.forEach(function(m){
+      var row=[ML[m]];
+      var rowTot=0;
+      years.forEach(function(yr){
+        var val=(pivot[yr]&&pivot[yr][m])||0;
+        colTot[yr]+=val;rowTot+=val;
+        row.push(val||0);
+      });
+      row.push(rowTot);
+      rows.push(row);
+    });
+    rows.push(['TOTAL'].concat(years.map(function(y){return colTot[y]||0;})).concat([years.reduce(function(s,y){return s+(colTot[y]||0);},0)]));
+    return rows;
+  }
+
+  exportarExcel([
+    {nombre:'Facturación',filas:buildPivotRows(revPivot,'Facturación $')},
+    {nombre:'Unidades',filas:buildPivotRows(undPivot,'Unidades')}
+  ],'Resumen_'+currentLocal+'_'+today());
+}
 function toast(msg,type){
   var d=document.createElement('div');d.className='tmsg t-'+(type||'ok');d.textContent=msg;
   document.getElementById('toast').appendChild(d);setTimeout(function(){d.remove();},3500);
