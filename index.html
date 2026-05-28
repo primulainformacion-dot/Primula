@@ -1288,6 +1288,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="tab" onclick="setLocalTab('stock',this)">🗃️ Stock</div>
       <div class="tab" onclick="setLocalTab('productos',this)">👔 Productos</div>
       <div class="tab" onclick="setLocalTab('facturacion',this)">📈 Facturación</div>
+      <div class="tab" onclick="setLocalTab('resumen',this)">📊 Resumen</div>
       <div class="tab" id="tab-nueva-venta" style="display:none;" onclick="setLocalTab('nueva-venta',this)">🏭 Nueva Venta</div>
       <div class="tab" id="tab-cierre" onclick="setLocalTab('cierre',this)">🔒 Cierre</div>
     </div>
@@ -1457,6 +1458,29 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <tbody id="faccli-tbody"></tbody>
         </table></div>
       </div>
+    </div>
+
+    <!-- Tab Resumen de Ventas -->
+    <div id="lt-resumen" style="display:none">
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:13px;font-weight:600;color:#374151;">Período:</span>
+          <select id="lres-anio" style="padding:7px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;">
+            <option value="">Todos los años</option>
+          </select>
+          <select id="lres-mes" style="padding:7px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;">
+            <option value="">Todos los meses</option>
+            <option value="01">Enero</option><option value="02">Febrero</option>
+            <option value="03">Marzo</option><option value="04">Abril</option>
+            <option value="05">Mayo</option><option value="06">Junio</option>
+            <option value="07">Julio</option><option value="08">Agosto</option>
+            <option value="09">Septiembre</option><option value="10">Octubre</option>
+            <option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+          <button class="btn btn-sm" onclick="renderLocalResumen()">Ver</button>
+        </div>
+      </div>
+      <div id="lres-contenido"></div>
     </div>
 
     <!-- Tab Nueva Venta Mayorista -->
@@ -3134,6 +3158,29 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
     </div>
     <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-cobro')">Cancelar</button><button class="btn btn-green" onclick="saveCobro()">Registrar cobro</button></div>
+  </div>
+</div>
+
+<!-- Modal: Editar ítems de venta -->
+<div class="modal-bg" id="m-edit-items-venta">
+  <div class="modal" style="max-width:620px;">
+    <h3>✏️ Editar ítems — Venta #<span id="eiv-venta-id"></span></h3>
+    <div style="display:grid;grid-template-columns:1fr 80px 110px 90px 36px;gap:6px;padding:0 0 6px;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e5e7eb;margin-bottom:8px;">
+      <span>Descripción</span>
+      <span style="text-align:right;">Cant.</span>
+      <span style="text-align:right;">Precio unit.</span>
+      <span style="text-align:right;">Subtotal</span>
+      <span></span>
+    </div>
+    <div id="eiv-rows"></div>
+    <button class="btn btn-sm btn-outline" onclick="eivAddRow()" style="margin-top:10px;">+ Agregar ítem</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:2px solid #e5e7eb;">
+      <div style="font-size:16px;font-weight:700;color:#374151;">Total: <span id="eiv-total" style="color:#6c7ae0;margin-left:6px;">$0</span></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-gray" onclick="closeM('m-edit-items-venta')">Cancelar</button>
+        <button class="btn" onclick="saveEditItemsVenta()">Guardar cambios</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -5621,7 +5668,7 @@ function navLocal(local, tab, el){
   // Mostrar/ocultar tab Nueva Venta según si es mayorista
   var tnv=document.getElementById('tab-nueva-venta');
   if(tnv)tnv.style.display=local==='mayorista'?'':'none';
-  var tabOrder=['pos','ventas','cobros','stock','productos','facturacion','nueva-venta','cierre'];
+  var tabOrder=['pos','ventas','cobros','stock','productos','facturacion','resumen','nueva-venta','cierre'];
   setLocalTab(tab, document.querySelectorAll('#local-tabs .tab')[tabOrder.indexOf(tab)]);
   document.getElementById('pg-title').textContent=(local==='llavallol'?'Llavallol':local==='mayorista'?'Ropa Mayorista':'Monte Grande');
   document.getElementById('pg-sub').textContent=tab.charAt(0).toUpperCase()+tab.slice(1);
@@ -6234,7 +6281,7 @@ function verCuenta(id){
       '<div class="tbl"><table><thead><tr><th>N°</th><th>Fecha</th><th>Local</th><th>Total</th><th>Saldo</th><th>Estado</th><th></th></tr></thead><tbody>'+
       (ventas.length?ventas.map(function(v){
         return '<tr>'+
-          '<td>#'+v.id+'</td><td>'+v.fecha+'</td>'+
+          '<td>#'+v.id+'</td><td>'+fmtF(v.fecha)+'</td>'+
           '<td><span class="badge '+(v.local==='llavallol'?'b-ll':v.local==='mayorista'?'b-purple':'b-mg')+'">'+v.local+'</span></td>'+
           '<td>'+$p(v.total)+'</td>'+
           '<td style="font-weight:700;color:'+(Number(v.saldo)>0?'#dc2626':'#16a34a')+'">'+$p(v.saldo)+'</td>'+
@@ -6332,7 +6379,7 @@ function renderProvCC(){
           var estadoColors={pendiente:'b-yellow',parcial:'b-blue',pagada:'b-green',anulada:'b-gray'};
           var estadoLabels={pendiente:'Pendiente',parcial:'Parcial',pagada:'Pagada',anulada:'Anulada'};
           var rowBg=vencida?'background:#fff5f5;':'';
-          var pagosTxt=pagos.length?('<div style="font-size:10px;color:#6b7280;margin-top:3px;">'+pagos.map(function(p){return p.fecha+' · '+$p(p.monto)+(p.caja?' · '+p.caja:'');}).join(' | ')+'</div>'):'';
+          var pagosTxt=pagos.length?('<div style="font-size:10px;color:#6b7280;margin-top:3px;">'+pagos.map(function(p){return fmtF(p.fecha)+' · '+$p(p.monto)+(p.caja?' · '+p.caja:'');}).join(' | ')+'</div>'):'';
           // Badge de cheque propio imputado pendiente
           var chqpImpPend=CHQP_IMPUTACIONES.filter(function(i){
             return i.factura_id===f.id&&(function(){
@@ -6347,8 +6394,8 @@ function renderProvCC(){
             }).join(' | ')+'</div>'):'';
           return '<tr style="'+rowBg+'">'+
             '<td style="font-weight:600;">'+(f.numero||'—')+'</td>'+
-            '<td style="font-size:12px;">'+f.fecha+'</td>'+
-            '<td style="font-size:12px;color:'+(vencida?'#dc2626':'#374151')+';font-weight:'+(vencida?'700':'400')+';">'+(venc||(f.estado==='pagada'?'—':'Sin fecha'))+'</td>'+
+            '<td style="font-size:12px;">'+fmtF(f.fecha)+'</td>'+
+            '<td style="font-size:12px;color:'+(vencida?'#dc2626':'#374151')+';font-weight:'+(vencida?'700':'400')+';\">'+(venc?fmtF(venc):(f.estado==='pagada'?'—':'Sin fecha'))+'</td>'+
             '<td style="font-size:12px;">'+(f.concepto||'—')+'</td>'+
             '<td style="text-align:right;font-weight:700;">'+$p(Number(f.monto_total))+'</td>'+
             '<td style="text-align:right;color:#16a34a;font-weight:600;">'+(pagado>0?$p(pagado):'—')+'</td>'+
@@ -7487,7 +7534,7 @@ function renderPres(){
   tb.innerHTML=list.map(function(p){
     var badgeClass=p.estado==='aprobado'?'b-green':p.estado==='convertido'?'b-purple':p.estado==='rechazado'?'b-red':p.estado==='enviado'?'b-blue':'b-gray';
     return '<tr>'+
-      '<td><strong>#'+p.id+'</strong></td><td>'+(p.cliente_nombre||'—')+'</td><td>'+p.fecha+'</td>'+
+      '<td><strong>#'+p.id+'</strong></td><td>'+(p.cliente_nombre||'—')+'</td><td>'+fmtF(p.fecha)+'</td>'+
       '<td>'+$p(p.total)+'</td>'+
       '<td><span class="badge '+badgeClass+'">'+p.estado+'</span></td>'+
       '<td><div class="actions">'+
@@ -7576,7 +7623,7 @@ function renderLocalHero(){
     '</div>';
 }
 function setLocalTab(tab, el){
-  ['pos','ventas','cobros','stock','productos','facturacion','nueva-venta','cierre'].forEach(function(t){
+  ['pos','ventas','cobros','stock','productos','facturacion','resumen','nueva-venta','cierre'].forEach(function(t){
     var d=document.getElementById('lt-'+t);if(d)d.style.display=t===tab?'block':'none';
   });
   document.querySelectorAll('#local-tabs .tab').forEach(function(t){t.classList.remove('active');});
@@ -7588,6 +7635,7 @@ function setLocalTab(tab, el){
   else if(tab==='stock')renderLocalStock();
   else if(tab==='productos')renderLocalProductos();
   else if(tab==='facturacion'){renderLocalFact();renderFacturasClientes();}
+  else if(tab==='resumen')renderLocalResumen();
   else if(tab==='nueva-venta')mayInit();
   else if(tab==='cierre')renderLocalCierre();
 }
@@ -7664,6 +7712,159 @@ function renderLocalCierre(){
       }).join('');
     }
   }
+}
+async function renderLocalResumen(){
+  // Poblar selector de años si está vacío
+  var anioEl=document.getElementById('lres-anio');
+  if(anioEl&&anioEl.options.length===1){
+    var venAll=VENTAS.filter(function(v){return v.local===currentLocal&&v.fecha;});
+    var aniosSet={};venAll.forEach(function(v){aniosSet[v.fecha.slice(0,4)]=1;});
+    Object.keys(aniosSet).sort().forEach(function(a){
+      var o=document.createElement('option');o.value=a;o.textContent=a;
+      if(a===String(new Date().getFullYear()))o.selected=true;
+      anioEl.appendChild(o);
+    });
+  }
+  var anio=anioEl?anioEl.value:'';
+  var mesEl=document.getElementById('lres-mes');
+  var mes=mesEl?mesEl.value:'';
+  var contenedor=document.getElementById('lres-contenido');
+  if(!contenedor)return;
+  contenedor.innerHTML='<div class="empty"><p>Cargando...</p></div>';
+  // Filtrar ventas por local y período
+  var ventas=VENTAS.filter(function(v){
+    if(v.local!==currentLocal||!v.fecha)return false;
+    if(anio&&!v.fecha.startsWith(anio))return false;
+    if(anio&&mes&&!v.fecha.startsWith(anio+'-'+mes))return false;
+    return true;
+  });
+  if(!ventas.length){
+    contenedor.innerHTML='<div class="empty"><p>No hay ventas para el período seleccionado.</p></div>';
+    return;
+  }
+  // KPIs básicos (client-side)
+  var totalVentas=ventas.reduce(function(s,v){return s+Number(v.total||0);},0);
+  var totalCobrado=ventas.reduce(function(s,v){return s+(Number(v.total||0)-Number(v.saldo||0));},0);
+  var totalPendiente=ventas.reduce(function(s,v){return s+Number(v.saldo||0);},0);
+  var nVentas=ventas.length;
+  // Consultar items_venta para las ventas filtradas
+  var ids=ventas.map(function(v){return v.id;});
+  var totalUnidades=0;
+  var itemsMap={};
+  if(ids.length>0){
+    var {data:items}=await sb.from('items_venta').select('descripcion,cantidad,subtotal').in('venta_id',ids);
+    if(items){
+      items.forEach(function(it){
+        totalUnidades+=Number(it.cantidad||0);
+        var desc=it.descripcion||'Sin descripción';
+        if(!itemsMap[desc])itemsMap[desc]={cantidad:0,subtotal:0};
+        itemsMap[desc].cantidad+=Number(it.cantidad||0);
+        itemsMap[desc].subtotal+=Number(it.subtotal||0);
+      });
+    }
+  }
+  // Top clientes
+  var clienteMap={};
+  ventas.forEach(function(v){
+    var n=v.cliente_nombre||'Mostrador';
+    if(!clienteMap[n])clienteMap[n]={total:0,count:0,saldo:0};
+    clienteMap[n].total+=Number(v.total||0);
+    clienteMap[n].count++;
+    clienteMap[n].saldo+=Number(v.saldo||0);
+  });
+  var topClientes=Object.entries(clienteMap).sort(function(a,b){return b[1].total-a[1].total;}).slice(0,10);
+  // Evolución mensual
+  var mesesMap={};
+  ventas.forEach(function(v){
+    var m=v.fecha?v.fecha.slice(0,7):'????';
+    if(!mesesMap[m])mesesMap[m]={total:0,count:0};
+    mesesMap[m].total+=Number(v.total||0);mesesMap[m].count++;
+  });
+  var mesesList=Object.entries(mesesMap).sort(function(a,b){return a[0].localeCompare(b[0]);});
+  var maxMes=Math.max.apply(null,mesesList.map(function(e){return e[1].total;}))||1;
+  // Top items
+  var topItems=Object.entries(itemsMap).sort(function(a,b){return b[1].subtotal-a[1].subtotal;}).slice(0,10);
+  var ML=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var html='';
+  // ── KPIs ──
+  html+='<div class="stats" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px;">'+
+    '<div class="stat"><div class="stat-icon" style="background:#ede9fe;">🧾</div><h3>'+nVentas+'</h3><p>Ventas</p></div>'+
+    '<div class="stat"><div class="stat-icon" style="background:#dbeafe;">💰</div><h3>'+$p(totalVentas)+'</h3><p>Facturado</p></div>'+
+    '<div class="stat"><div class="stat-icon" style="background:#dcfce7;">✅</div><h3>'+$p(totalCobrado)+'</h3><p>Cobrado</p></div>'+
+    '<div class="stat"><div class="stat-icon" style="background:#fee2e2;">⏳</div><h3 style="color:#dc2626;">'+$p(totalPendiente)+'</h3><p>Pendiente</p></div>'+
+    '<div class="stat"><div class="stat-icon" style="background:#fef3c7;">📦</div><h3>'+totalUnidades.toLocaleString('es-AR')+'</h3><p>Unidades</p></div>'+
+  '</div>';
+  // ── Dos columnas: top clientes + top ítems ──
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">';
+  // Top clientes
+  html+='<div class="panel"><div class="panel-hdr"><h4>🏆 Top clientes</h4></div>'+
+    '<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;border-collapse:collapse;">'+
+    '<thead><tr style="background:#f9fafb;">'+
+      '<th style="padding:7px 8px;text-align:left;font-weight:600;color:#6b7280;">#</th>'+
+      '<th style="padding:7px 8px;text-align:left;font-weight:600;color:#6b7280;">Cliente</th>'+
+      '<th style="padding:7px 8px;text-align:right;font-weight:600;color:#6b7280;">Ventas</th>'+
+      '<th style="padding:7px 8px;text-align:right;font-weight:600;color:#6b7280;">Total</th>'+
+      '<th style="padding:7px 8px;text-align:right;font-weight:600;color:#dc2626;">Deuda</th>'+
+    '</tr></thead><tbody>';
+  topClientes.forEach(function(e,i){
+    html+='<tr style="border-top:1px solid #f3f4f6;">'+
+      '<td style="padding:5px 8px;font-size:11px;color:#9ca3af;">'+(i+1)+'</td>'+
+      '<td style="padding:5px 8px;font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(e[0])+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;color:#6b7280;">'+e[1].count+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;font-weight:700;color:#6c7ae0;">'+$p(e[1].total)+'</td>'+
+      '<td style="padding:5px 8px;text-align:right;font-weight:700;color:'+(e[1].saldo>0?'#dc2626':'#16a34a')+';">'+$p(e[1].saldo)+'</td>'+
+    '</tr>';
+  });
+  html+='</tbody></table></div></div>';
+  // Top ítems
+  html+='<div class="panel"><div class="panel-hdr"><h4>📦 Ítems más vendidos</h4></div>'+
+    '<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;border-collapse:collapse;">'+
+    '<thead><tr style="background:#f9fafb;">'+
+      '<th style="padding:7px 8px;text-align:left;font-weight:600;color:#6b7280;">#</th>'+
+      '<th style="padding:7px 8px;text-align:left;font-weight:600;color:#6b7280;">Ítem</th>'+
+      '<th style="padding:7px 8px;text-align:right;font-weight:600;color:#6b7280;">Unidades</th>'+
+      '<th style="padding:7px 8px;text-align:right;font-weight:600;color:#6b7280;">Total</th>'+
+    '</tr></thead><tbody>';
+  if(topItems.length){
+    topItems.forEach(function(e,i){
+      html+='<tr style="border-top:1px solid #f3f4f6;">'+
+        '<td style="padding:5px 8px;font-size:11px;color:#9ca3af;">'+(i+1)+'</td>'+
+        '<td style="padding:5px 8px;font-weight:600;">'+esc(e[0])+'</td>'+
+        '<td style="padding:5px 8px;text-align:right;font-weight:700;color:#6c7ae0;">'+Number(e[1].cantidad).toLocaleString('es-AR')+'</td>'+
+        '<td style="padding:5px 8px;text-align:right;font-weight:700;color:#16a34a;">'+$p(e[1].subtotal)+'</td>'+
+      '</tr>';
+    });
+  } else {
+    html+='<tr><td colspan="4" style="text-align:center;padding:20px;color:#9ca3af;font-size:13px;">Sin ítems detallados — cargá ventas con productos para ver este ranking.</td></tr>';
+  }
+  html+='</tbody></table></div></div>';
+  html+='</div>'; // end grid 2 cols
+  // ── Evolución mensual ──
+  html+='<div class="panel"><div class="panel-hdr"><h4>📅 Evolución mensual</h4></div>'+
+    '<div style="overflow-x:auto;"><table style="width:100%;font-size:12px;border-collapse:collapse;">'+
+    '<thead><tr style="background:#f9fafb;">'+
+      '<th style="padding:7px 10px;text-align:left;font-weight:600;color:#6b7280;">Mes</th>'+
+      '<th style="padding:7px 10px;text-align:right;font-weight:600;color:#6b7280;">Ventas</th>'+
+      '<th style="padding:7px 10px;text-align:right;font-weight:600;color:#6b7280;">Total</th>'+
+      '<th style="padding:7px 10px;font-weight:600;color:#6b7280;min-width:180px;">Progreso</th>'+
+    '</tr></thead><tbody>';
+  mesesList.forEach(function(e){
+    var p=e[0].split('-');
+    var label=(ML[parseInt(p[1])]||p[1])+' '+p[0];
+    var pct=Math.round(e[1].total/maxMes*100);
+    html+='<tr style="border-top:1px solid #f3f4f6;">'+
+      '<td style="padding:6px 10px;font-weight:600;">'+label+'</td>'+
+      '<td style="padding:6px 10px;text-align:right;color:#6b7280;">'+e[1].count+'</td>'+
+      '<td style="padding:6px 10px;text-align:right;font-weight:700;color:#6c7ae0;">'+$p(e[1].total)+'</td>'+
+      '<td style="padding:6px 10px;">'+
+        '<div style="background:#f3f4f6;border-radius:4px;height:8px;">'+
+        '<div style="background:#6c7ae0;border-radius:4px;height:8px;width:'+pct+'%;"></div>'+
+        '</div>'+
+      '</td>'+
+    '</tr>';
+  });
+  html+='</tbody></table></div></div>';
+  contenedor.innerHTML=html;
 }
 function actualizarDiffLocal(){
   var caja=currentLocal==='llavallol'?'LOCAL LLAVALLOL':'LOCAL MONTE GRANDE';
@@ -7885,7 +8086,7 @@ function renderLocalCobros(){
   if(!deudas.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="ei">✅</div><p>Todo cobrado</p></div></td></tr>';return;}
   tb.innerHTML=deudas.map(function(v){
     return '<tr>'+
-      '<td>#'+v.id+'</td><td>'+v.fecha+'</td>'+
+      '<td>#'+v.id+'</td><td>'+fmtF(v.fecha)+'</td>'+
       '<td>'+(v.cliente_nombre||'Mostrador')+'</td>'+
       '<td>'+$p(v.total)+'</td>'+
       '<td style="color:#dc2626;font-weight:700;">'+$p(v.saldo)+'</td>'+
@@ -7927,7 +8128,7 @@ async function renderLocalFact(){
   '<div class="panel"><div class="panel-hdr"><h4>Detalle ('+list.length+' ventas)</h4></div>'+
   '<div class="tbl"><table><thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Total</th><th>Saldo</th><th>Estado</th></tr></thead><tbody>'+
   (list.length?list.map(function(v){
-    return '<tr><td>#'+v.id+'</td><td>'+v.fecha+'</td><td>'+(v.cliente_nombre||'Mostrador')+'</td>'+
+    return '<tr><td>#'+v.id+'</td><td>'+fmtF(v.fecha)+'</td><td>'+(v.cliente_nombre||'Mostrador')+'</td>'+
     '<td>'+v.tipo+'</td><td>'+$p(v.total)+'</td>'+
     '<td style="color:'+(Number(v.saldo)>0?'#dc2626':'#16a34a')+'">'+$p(v.saldo)+'</td>'+
     '<td><span class="badge '+(v.estado==='cobrado'?'b-green':v.estado==='parcial'?'b-blue':'b-yellow')+'">'+v.estado+'</span></td></tr>';
@@ -8223,18 +8424,21 @@ async function verVenta(id, backSec){
     '<div class="panel">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:18px;">'+
         '<div><h3 style="font-size:18px;font-weight:800;color:#1a1f36;">Venta #'+v.id+'</h3>'+
-        '<div style="color:#9ca3af;font-size:13px;margin-top:4px;">'+v.fecha+' · '+(v.local==='llavallol'?'Llavallol':'Monte Grande')+' · '+v.tipo+'</div></div>'+
+        '<div style="color:#9ca3af;font-size:13px;margin-top:4px;">'+fmtF(v.fecha)+' · '+(v.local==='llavallol'?'Llavallol':'Monte Grande')+' · '+v.tipo+'</div></div>'+
         '<div style="text-align:right;"><div style="font-size:24px;font-weight:800;color:#6c7ae0;">'+$p(v.total)+'</div>'+
         '<span class="badge '+(v.estado==='cobrado'?'b-green':v.estado==='parcial'?'b-blue':'b-yellow')+'">'+v.estado+'</span></div>'+
       '</div>'+
       '<h4 style="margin-bottom:10px;font-size:14px;">Items</h4>'+
       '<div class="items-box"><div class="item-row hdr"><span>Descripción</span><span>Cant.</span><span>Precio</span><span>Subtotal</span><span></span></div>'+
       (items||[]).map(function(it){return '<div class="item-row"><span>'+esc(it.descripcion)+'</span><span>'+it.cantidad+'</span><span>'+$p(it.precio_unitario)+'</span><span>'+$p(it.subtotal)+'</span><span></span></div>';}).join('')+
-      '</div><div class="total-row">Total: <span style="margin-left:10px;color:#6c7ae0;">'+$p(v.total)+'</span></div>'+
+      '</div><div class="total-row" style="display:flex;justify-content:space-between;align-items:center;">'+
+      '<span>Total: <span style="margin-left:8px;color:#6c7ae0;font-weight:800;">'+$p(v.total)+'</span></span>'+
+      '<button class="btn btn-sm btn-outline" onclick="openEditItemsVenta('+v.id+')">✏️ Editar ítems</button>'+
+      '</div>'+
       '<h4 style="margin:18px 0 10px;font-size:14px;">Cobros</h4>'+
       (cobros&&cobros.length?
         '<div class="tbl"><table><thead><tr><th>Fecha</th><th>Monto</th><th>Medio</th><th>Nota</th></tr></thead><tbody>'+
-        cobros.map(function(c){return '<tr><td>'+c.fecha+'</td><td style="color:#16a34a;font-weight:700;">'+$p(c.monto)+'</td><td>'+c.medio+'</td><td>'+(c.nota||'—')+'</td></tr>';}).join('')+
+        cobros.map(function(c){return '<tr><td>'+fmtF(c.fecha)+'</td><td style="color:#16a34a;font-weight:700;">'+$p(c.monto)+'</td><td>'+c.medio+'</td><td>'+(c.nota||'—')+'</td></tr>';}).join('')+
         '</tbody></table></div>':
         '<div class="empty"><p>Sin cobros registrados</p></div>')+
       (v.estado!=='cobrado'?'<div style="margin-top:14px;"><button class="btn btn-green" onclick="openCobro('+v.id+','+(v.cliente_id||'null')+','+v.saldo+')">Registrar cobro</button></div>':'')+
@@ -8306,7 +8510,7 @@ async function generarReporte(){
     '<div class="panel"><div class="panel-hdr"><h4>Detalle</h4></div>'+
     '<div class="tbl"><table><thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Local</th><th>Tipo</th><th>Total</th><th>Saldo</th><th>Estado</th></tr></thead><tbody>'+
     (list.length?list.map(function(v){
-      return '<tr><td>#'+v.id+'</td><td>'+v.fecha+'</td><td>'+(v.cliente_nombre||'Mostrador')+'</td>'+
+      return '<tr><td>#'+v.id+'</td><td>'+fmtF(v.fecha)+'</td><td>'+(v.cliente_nombre||'Mostrador')+'</td>'+
       '<td><span class="badge '+(v.local==='llavallol'?'b-ll':v.local==='mayorista'?'b-purple':'b-mg')+'">'+v.local+'</span></td>'+
       '<td>'+v.tipo+'</td><td>'+$p(v.total)+'</td>'+
       '<td style="color:'+(Number(v.saldo)>0?'#dc2626':'#16a34a')+'">'+$p(v.saldo)+'</td>'+
@@ -10462,7 +10666,7 @@ function poblarFaccliVentas(clienteId){
     .forEach(function(v){
       var o=document.createElement('option');
       o.value=v.id;
-      o.textContent='Venta #'+v.id+' · '+v.fecha+' · Saldo: '+$p(Number(v.saldo));
+      o.textContent='Venta #'+v.id+' · '+fmtF(v.fecha)+' · Saldo: '+$p(Number(v.saldo));
       sel.appendChild(o);
     });
   if(prev)sel.value=prev;
@@ -10961,7 +11165,7 @@ function renderChqResumen(){
         var d=new Date(x.fecha+'T00:00:00');
         var dias=Math.round((d-hoyDate)/(86400000));
         var label=dias===0?'HOY':dias===1?'MAÑANA':(dias<0?Math.abs(dias)+' días VENCIDO':dias+' días');
-        html+='<tr style="background:#f9fafb;"><td colspan="5" style="font-size:11px;font-weight:700;color:#9ca3af;padding:4px 12px;">'+x.fecha+' — '+label+'</td></tr>';
+        html+='<tr style="background:#f9fafb;"><td colspan="5" style="font-size:11px;font-weight:700;color:#9ca3af;padding:4px 12px;">'+fmtF(x.fecha)+' — '+label+'</td></tr>';
         prevFecha=x.fecha;
       }
       html+='<tr>'+
@@ -11001,7 +11205,7 @@ function renderChqpImpFacturas(){
     return '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;cursor:pointer;background:'+(checked?'#ede9fe':'#f9fafb')+';border:1px solid '+(checked?'#6c7ae0':'#e5e7eb')+';transition:background .15s;">'+
       '<input type="checkbox" value="'+f.id+'" '+(checked?'checked':'')+' onchange="toggleChqpImpFact('+f.id+','+saldo+')" style="width:15px;height:15px;cursor:pointer;"/>'+
       '<div style="flex:1;min-width:0;">'+
-        '<div style="font-size:12px;font-weight:700;color:#374151;">'+(f.numero||'Sin N°')+' &nbsp;·&nbsp; '+f.fecha+'</div>'+
+        '<div style="font-size:12px;font-weight:700;color:#374151;">'+(f.numero||'Sin N°')+' &nbsp;·&nbsp; '+fmtF(f.fecha)+'</div>'+
         (f.concepto?'<div style="font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+f.concepto+'</div>':'')+
       '</div>'+
       '<div style="font-size:13px;font-weight:800;color:#dc2626;white-space:nowrap;">'+$p(saldo)+'</div>'+
@@ -15182,7 +15386,7 @@ function previewImport(input){
       var tipoBadge=r.tipo==='ingreso'?'b-green':r.tipo==='transferencia'?'b-purple':'b-red';
       return'<tr style="'+(ok?'':'background:#fff1f2;')+'">'+
         '<td style="font-size:11px;color:#9ca3af;">'+r.num+'</td>'+
-        '<td>'+r.fecha+'</td>'+
+        '<td>'+fmtF(r.fecha)+'</td>'+
         '<td style="font-size:11px;color:'+(CAJA_COLORES[r.caja]||'#6b7280')+';font-weight:700;">'+cajaNombre(r.caja)+'</td>'+
         '<td><span class="badge '+tipoBadge+'">'+r.tipo+'</span></td>'+
         '<td style="font-size:11px;">'+(r.concepto||'—')+'</td>'+
