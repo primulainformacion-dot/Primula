@@ -6947,12 +6947,20 @@ function renderCCMayoristas(){
     var ventasRows=ventasCli.slice(0,8).map(function(v){
       var estadoBadge=v.estado==='cobrado'?'b-green':v.estado==='parcial'?'b-blue':'b-yellow';
       var esNC=Number(v.total)<0;
-      var cobrosV=COBROS.filter(function(cb){return cb.venta_id===v.id;}).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
-      var mainRow='<tr'+(esNC?' style="background:#fff5f5;"':'')+'>'+
+      var cobrosV=COBROS.filter(function(cb){return cb.venta_id===v.id;});
+      var cobrosHint='';
+      if(cobrosV.length){
+        var totalCob=cobrosV.reduce(function(s,cb){return s+Number(cb.monto||0);},0);
+        cobrosHint='<div style="font-size:10px;color:#6b7280;margin-top:3px;">'+cobrosV.length+' pago'+(cobrosV.length>1?'s':'')+' · cobrado '+$p(totalCob)+'</div>';
+      }
+      return '<tr'+(esNC?' style="background:#fff5f5;"':'')+'>'+
         '<td style="font-size:12px;color:#6b7280;">'+fmtF(v.fecha)+(esNC?' <span class="badge b-red" style="font-size:10px;padding:1px 5px;">NC</span>':'')+' </td>'+
         '<td style="font-size:12px;color:#6c7ae0;font-weight:600;">'+(v.nro_factura||'—')+'</td>'+
         '<td style="text-align:right;font-weight:700;">'+$p(Number(v.total))+'</td>'+
-        '<td style="text-align:right;font-weight:800;color:'+(Number(v.saldo)>0?'#dc2626':'#16a34a')+';">'+$p(Number(v.saldo))+'</td>'+
+        '<td style="text-align:right;">'+
+          '<span style="font-weight:800;color:'+(Number(v.saldo)>0?'#dc2626':'#16a34a')+';">'+$p(Number(v.saldo))+'</span>'+
+          cobrosHint+
+        '</td>'+
         '<td><span class="badge '+estadoBadge+'">'+v.estado+'</span></td>'+
         '<td style="white-space:nowrap;">'+
           (esNC&&v.estado!=='cobrado'?'<button class="btn btn-sm btn-gray" onclick="darDeBajaNC('+v.id+')">✖ Dar de baja</button> ':'')+
@@ -6960,23 +6968,6 @@ function renderCCMayoristas(){
           '<button class="btn btn-sm btn-gray" onclick="verVenta('+v.id+',\'cuenta\')">Ver</button>'+
         '</td>'+
       '</tr>';
-      var subRow='';
-      if(cobrosV.length){
-        var pills=cobrosV.map(function(cb){
-          var chq=cb.cheque_id?CHEQUES_CARTERA.find(function(ch){return ch.id===cb.cheque_id;}):null;
-          var medio=cb.medio||'';
-          var icon=medio==='cheque'||medio==='echeq'?'🧾':(medio==='efectivo'?'💵':(medio==='transferencia'?'🏦':'💳'));
-          var txt=fmtF(cb.fecha)+' '+icon+' '+$p(cb.monto);
-          if(chq){
-            txt+=' · '+(chq.tipo==='echeq'?'ECHEQ':'Cheq')+(chq.numero?' #'+chq.numero:'')+(chq.banco?' '+chq.banco:'')+(chq.emisor?' · '+chq.emisor:'')+(chq.fecha_cobro?' vto '+fmtF(chq.fecha_cobro):'');
-          }else if(medio&&medio!=='cheque'&&medio!=='echeq'){
-            txt+=' · '+medio;
-          }
-          return '<span style="display:inline-block;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;font-size:11px;padding:2px 8px;border-radius:20px;margin:2px 3px 2px 0;white-space:nowrap;">'+txt+'</span>';
-        }).join('');
-        subRow='<tr><td colspan="6" style="padding:0 10px 7px 28px;background:'+(esNC?'#fff5f5':'#fafafa')+';border-top:none;">'+pills+'</td></tr>';
-      }
-      return mainRow+subRow;
     }).join('');
 
     return '<div style="margin-bottom:14px;border:2px solid '+(hayDeuda?'#fecaca':'#e5e7eb')+';border-radius:12px;overflow:hidden;">'+
@@ -9448,10 +9439,24 @@ async function verVenta(id, backSec){
       '<button class="btn btn-sm btn-outline" onclick="openEditItemsVenta('+v.id+')">✏️ Editar ítems</button>'+
       '</div>'+
       '<h4 style="margin:18px 0 10px;font-size:14px;">Cobros</h4>'+
-      (cobros&&cobros.length?
-        '<div class="tbl"><table><thead><tr><th>Fecha</th><th>Monto</th><th>Medio</th><th>Nota</th></tr></thead><tbody>'+
-        cobros.map(function(c){return '<tr><td>'+fmtF(c.fecha)+'</td><td style="color:#16a34a;font-weight:700;">'+$p(c.monto)+'</td><td>'+c.medio+'</td><td>'+(c.nota||'—')+'</td></tr>';}).join('')+
-        '</tbody></table></div>':
+      (cobros&&cobros.length?(function(){
+        var totalCobrado=(cobros||[]).reduce(function(s,c){return s+Number(c.monto||0);},0);
+        var rows=cobros.map(function(c){
+          var chq=c.cheque_id?CHEQUES_CARTERA.find(function(ch){return ch.id===c.cheque_id;}):null;
+          var chqCell='<td style="font-size:11px;color:#6b7280;">—</td>';
+          if(chq){
+            var chqTxt=(chq.tipo==='echeq'?'⚡ ECHEQ':'📋 CHQ')+(chq.numero?' N°'+chq.numero:'')+(chq.banco?' · '+chq.banco:'')+(chq.emisor?' · '+chq.emisor:'')+(chq.fecha_cobro?'<br><span style="color:#9ca3af;">vto '+fmtF(chq.fecha_cobro)+'</span>':'');
+            chqCell='<td style="font-size:11px;color:#374151;">'+chqTxt+'</td>';
+          }
+          return '<tr><td>'+fmtF(c.fecha)+'</td><td style="color:#16a34a;font-weight:700;">'+$p(c.monto)+'</td><td>'+c.medio+'</td><td style="font-size:12px;">'+(c.nota||'—')+'</td>'+chqCell+'</tr>';
+        }).join('');
+        var totalRow='<tr style="background:#f0fdf4;border-top:2px solid #bbf7d0;">'+
+          '<td style="font-weight:700;color:#166534;" colspan="1">Total cobrado</td>'+
+          '<td style="font-weight:800;color:#16a34a;">'+$p(totalCobrado)+'</td>'+
+          '<td colspan="2" style="font-size:12px;color:#6b7280;">Saldo pendiente: <strong style="color:'+(Number(v.saldo)>0?'#dc2626':'#16a34a')+';">'+$p(Number(v.saldo))+'</strong></td>'+
+          '<td></td></tr>';
+        return '<div class="tbl"><table><thead><tr><th>Fecha</th><th>Monto</th><th>Medio</th><th>Nota</th><th>Cheque / Trazabilidad</th></tr></thead><tbody>'+rows+totalRow+'</tbody></table></div>';
+      })():
         '<div class="empty"><p>Sin cobros registrados</p></div>')+
       (v.estado!=='cobrado'?
         '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">'+
@@ -11381,7 +11386,9 @@ var editFacCliId=null;
 function saldoCheque(chequeId){
   var c=CHEQUES_CARTERA.find(function(x){return x.id===chequeId;})||{};
   var imp=CHEQUE_IMPUTACIONES.filter(function(i){return i.cheque_id===chequeId;}).reduce(function(s,i){return s+Number(i.monto);},0);
-  return Math.max(Number(c.monto||0)-imp,0);
+  // También descuenta cobros de CC Mayoristas vinculados a este cheque (patch_71)
+  var cobroCheq=COBROS.filter(function(cb){return cb.cheque_id===chequeId;}).reduce(function(s,cb){return s+Number(cb.monto||0);},0);
+  return Math.max(Number(c.monto||0)-imp-cobroCheq,0);
 }
 // Saldo disponible para usar/endosar/depositar (lado egreso)
 function saldoChequeUso(chequeId){
@@ -11904,12 +11911,16 @@ async function saveImputacion(){
     var ventaId=parseInt(selVal.replace('v_',''))||0;
     var venta=VENTAS.find(function(v){return v.id===ventaId;})||{};
     var saldoV=Number(venta.saldo||0);
+    if(saldoV<=0.01){errEl.textContent='Esta venta ya está cobrada al 100%';errEl.style.display='block';return;}
     if(monto>saldoV+0.01){errEl.textContent='El monto supera el saldo de la venta ('+$p(saldoV)+')';errEl.style.display='block';return;}
+    // Guard: cheque ya aplicado a esta venta (funciona si patch_71 está corrido)
+    var yaAplicado=COBROS.some(function(cb){return cb.cheque_id===impChequeId&&cb.venta_id===ventaId;});
+    if(yaAplicado){errEl.textContent='⚠️ Este cheque ya fue aplicado a esta venta';errEl.style.display='block';return;}
     var cli=CLIENTES.find(function(c){return c.id===venta.cliente_id;})||{};
-    // Registrar cobro
+    // Registrar cobro — guarda cheque_id para trazabilidad (requiere patch_71)
     var {error:eCobro}=await sb.from('cobros').insert({
       venta_id:ventaId,cliente_id:venta.cliente_id||null,
-      fecha:fechaImp,monto,medio:'cheque',
+      fecha:fechaImp,monto,medio:'cheque',cheque_id:impChequeId,
       nota:(notaImp||'')+((chqImp.numero||chqImp.tipo)?(' · '+(chqImp.tipo==='echeq'?'ECHEQ':'Cheque')+(chqImp.numero?' N°'+chqImp.numero:'')):'')
     });
     if(eCobro){errEl.textContent='Error: '+eCobro.message;errEl.style.display='block';return;}
