@@ -4779,20 +4779,31 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
-<!-- Modal: imputar cheque a factura -->
+<!-- Modal: imputar cheque a factura o venta CC -->
 <div class="modal-bg" id="m-imputar">
   <div class="modal" style="max-width:600px;">
-    <h3>🔗 Imputar cheque a factura</h3>
-    <div id="m-imputar-cheque-info" style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;"></div>
+    <h3>🔗 Aplicar cheque a deuda</h3>
+    <div id="m-imputar-cheque-info" style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;"></div>
+    <div class="field" style="margin-bottom:6px;">
+      <label>Tipo de deuda *</label>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;">
+          <input type="radio" name="imp-tipo" value="venta" checked onchange="impCambiarTipo()"/> Venta CC Mayoristas
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;">
+          <input type="radio" name="imp-tipo" value="factura" onchange="impCambiarTipo()"/> Factura de cliente
+        </label>
+      </div>
+    </div>
     <div class="field" style="margin-bottom:14px;">
-      <label>Factura a imputar *</label>
+      <label id="imp-select-label">Venta a cobrar *</label>
       <select id="imp-factura-id" onchange="impActualizarMax()" style="width:100%;">
-        <option value="">— Seleccioná una factura —</option>
+        <option value="">— Seleccioná —</option>
       </select>
     </div>
     <div class="grid2">
       <div class="field">
-        <label>Monto a imputar $ *</label>
+        <label>Monto a aplicar $ *</label>
         <input type="number" id="imp-monto" min="0" placeholder="0" oninput="impActualizarMax()"/>
         <div id="imp-max-hint" style="font-size:11px;color:#6b7280;margin-top:4px;"></div>
       </div>
@@ -4805,7 +4816,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div id="imp-err" style="color:#dc2626;font-size:12px;margin-top:6px;display:none;"></div>
     <div class="modal-footer">
       <button class="btn btn-gray" onclick="closeM('m-imputar')">Cancelar</button>
-      <button class="btn" style="background:#7c3aed;border-color:#6d28d9;" onclick="saveImputacion()">🔗 Imputar</button>
+      <button class="btn" style="background:#7c3aed;border-color:#6d28d9;" onclick="saveImputacion()">🔗 Aplicar</button>
     </div>
   </div>
 </div>
@@ -11788,77 +11799,132 @@ function openImputarModal(chequeId){
   var saldo=saldoCheque(chequeId);
   document.getElementById('m-imputar-cheque-info').innerHTML=
     '<strong>'+esc(c.emisor||'')+'</strong> · '+(c.tipo==='echeq'?'ECHEQ':'Cheque')+' · Monto: <strong>'+$p(Number(c.monto))+'</strong><br>'+
-    'Saldo disponible para imputar: <strong style="color:'+(saldo>0?'#16a34a':'#dc2626')+';">'+$p(saldo)+'</strong>';
+    'Saldo disponible: <strong style="color:'+(saldo>0?'#16a34a':'#dc2626')+';">'+$p(saldo)+'</strong>';
   document.getElementById('imp-fecha').value=today();
   document.getElementById('imp-monto').value='';
   document.getElementById('imp-nota').value='';
   document.getElementById('imp-err').style.display='none';
   document.getElementById('imp-max-hint').textContent='Máximo disponible: '+$p(saldo);
-  // Poblar facturas pendientes
-  var sel=document.getElementById('imp-factura-id');
-  sel.innerHTML='<option value="">— Seleccioná una factura —</option>';
-  FACTURAS_CLIENTES.filter(function(f){return f.estado!=='cobrada';}).forEach(function(f){
-    var sf=saldoFactura(f.id);
-    var o=document.createElement('option');
-    o.value=f.id;
-    o.textContent=(f.nro_factura||'S/N')+' · '+f.cliente_nombre+' · Saldo: '+$p(sf)+' · '+fmtF(f.fecha_emision);
-    sel.appendChild(o);
-  });
+  // Arrancar en modo "venta CC"
+  var radioVenta=document.querySelector('input[name="imp-tipo"][value="venta"]');
+  if(radioVenta)radioVenta.checked=true;
+  impCambiarTipo();
   openM('m-imputar');
+}
+
+function impCambiarTipo(){
+  var tipo=document.querySelector('input[name="imp-tipo"]:checked');
+  var t=tipo?tipo.value:'venta';
+  var sel=document.getElementById('imp-factura-id');
+  var lbl=document.getElementById('imp-select-label');
+  sel.innerHTML='<option value="">— Seleccioná —</option>';
+  if(t==='venta'){
+    if(lbl)lbl.textContent='Venta a cobrar *';
+    // Ventas CC Mayoristas pendientes (con saldo > 0)
+    var ventas=VENTAS.filter(function(v){return v.estado!=='cobrado'&&v.estado!=='anulada'&&Number(v.saldo||0)>0;});
+    ventas.sort(function(a,b){return (a.fecha||'')>(b.fecha||'')?1:-1;});
+    ventas.forEach(function(v){
+      var cli=CLIENTES.find(function(c){return c.id===v.cliente_id;})||{};
+      var o=document.createElement('option');
+      o.value='v_'+v.id;  // prefijo v_ para distinguir de facturas
+      o.textContent=(v.nro_factura||'Vta #'+v.id)+' · '+(cli.nombre||v.cliente_nombre||'?')+' · Saldo: '+$p(Number(v.saldo||0))+' · '+fmtF(v.fecha);
+      sel.appendChild(o);
+    });
+  }else{
+    if(lbl)lbl.textContent='Factura a imputar *';
+    FACTURAS_CLIENTES.filter(function(f){return f.estado!=='cobrada';}).forEach(function(f){
+      var sf=saldoFactura(f.id);
+      var o=document.createElement('option');
+      o.value=f.id;
+      o.textContent=(f.nro_factura||'S/N')+' · '+f.cliente_nombre+' · Saldo: '+$p(sf)+' · '+fmtF(f.fecha_emision);
+      sel.appendChild(o);
+    });
+  }
+  impActualizarMax();
 }
 function impActualizarMax(){
   var saldoChq=impChequeId?saldoCheque(impChequeId):0;
-  var facId=parseInt(document.getElementById('imp-factura-id').value)||0;
-  var saldoFac=facId?saldoFactura(facId):0;
-  var max=Math.min(saldoChq,saldoFac||saldoChq);
-  document.getElementById('imp-max-hint').textContent='Máximo: '+$p(max)+(saldoFac?' (saldo factura: '+$p(saldoFac)+')':'');
+  var selVal=document.getElementById('imp-factura-id').value;
+  var saldoDest=0;
+  if(selVal){
+    if(String(selVal).startsWith('v_')){
+      var vId=parseInt(selVal.replace('v_',''))||0;
+      var v=VENTAS.find(function(x){return x.id===vId;})||{};
+      saldoDest=Number(v.saldo||0);
+    }else{
+      var fId=parseInt(selVal)||0;
+      saldoDest=fId?saldoFactura(fId):0;
+    }
+  }
+  var max=Math.min(saldoChq,saldoDest||saldoChq);
+  document.getElementById('imp-max-hint').textContent='Máximo: '+$p(max)+(saldoDest?' (saldo deuda: '+$p(saldoDest)+')':'');
 }
 async function saveImputacion(){
-  var facId=parseInt(document.getElementById('imp-factura-id').value)||0;
+  var selVal=document.getElementById('imp-factura-id').value;
   var monto=parseFloat(document.getElementById('imp-monto').value)||0;
   var errEl=document.getElementById('imp-err');
-  if(!facId){errEl.textContent='Seleccioná una factura';errEl.style.display='block';return;}
-  if(!monto||monto<=0){errEl.textContent='Ingresá un monto válido';errEl.style.display='block';return;}
-  var saldoChq=saldoCheque(impChequeId);
-  var saldoFac=saldoFactura(facId);
-  if(monto>saldoChq){errEl.textContent='El monto supera el saldo del cheque ('+$p(saldoChq)+')';errEl.style.display='block';return;}
-  if(monto>saldoFac){errEl.textContent='El monto supera el saldo de la factura ('+$p(saldoFac)+')';errEl.style.display='block';return;}
-  errEl.style.display='none';
   var fechaImp=document.getElementById('imp-fecha').value||today();
   var notaImp=document.getElementById('imp-nota').value.trim()||null;
-  var r=await sb.from('cheque_imputaciones').insert({
-    cheque_id:impChequeId, factura_id:facId, monto:monto,
-    fecha:fechaImp, nota:notaImp
-  });
-  if(r.error){errEl.textContent='Error: '+r.error.message;errEl.style.display='block';return;}
-  await actualizarEstadoFactura(facId);
-  var fac=FACTURAS_CLIENTES.find(function(f){return f.id===facId;})||{};
   var chqImp=CHEQUES_CARTERA.find(function(x){return x.id===impChequeId;})||{};
-  var detalleImp='Imputado a FAC '+(fac.nro_factura||'S/N')+(fac.cliente_nombre?' · '+fac.cliente_nombre:'')+(chqImp.numero?' · Cheque N°'+chqImp.numero:'');
-  // EGRESO en CHEQUES/ECHEQ
-  await sb.from('movimientos').insert({
-    tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha:fechaImp,
-    ingreso:0,egreso:monto,
-    concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleImp,nota:notaImp
-  });
-  // Si la factura está ligada a una venta, registrar cobro y actualizar saldo
-  if(fac.venta_id){
-    var venta=VENTAS.find(function(v){return v.id===fac.venta_id;})||{};
-    await sb.from('cobros').insert({
-      venta_id:fac.venta_id,
-      cliente_id:fac.cliente_id||null,
+  var saldoChq=saldoCheque(impChequeId);
+  if(!selVal){errEl.textContent='Seleccioná una deuda';errEl.style.display='block';return;}
+  if(!monto||monto<=0){errEl.textContent='Ingresá un monto válido';errEl.style.display='block';return;}
+  if(monto>saldoChq+0.01){errEl.textContent='El monto supera el saldo del cheque ('+$p(saldoChq)+')';errEl.style.display='block';return;}
+  errEl.style.display='none';
+
+  var esVenta=String(selVal).startsWith('v_');
+
+  if(esVenta){
+    // ── Cobro en CC Mayoristas ──
+    var ventaId=parseInt(selVal.replace('v_',''))||0;
+    var venta=VENTAS.find(function(v){return v.id===ventaId;})||{};
+    var saldoV=Number(venta.saldo||0);
+    if(monto>saldoV+0.01){errEl.textContent='El monto supera el saldo de la venta ('+$p(saldoV)+')';errEl.style.display='block';return;}
+    var cli=CLIENTES.find(function(c){return c.id===venta.cliente_id;})||{};
+    // Registrar cobro
+    var {error:eCobro}=await sb.from('cobros').insert({
+      venta_id:ventaId,cliente_id:venta.cliente_id||null,
       fecha:fechaImp,monto,medio:'cheque',
-      nota:'Imputación FAC '+(fac.nro_factura||'S/N')+(chqImp.numero?' · Cheque N°'+chqImp.numero:'')
+      nota:(notaImp||'')+((chqImp.numero||chqImp.tipo)?(' · '+(chqImp.tipo==='echeq'?'ECHEQ':'Cheque')+(chqImp.numero?' N°'+chqImp.numero:'')):'')
     });
-    var nuevoSaldo=Math.max(Number(venta.saldo||0)-monto,0);
+    if(eCobro){errEl.textContent='Error: '+eCobro.message;errEl.style.display='block';return;}
+    // Actualizar saldo y estado de la venta
+    var nuevoSaldo=Math.max(saldoV-monto,0);
     var nuevoEst=nuevoSaldo<=0?'cobrado':'parcial';
-    await sb.from('ventas').update({saldo:nuevoSaldo,estado:nuevoEst,updated_at:new Date().toISOString()}).eq('id',fac.venta_id);
+    await sb.from('ventas').update({saldo:nuevoSaldo,estado:nuevoEst,updated_at:new Date().toISOString()}).eq('id',ventaId);
+    // NO se crea movimiento adicional: el ingreso en CHEQUES/ECHEQ
+    // ya fue registrado cuando se cargó el cheque a la cartera.
+    toast('✅ Cobro registrado: '+$p(monto)+' · '+(cli.nombre||'Vta #'+ventaId));
+    closeM('m-imputar');
+    await Promise.all([loadChequesCartera(),loadChequeImputaciones(),loadVentas(),loadMovs()]);
+    renderChqCartera();
+
+  }else{
+    // ── Imputación a Factura de Cliente ──
+    var facId=parseInt(selVal)||0;
+    var fac=FACTURAS_CLIENTES.find(function(f){return f.id===facId;})||{};
+    var saldoFac=saldoFactura(facId);
+    if(monto>saldoFac+0.01){errEl.textContent='El monto supera el saldo de la factura ('+$p(saldoFac)+')';errEl.style.display='block';return;}
+    var r=await sb.from('cheque_imputaciones').insert({cheque_id:impChequeId,factura_id:facId,monto,fecha:fechaImp,nota:notaImp});
+    if(r.error){errEl.textContent='Error: '+r.error.message;errEl.style.display='block';return;}
+    await actualizarEstadoFactura(facId);
+    var detF='Imputado a FAC '+(fac.nro_factura||'S/N')+(fac.cliente_nombre?' · '+fac.cliente_nombre:'')+(chqImp.numero?' · Cheque N°'+chqImp.numero:'');
+    await sb.from('movimientos').insert({
+      tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha:fechaImp,
+      ingreso:0,egreso:monto,concepto:'CHEQUES/TRANSFERENCIAS',detalle:detF,nota:notaImp
+    });
+    if(fac.venta_id){
+      var ventaF=VENTAS.find(function(v){return v.id===fac.venta_id;})||{};
+      await sb.from('cobros').insert({venta_id:fac.venta_id,cliente_id:fac.cliente_id||null,fecha:fechaImp,monto,medio:'cheque',nota:'Imputación FAC '+(fac.nro_factura||'S/N')+(chqImp.numero?' · Cheque N°'+chqImp.numero:'')});
+      var ns=Math.max(Number(ventaF.saldo||0)-monto,0);
+      await sb.from('ventas').update({saldo:ns,estado:ns<=0?'cobrado':'parcial',updated_at:new Date().toISOString()}).eq('id',fac.venta_id);
+    }
+    toast('Imputación registrada: '+$p(monto));
+    closeM('m-imputar');
+    await Promise.all([loadChequesCartera(),loadChequeImputaciones(),loadFacturasClientes(),loadVentas(),loadMovs()]);
+    renderChqCartera();
+    renderFacturasClientes();
   }
-  toast('Imputación registrada: '+$p(monto)+(fac.venta_id?' — cobro aplicado a venta #'+fac.venta_id:''));
-  closeM('m-imputar');
-  await Promise.all([loadChequesCartera(),loadChequeImputaciones(),loadFacturasClientes(),loadVentas(),loadMovs()]);
-  renderChqCartera();
-  renderFacturasClientes();
 }
 
 function renderChqCartera(){
