@@ -7816,6 +7816,8 @@ async function renderLocalResumen(){
     if(!undPivot[yr])undPivot[yr]={};
     undPivot[yr][mo]=(undPivot[yr][mo]||0)+Number(it.cantidad||0);
   });
+  // Siempre mostrar todos los años desde 2013 hasta el año actual
+  for(var _y=2013;_y<=new Date().getFullYear();_y++)allYearsSet[String(_y)]=1;
   var allYears=Object.keys(allYearsSet).sort();
 
   // ── Helper: construir tabla pivot (meses=filas, años=columnas) ──
@@ -10542,8 +10544,9 @@ function renderFacturasClientes(){
       '<td style="text-align:right;color:#16a34a;font-weight:700;">'+(cobrado>0?$p(cobrado):'—')+'</td>'+
       '<td style="text-align:right;font-weight:800;color:'+(saldo>0?'#ea580c':'#9ca3af')+';">'+$p(saldo)+'</td>'+
       '<td>'+(estBadge[f.estado]||f.estado)+'</td>'+
-      '<td style="white-space:nowrap;">'+
-        '<button class="btn btn-outline" style="padding:4px 10px;font-size:12px;" onclick="openFacturaClienteModal('+f.id+')">Editar</button>'+
+      '<td style="white-space:nowrap;display:flex;gap:4px;align-items:center;">'+
+        '<button class="btn btn-outline" style="padding:4px 10px;font-size:12px;" onclick="openFacturaClienteModal('+f.id+')">✏️</button>'+
+        '<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border-color:#fecaca;padding:4px 8px;" onclick="confirmDeleteFacturaCli('+f.id+')" title="Eliminar factura">🗑️</button>'+
       '</td>'+
     '</tr>';
   }).join('');
@@ -10903,6 +10906,13 @@ async function deleteFacturaCliente(){
   await sb.from('facturas_clientes').delete().eq('id',editFacCliId);
   toast('Factura eliminada');
   closeM('m-faccli');
+  await loadFacturasClientes();
+  renderFacturasClientes();
+}
+async function confirmDeleteFacturaCli(id){
+  if(!confirm('¿Eliminar esta factura? La acción no se puede deshacer.'))return;
+  await sb.from('facturas_clientes').delete().eq('id',id);
+  toast('Factura eliminada','info');
   await loadFacturasClientes();
   renderFacturasClientes();
 }
