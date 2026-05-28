@@ -6401,8 +6401,10 @@ function renderProvCC(){
             '<td style="text-align:right;color:#16a34a;font-weight:600;">'+(pagado>0?$p(pagado):'—')+'</td>'+
             '<td style="text-align:right;font-weight:800;color:'+(saldo>0?'#dc2626':'#9ca3af')+';">'+$p(saldo)+'</td>'+
             '<td><span class="badge '+(estadoColors[f.estado]||'b-gray')+'">'+(estadoLabels[f.estado]||f.estado)+'</span>'+pagosTxt+chqpBadge+'</td>'+
-            '<td style="white-space:nowrap;">'+
-              (f.estado!=='pagada'&&f.estado!=='anulada'?'<button class="btn btn-sm" onclick="openPagoFacturaModal('+f.id+')" title="Registrar pago">💸</button> ':'')+'<button class="btn btn-gray btn-sm" onclick="openFacturaModal('+f.id+')" title="Editar">✏️</button>'+
+            '<td style="white-space:nowrap;display:flex;gap:4px;align-items:center;">'+
+              (f.estado!=='pagada'&&f.estado!=='anulada'?'<button class="btn btn-sm" onclick="openPagoFacturaModal('+f.id+')" title="Registrar pago">💸</button>':'')+
+              '<button class="btn btn-gray btn-sm" onclick="openFacturaModal('+f.id+')" title="Editar">✏️</button>'+
+              '<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border-color:#fecaca;" onclick="confirmDeleteFacturaProv('+f.id+')" title="Eliminar factura">🗑️</button>'+
             '</td>'+
           '</tr>';
         }).join('')+'</tbody></table></div>'+
@@ -7108,6 +7110,15 @@ async function deleteFactura(){
   if(r.error){toast('Error: '+r.error.message,'err');return;}
   toast('Factura eliminada','info');
   closeM('m-pfact');
+  await Promise.all([loadProvFacturas(),loadFacturaPagos()]);
+  renderProvCC();renderPanelGeneral();
+}
+
+async function confirmDeleteFacturaProv(id){
+  if(!confirm('¿Eliminar esta factura? También se eliminarán sus pagos asociados.'))return;
+  var r=await sb.from('proveedor_facturas').delete().eq('id',id);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('Factura eliminada','info');
   await Promise.all([loadProvFacturas(),loadFacturaPagos()]);
   renderProvCC();renderPanelGeneral();
 }
@@ -8413,6 +8424,39 @@ async function saveCobro(){
 }
 
 // ════════════════════════════════════
+// SALDAR HISTÓRICAMENTE (sin movimiento de caja)
+// ════════════════════════════════════
+async function saldaHistorico(vid, saldo){
+  var v=VENTAS.find(function(x){return x.id===vid;});
+  if(!v)return;
+  var monto=Number(saldo||0);
+  if(monto<=0){toast('La venta ya no tiene saldo pendiente.','info');return;}
+  if(!confirm('¿Marcar la venta #'+vid+' como saldada por '+$p(monto)+'?\n\nEsto registra el cobro histórico pero NO genera movimiento de caja (el dinero ya fue recibido en su momento).'))return;
+  // Insertar cobro histórico (sin movimiento)
+  var cobFecha=v.fecha||today();
+  var rCob=await sb.from('cobros').insert({
+    venta_id:vid,
+    cliente_id:v.cliente_id||null,
+    fecha:cobFecha,
+    monto:monto,
+    medio:'Histórico',
+    nota:'Saldo anterior al sistema'
+  });
+  if(rCob.error){toast('Error: '+rCob.error.message,'err');return;}
+  // Actualizar venta
+  await sb.from('ventas').update({saldo:0,estado:'cobrado',updated_at:new Date().toISOString()}).eq('id',vid);
+  // Actualizar cache
+  var idx=VENTAS.findIndex(function(x){return x.id===vid;});
+  if(idx>=0){VENTAS[idx].saldo=0;VENTAS[idx].estado='cobrado';}
+  toast('Venta #'+vid+' saldada históricamente ✓');
+  await loadVentas();
+  renderDash();
+  // Refrescar vista actual
+  verVenta(vid,ventaBackSection);
+  if(document.getElementById('sec-clientes').classList.contains('active'))renderCCMayoristas();
+}
+
+// ════════════════════════════════════
 // VER DETALLE VENTA
 // ════════════════════════════════════
 async function verVenta(id, backSec){
@@ -8441,7 +8485,11 @@ async function verVenta(id, backSec){
         cobros.map(function(c){return '<tr><td>'+fmtF(c.fecha)+'</td><td style="color:#16a34a;font-weight:700;">'+$p(c.monto)+'</td><td>'+c.medio+'</td><td>'+(c.nota||'—')+'</td></tr>';}).join('')+
         '</tbody></table></div>':
         '<div class="empty"><p>Sin cobros registrados</p></div>')+
-      (v.estado!=='cobrado'?'<div style="margin-top:14px;"><button class="btn btn-green" onclick="openCobro('+v.id+','+(v.cliente_id||'null')+','+v.saldo+')">Registrar cobro</button></div>':'')+
+      (v.estado!=='cobrado'?
+        '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">'+
+          '<button class="btn btn-green" onclick="openCobro('+v.id+','+(v.cliente_id||'null')+','+v.saldo+')">💵 Registrar cobro</button>'+
+          '<button class="btn btn-gray" onclick="saldaHistorico('+v.id+','+v.saldo+')" title="Marca como cobrado sin generar movimiento de caja — para pagos ya recibidos en el pasado">🗂️ Saldar históricamente</button>'+
+        '</div>':'')+
     '</div>';
   var backEl=document.getElementById('vd-back');
   if(backSec==='cuenta' && v.cliente_id){
