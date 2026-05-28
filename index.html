@@ -9255,8 +9255,9 @@ async function saveCobro(){
   var saldoAnterior=parseFloat(document.getElementById('mcob-saldo-num').value)||0;
 
   // 1) Registrar cobro
-  var rCob=await sb.from('cobros').insert({venta_id:vid,cliente_id:cid,fecha,monto,medio,nota:nota||null});
+  var rCob=await sb.from('cobros').insert({venta_id:vid,cliente_id:cid,fecha,monto,medio,nota:nota||null}).select('id').single();
   if(rCob.error){toast('Error: '+rCob.error.message,'err');return;}
+  var cobroId=rCob.data?rCob.data.id:null;
 
   // 2) Actualizar saldo y estado de la venta
   var nuevoSaldo=Math.max(saldoAnterior-monto,0);
@@ -9278,8 +9279,13 @@ async function saveCobro(){
       monto,fecha_recibido:fecha,fecha_cobro:fCobroChq,
       estado:'en_cartera',
       nro_factura:null,nota:nota||null
-    });
+    }).select('id').single();
     if(rChq.error){toast('Error al crear cheque: '+rChq.error.message,'err');return;}
+    var chequeNuevoId=rChq.data?rChq.data.id:null;
+    // Guardar cheque_id en el cobro para trazabilidad
+    if(chequeNuevoId&&cobroId){
+      await sb.from('cobros').update({cheque_id:chequeNuevoId}).eq('id',cobroId);
+    }
     // Ingreso en CHEQUES/ECHEQ
     await sb.from('movimientos').insert({
       caja:'CHEQUES/ECHEQ',fecha,tipo:'ingreso',concepto:'COBRO CLIENTE',
