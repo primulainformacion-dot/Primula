@@ -362,14 +362,9 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
   <!-- ════════════ INICIO ════════════ -->
   <div class="section active" id="sec-inicio">
-    <!-- Alertas -->
     <div id="pan-alertas" style="margin-bottom:16px;"></div>
-
-    <!-- KPIs operativos -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px;" id="dash-kpis"></div>
-
-    <!-- Paneles principales -->
-    <div class="two-col" style="margin-bottom:16px;">
+    <div id="dash-kpis" class="stats" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));"></div>
+    <div class="two-col">
       <div class="panel">
         <div class="panel-hdr"><h4>🏭 Órdenes activas</h4><button class="btn btn-sm btn-outline" onclick="nav('produccion',null)">Ver producción →</button></div>
         <div id="dash-ordenes"></div>
@@ -379,7 +374,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <div id="dash-deudas"></div>
       </div>
     </div>
-
     <div class="two-col">
       <div class="panel">
         <div class="panel-hdr"><h4>🛒 Últimas ventas</h4></div>
@@ -1371,7 +1365,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="panel">
         <div class="panel-hdr">
           <div class="search-row">
-            <input id="lv-q" placeholder="Buscar cliente..." oninput="renderLocalVentas()"/>
+            <input id="lv-q" placeholder="Buscar cliente o N° factura..." oninput="renderLocalVentas()"/>
             <select id="lv-estado" onchange="renderLocalVentas()">
               <option value="">Todos</option><option value="pendiente">Pendiente</option>
               <option value="parcial">Parcial</option><option value="cobrado">Cobrado</option>
@@ -5520,7 +5514,17 @@ async function loadMoratorias(){ var {data}=await sb.from('moratorias').select('
 async function loadClientes(){ var {data}=await sb.from('clientes').select('*').order('nombre'); CLIENTES=data||[]; }
 async function loadProveedores(){ var {data}=await sb.from('proveedores').select('*').order('nombre'); PROVEEDORES=data||[]; }
 async function loadProductos(){ var {data}=await sb.from('productos').select('*,categorias(nombre)').order('nombre'); PRODUCTOS=data||[]; }
-async function loadVentas(){ var {data}=await sb.from('ventas').select('*').order('fecha',{ascending:false}).limit(10000); VENTAS=data||[]; }
+async function loadVentas(){
+  var page=0,tam=1000,todos=[];
+  while(true){
+    var {data,error}=await sb.from('ventas').select('*').order('fecha',{ascending:false}).range(page*tam,(page+1)*tam-1);
+    if(error||!data||!data.length)break;
+    todos=todos.concat(data);
+    if(data.length<tam)break;
+    page++;
+  }
+  VENTAS=todos;
+}
 async function loadStock(){ var {data}=await sb.from('stock').select('*,productos(nombre,codigo)').order('id'); STOCK=data||[]; }
 async function loadPresupuestos(){ var {data}=await sb.from('presupuestos').select('*').order('fecha',{ascending:false}).limit(200); PRESUPUESTOS=data||[]; }
 async function loadMovs(){
@@ -6235,13 +6239,11 @@ function renderDash(){
 
   // ── Render KPIs ──
   function kpi(icono,bg,color,valor,label,sub,accion){
-    return '<div onclick="'+accion+'" style="background:#fff;border:1.5px solid #e5e7eb;border-radius:14px;padding:16px 14px;cursor:'+(accion?'pointer':'default')+';transition:box-shadow .15s;display:flex;flex-direction:column;gap:4px;" onmouseover="this.style.boxShadow=\'0 4px 12px rgba(0,0,0,.08)\'" onmouseout="this.style.boxShadow=\'none\'">'+
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'+
-        '<span style="font-size:20px;background:'+bg+';border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;">'+icono+'</span>'+
-        '<span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;">'+label+'</span>'+
-      '</div>'+
-      '<div style="font-size:22px;font-weight:900;color:'+color+';">'+valor+'</div>'+
-      (sub?'<div style="font-size:11px;color:#9ca3af;margin-top:2px;">'+sub+'</div>':'')+
+    return '<div class="stat" onclick="'+accion+'" style="cursor:'+(accion?'pointer':'default')+';">'+
+      '<div class="stat-icon" style="background:'+bg+';">'+icono+'</div>'+
+      '<h3 style="color:'+color+';">'+valor+'</h3>'+
+      '<p>'+label+'</p>'+
+      (sub?'<p style="font-size:11px;color:'+color+';opacity:.8;margin-top:2px;">'+sub+'</p>':'')+
     '</div>';
   }
 
@@ -6464,6 +6466,16 @@ async function aplicarCompensacionNC(){
   renderCCMayoristas();
 }
 
+async function darDeBajaNC(ventaId){
+  var v=VENTAS.find(function(x){return x.id===ventaId;});
+  if(!v)return;
+  if(!confirm('¿Dar de baja la NC #'+ventaId+' ('+$p(Math.abs(Number(v.total)))+') de '+esc(v.cliente_nombre||'este cliente')+'?\n\nSe marcará como saldada sin afectar ninguna venta ni generar movimiento de caja.'))return;
+  var r=await sb.from('ventas').update({saldo:0,estado:'cobrado',nota:(v.nota?v.nota+' ':'')+'[NC dada de baja]'}).eq('id',ventaId);
+  if(r.error){toast('Error: '+r.error.message,'err');return;}
+  toast('NC #'+ventaId+' dada de baja ✔️');
+  await loadVentas();
+  renderCCMayoristas();
+}
 var _recalcPendientes=[];
 async function recalcularSaldosVentas(){
   // Excluye NCs (total < 0): funcionan distinto, no se recalculan
@@ -6585,7 +6597,8 @@ function renderCCMayoristas(){
         '<td style="text-align:right;font-weight:800;color:'+(Number(v.saldo)>0?'#dc2626':'#16a34a')+';">'+$p(Number(v.saldo))+'</td>'+
         '<td><span class="badge '+estadoBadge+'">'+v.estado+'</span></td>'+
         '<td style="white-space:nowrap;">'+
-          (v.estado!=='cobrado'?'<button class="btn btn-sm btn-green" onclick="openCobro('+v.id+','+c.id+','+v.saldo+')">💰 Cobrar</button> ':'')+
+          (esNC&&v.estado!=='cobrado'?'<button class="btn btn-sm btn-gray" onclick="darDeBajaNC('+v.id+')">✖ Dar de baja</button> ':'')+
+          (!esNC&&v.estado!=='cobrado'?'<button class="btn btn-sm btn-green" onclick="openCobro('+v.id+','+c.id+','+v.saldo+')">💰 Cobrar</button> ':'')+
           '<button class="btn btn-sm btn-gray" onclick="verVenta('+v.id+',\'cuenta\')">Ver</button>'+
         '</td>'+
       '</tr>';
@@ -6689,19 +6702,23 @@ function verCuenta(id){
       '<div class="panel-hdr"><h4>Historial de ventas</h4><div style="display:flex;gap:8px;">'+
         (deuda>0?'<button class="btn btn-sm btn-outline" onclick="openLiqCheques(\'cobrar\','+id+')">💳 Cobrar con cheques</button>':'')+
         '<button class="btn btn-sm" onclick="abrirVentaParaCliente('+id+')">+ Nueva venta</button></div></div>'+
-      '<div class="tbl"><table><thead><tr><th>N°</th><th>Fecha</th><th>Local</th><th>Total</th><th>Saldo</th><th>Estado</th><th></th></tr></thead><tbody>'+
+      '<div class="tbl"><table><thead><tr><th>N°</th><th>N° Factura</th><th>Fecha</th><th>Local</th><th>Total</th><th>Saldo</th><th>Estado</th><th></th></tr></thead><tbody>'+
       (ventas.length?ventas.map(function(v){
-        return '<tr>'+
-          '<td>#'+v.id+'</td><td>'+fmtF(v.fecha)+'</td>'+
+        var esNC=Number(v.total)<0;
+        return '<tr'+(esNC?' style="background:#fff5f5;"':'')+'>'+
+          '<td><strong>#'+v.id+'</strong>'+(esNC?' <span class="badge b-red" style="font-size:10px;">NC</span>':'')+' </td>'+
+          '<td style="font-size:12px;color:#6c7ae0;font-weight:600;">'+(v.nro_factura||'—')+'</td>'+
+          '<td style="white-space:nowrap;">'+fmtF(v.fecha)+'</td>'+
           '<td><span class="badge '+(v.local==='llavallol'?'b-ll':v.local==='mayorista'?'b-purple':'b-mg')+'">'+v.local+'</span></td>'+
           '<td>'+$p(v.total)+'</td>'+
           '<td style="font-weight:700;color:'+(Number(v.saldo)>0?'#dc2626':'#16a34a')+'">'+$p(v.saldo)+'</td>'+
           '<td><span class="badge '+(v.estado==='cobrado'?'b-green':v.estado==='parcial'?'b-blue':'b-yellow')+'">'+v.estado+'</span></td>'+
           '<td><div class="actions">'+
-            (v.estado!=='cobrado'?'<button class="btn btn-sm btn-green" onclick="openCobro('+v.id+','+id+','+v.saldo+')">Cobrar</button>':'')+
+            (esNC&&v.estado!=='cobrado'?'<button class="btn btn-sm btn-gray" onclick="darDeBajaNC('+v.id+')">✖ Dar de baja</button>':'')+
+            (!esNC&&v.estado!=='cobrado'?'<button class="btn btn-sm btn-green" onclick="openCobro('+v.id+','+id+','+v.saldo+')">Cobrar</button>':'')+
             '<button class="btn btn-sm btn-outline" onclick="verVenta('+v.id+',\'cuenta\')">Ver</button>'+
           '</div></td></tr>';
-      }).join(''):'<tr><td colspan="7"><div class="empty"><p>Sin ventas</p></div></td></tr>')+
+      }).join(''):'<tr><td colspan="8"><div class="empty"><p>Sin ventas</p></div></td></tr>')+
       '</tbody></table></div></div>';
   nav('cuenta',null);
   document.getElementById('pg-title').textContent='Cuenta — '+c.nombre;
@@ -8568,7 +8585,7 @@ async function saveDevolucion(){
 function renderLocalVentas(){
   var q=(document.getElementById('lv-q').value||'').toLowerCase();
   var est=document.getElementById('lv-estado').value;
-  var list=VENTAS.filter(function(v){return v.local===currentLocal&&(!q||(v.cliente_nombre||'').toLowerCase().includes(q))&&(!est||v.estado===est);});
+  var list=VENTAS.filter(function(v){return v.local===currentLocal&&(!q||(v.cliente_nombre||'').toLowerCase().includes(q)||(v.nro_factura||'').toLowerCase().includes(q))&&(!est||v.estado===est);});
   var tb=document.getElementById('lv-tbody');
   if(!list.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><div class="ei">🛒</div><p>Sin ventas</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(v){
@@ -12188,7 +12205,17 @@ async function loadEnviosBordado(){ var {data}=await sb.from('envios_bordado').s
 async function loadEnviosBordadoItems(){ var {data}=await sb.from('envios_bordado_items').select('*'); ENVIOS_BORDADO_ITEMS=data||[]; }
 async function loadEntregas(){ var {data}=await sb.from('entregas').select('*').order('fecha',{ascending:false}); ENTREGAS=data||[]; }
 async function loadEntregasItems(){ var {data}=await sb.from('entregas_items').select('*'); ENTREGAS_ITEMS=data||[]; }
-async function loadItemsVenta(){ var {data}=await sb.from('items_venta').select('*').limit(20000); ITEMS_VENTA=data||[]; }
+async function loadItemsVenta(){
+  var page=0,tam=1000,todos=[];
+  while(true){
+    var {data,error}=await sb.from('items_venta').select('*').range(page*tam,(page+1)*tam-1);
+    if(error||!data||!data.length)break;
+    todos=todos.concat(data);
+    if(data.length<tam)break;
+    page++;
+  }
+  ITEMS_VENTA=todos;
+}
 
 var COLORES_TELAS=['MARINO','NEGRO','GRIS MELANGE','GRIS TOPO','GRIS PERLA','BLANCO','ROJO','BORDO','FRANCIA','AMARILLO','NARANJA','BEIGE','CELESTE','VERDE'];
 var TALLES_PRENDAS=['XS','S','M','L','XL','XXL','3XL','4XL','5XL','6XL','7XL','8XL','UNICO'];
@@ -19838,7 +19865,17 @@ async function deleteFicha(id){
 }
 
 // ── MOVIMIENTOS STOCK ────────────────────────────────────────────────────────
-async function loadMovimientosStock(){var {data}=await sb.from('movimientos_stock').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false}).limit(10000);MOVIMIENTOS_STOCK=data||[];}
+async function loadMovimientosStock(){
+  var page=0,tam=1000,todos=[];
+  while(true){
+    var {data,error}=await sb.from('movimientos_stock').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false}).range(page*tam,(page+1)*tam-1);
+    if(error||!data||!data.length)break;
+    todos=todos.concat(data);
+    if(data.length<tam)break;
+    page++;
+  }
+  MOVIMIENTOS_STOCK=todos;
+}
 
 function renderMovimientosStock(){
   var tipo=((document.getElementById('mvstk-tipo')||{}).value||'');
@@ -20208,7 +20245,17 @@ async function deletePagoTal(id){
 // ── COMPRAS ──────────────────────────────────────────────────────────────────
 async function loadCompras(){var {data}=await sb.from('compras').select('*').order('fecha',{ascending:false});COMPRAS=data||[];}
 async function loadComprasItems(){var {data}=await sb.from('compras_items').select('*').limit(10000);COMPRAS_ITEMS=data||[];}
-async function loadHistorialPrecios(){var {data}=await sb.from('historial_precios').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false}).limit(10000);HISTORIAL_PRECIOS=data||[];}
+async function loadHistorialPrecios(){
+  var page=0,tam=1000,todos=[];
+  while(true){
+    var {data,error}=await sb.from('historial_precios').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false}).range(page*tam,(page+1)*tam-1);
+    if(error||!data||!data.length)break;
+    todos=todos.concat(data);
+    if(data.length<tam)break;
+    page++;
+  }
+  HISTORIAL_PRECIOS=todos;
+}
 
 function renderCompras(){
   var now=new Date().toISOString().slice(0,7);
