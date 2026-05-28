@@ -1366,7 +1366,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <button class="btn" onclick="openNuevaVenta()">+ Nueva venta</button>
         </div>
         <div class="tbl"><table>
-          <thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Total</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>N°</th><th>FAC</th><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Total</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
           <tbody id="lv-tbody"></tbody>
         </table></div>
       </div>
@@ -1498,6 +1498,10 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <div class="field">
             <label>Fecha</label>
             <input type="date" id="may-fecha"/>
+          </div>
+          <div class="field">
+            <label>N° Factura</label>
+            <input id="may-nro-factura" placeholder="Ej: 0001-00001234"/>
           </div>
           <div class="field full">
             <label>Nota</label>
@@ -3158,6 +3162,39 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
     </div>
     <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('m-cobro')">Cancelar</button><button class="btn btn-green" onclick="saveCobro()">Registrar cobro</button></div>
+  </div>
+</div>
+
+<!-- Modal: Saldar históricamente en lote -->
+<div class="modal-bg" id="m-saldo-masivo">
+  <div class="modal" style="max-width:720px;">
+    <h3>🗂️ Saldar históricamente en lote</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:14px;">Marcá las ventas que ya fueron cobradas en su momento. No generará movimientos de caja.</p>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+      <button class="btn btn-sm btn-outline" onclick="saldoMasivoSelectAll(true)">Seleccionar todas</button>
+      <button class="btn btn-sm btn-outline" onclick="saldoMasivoSelectAll(false)">Deseleccionar todas</button>
+      <span id="smv-sel-count" style="font-size:12px;color:#6b7280;margin-left:8px;">0 seleccionadas</span>
+    </div>
+    <div style="max-height:420px;overflow-y:auto;border:1.5px solid #e5e7eb;border-radius:10px;">
+      <table style="width:100%;font-size:12px;border-collapse:collapse;">
+        <thead><tr style="background:#f9fafb;position:sticky;top:0;">
+          <th style="padding:8px 10px;width:36px;"><input type="checkbox" id="smv-chk-all" onchange="saldoMasivoSelectAll(this.checked)"/></th>
+          <th style="padding:8px 8px;text-align:left;font-weight:600;color:#6b7280;">Cliente</th>
+          <th style="padding:8px 8px;text-align:left;font-weight:600;color:#6b7280;">Fecha</th>
+          <th style="padding:8px 8px;text-align:left;font-weight:600;color:#6b7280;">FAC</th>
+          <th style="padding:8px 8px;text-align:right;font-weight:600;color:#6b7280;">Total</th>
+          <th style="padding:8px 8px;text-align:right;font-weight:600;color:#dc2626;">Saldo</th>
+        </tr></thead>
+        <tbody id="smv-tbody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:2px solid #e5e7eb;">
+      <div style="font-size:13px;font-weight:700;color:#374151;">A saldar: <span id="smv-total-sel" style="color:#6c7ae0;">$0</span></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-gray" onclick="closeM('m-saldo-masivo')">Cancelar</button>
+        <button class="btn btn-green" onclick="ejecutarSaldoMasivo()">✓ Saldar seleccionadas</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -5408,7 +5445,7 @@ async function loadMoratorias(){ var {data}=await sb.from('moratorias').select('
 async function loadClientes(){ var {data}=await sb.from('clientes').select('*').order('nombre'); CLIENTES=data||[]; }
 async function loadProveedores(){ var {data}=await sb.from('proveedores').select('*').order('nombre'); PROVEEDORES=data||[]; }
 async function loadProductos(){ var {data}=await sb.from('productos').select('*,categorias(nombre)').order('nombre'); PRODUCTOS=data||[]; }
-async function loadVentas(){ var {data}=await sb.from('ventas').select('*').order('fecha',{ascending:false}).limit(500); VENTAS=data||[]; }
+async function loadVentas(){ var {data}=await sb.from('ventas').select('*').order('fecha',{ascending:false}); VENTAS=data||[]; }
 async function loadStock(){ var {data}=await sb.from('stock').select('*,productos(nombre,codigo)').order('id'); STOCK=data||[]; }
 async function loadPresupuestos(){ var {data}=await sb.from('presupuestos').select('*').order('fecha',{ascending:false}).limit(200); PRESUPUESTOS=data||[]; }
 async function loadMovs(){
@@ -6172,7 +6209,23 @@ function renderCCMayoristas(){
     return;
   }
 
-  cont.innerHTML=mayClientes.map(function(c){
+  // Panel de saldo masivo
+  var pendTodas=VENTAS.filter(function(v){return v.tipo==='mayorista'&&v.estado!=='cobrado'&&Number(v.saldo)>0;});
+  var panelMasivo='';
+  if(pendTodas.length){
+    panelMasivo='<div style="background:#fefce8;border:1.5px solid #fde68a;border-radius:12px;padding:14px 18px;margin-bottom:16px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">'+
+        '<div>'+
+          '<div style="font-size:12px;font-weight:800;color:#92400e;letter-spacing:.3px;">🗂️ SALDAR HISTÓRICAMENTE EN LOTE</div>'+
+          '<div style="font-size:12px;color:#78350f;margin-top:3px;">'+pendTodas.length+' ventas con saldo pendiente · Total: <strong>'+$p(pendTodas.reduce(function(s,v){return s+Number(v.saldo);},0))+'</strong></div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
+          '<button class="btn btn-sm" style="background:#fff;border-color:#fde68a;color:#92400e;" onclick="abrirSaldoMasivo()">Ver y seleccionar ventas →</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }
+  cont.innerHTML=panelMasivo+mayClientes.map(function(c){
     var ventasCli=VENTAS.filter(function(v){return v.cliente_id===c.id;}).sort(function(a,b){return a.fecha<b.fecha?1:-1;});
     var pendCli=ventasCli.filter(function(v){return v.estado!=='cobrado'&&Number(v.saldo)>0;});
     var deudaCli=pendCli.reduce(function(s,v){return s+Number(v.saldo);},0);
@@ -6183,7 +6236,7 @@ function renderCCMayoristas(){
       var estadoBadge=v.estado==='cobrado'?'b-green':v.estado==='parcial'?'b-blue':'b-yellow';
       return '<tr>'+
         '<td style="font-size:12px;color:#6b7280;">'+fmtF(v.fecha)+'</td>'+
-        '<td style="font-size:12px;">'+(v.nota||'—')+'</td>'+
+        '<td style="font-size:12px;color:#6c7ae0;font-weight:600;">'+(v.nro_factura||'—')+'</td>'+
         '<td style="text-align:right;font-weight:700;">'+$p(Number(v.total))+'</td>'+
         '<td style="text-align:right;font-weight:800;color:'+(Number(v.saldo)>0?'#dc2626':'#16a34a')+';">'+$p(Number(v.saldo))+'</td>'+
         '<td><span class="badge '+estadoBadge+'">'+v.estado+'</span></td>'+
@@ -7804,17 +7857,22 @@ async function renderLocalResumen(){
 
   // ── Pivots históricos (todos los años × meses) ──
   var revPivot={},undPivot={},allYearsSet={};
+  // Mapa venta_id → total para identificar notas de crédito (total < 0)
+  var idToTotal={};ventasTodas.forEach(function(v){idToTotal[v.id]=Number(v.total||0);});
   ventasTodas.forEach(function(v){
     var yr=v.fecha.slice(0,4);var mo=parseInt(v.fecha.slice(5,7));
     allYearsSet[yr]=1;
     if(!revPivot[yr])revPivot[yr]={};
-    revPivot[yr][mo]=(revPivot[yr][mo]||0)+Number(v.total||0);
+    revPivot[yr][mo]=(revPivot[yr][mo]||0)+Number(v.total||0);  // NC ya tiene total negativo → resta solo
   });
   todosItems.forEach(function(it){
     var fecha=idToFecha[it.venta_id];if(!fecha)return;
     var yr=fecha.slice(0,4);var mo=parseInt(fecha.slice(5,7));
     if(!undPivot[yr])undPivot[yr]={};
-    undPivot[yr][mo]=(undPivot[yr][mo]||0)+Number(it.cantidad||0);
+    // Si la venta es NC (total < 0) invertimos el signo de las unidades
+    var esNC=(idToTotal[it.venta_id]||0)<0;
+    var cant=esNC?-Number(it.cantidad||0):Number(it.cantidad||0);
+    undPivot[yr][mo]=(undPivot[yr][mo]||0)+cant;
   });
   // Siempre mostrar todos los años desde 2013 hasta el año actual
   for(var _y=2013;_y<=new Date().getFullYear();_y++)allYearsSet[String(_y)]=1;
@@ -7844,19 +7902,24 @@ async function renderLocalResumen(){
       var cells=years.map(function(yr){
         var val=(pivot[yr]&&pivot[yr][m])||0;
         var isCur=yr===anioActual;
-        return '<td style="padding:5px 8px;text-align:right;font-size:12px;color:'+(val>0?colorVal:'#d1d5db')+';'+(isCur&&val>0?'background:#f5f3ff;font-weight:700;':'')+'">'+(val>0?fmtCell(val):'—')+'</td>';
+        var cellColor=val>0?colorVal:val<0?'#dc2626':'#d1d5db';
+        var cellBg=isCur&&val!==0?'background:#f5f3ff;':'';
+        var cellFw=isCur&&val!==0?'font-weight:700;':'';
+        var cellTxt=val>0?fmtCell(val):val<0?'('+fmtCell(Math.abs(val))+')':'—';
+        return '<td style="padding:5px 8px;text-align:right;font-size:12px;color:'+cellColor+';'+cellBg+cellFw+'">'+cellTxt+'</td>';
       }).join('');
       rows+='<tr style="border-top:1px solid #f3f4f6;">'+
         '<td style="padding:5px 10px;font-weight:700;color:#374151;white-space:nowrap;background:#fafafa;">'+ML[m]+'</td>'+
         cells+
         '<td style="padding:5px 10px;text-align:right;font-weight:800;color:#6c7ae0;border-left:2px solid #e5e7eb;">'+
-          (rowTot[m]>0?fmtCell(rowTot[m]):'—')+
+          (rowTot[m]>0?fmtCell(rowTot[m]):rowTot[m]<0?'<span style="color:#dc2626;">('+fmtCell(Math.abs(rowTot[m]))+')</span>':'—')+
         '</td>'+
       '</tr>';
     });
     // Fila total
     var totCells=years.map(function(yr){
-      return '<td style="padding:6px 8px;text-align:right;font-weight:700;color:#374151;font-size:12px;">'+(colTot[yr]>0?fmtCell(colTot[yr]):'—')+'</td>';
+      var cv=colTot[yr];
+      return '<td style="padding:6px 8px;text-align:right;font-weight:700;color:'+(cv<0?'#dc2626':'#374151')+';font-size:12px;">'+(cv>0?fmtCell(cv):cv<0?'('+fmtCell(Math.abs(cv))+')':'—')+'</td>';
     }).join('');
     rows+='<tr style="border-top:2px solid #e5e7eb;background:#f9fafb;">'+
       '<td style="padding:6px 10px;font-weight:800;color:#374151;background:#f3f4f6;">TOTAL</td>'+
@@ -8143,11 +8206,13 @@ function renderLocalVentas(){
   var est=document.getElementById('lv-estado').value;
   var list=VENTAS.filter(function(v){return v.local===currentLocal&&(!q||(v.cliente_nombre||'').toLowerCase().includes(q))&&(!est||v.estado===est);});
   var tb=document.getElementById('lv-tbody');
-  if(!list.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><div class="ei">🛒</div><p>Sin ventas</p></div></td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><div class="ei">🛒</div><p>Sin ventas</p></div></td></tr>';return;}
   tb.innerHTML=list.map(function(v){
     var tieneDev=DEVOLUCIONES.some(function(d){return d.venta_id===v.id;});
     return '<tr>'+
-      '<td><strong>#'+v.id+'</strong></td><td>'+fmtF(v.fecha)+'</td>'+
+      '<td><strong>#'+v.id+'</strong></td>'+
+      '<td style="font-size:12px;color:#6b7280;">'+(v.nro_factura||'—')+'</td>'+
+      '<td>'+fmtF(v.fecha)+'</td>'+
       '<td>'+(v.cliente_nombre||'<i style="color:#9ca3af">Mostrador</i>')+'</td>'+
       '<td><span class="badge '+(v.tipo==='mayorista'?'b-blue':'b-gray')+'">'+v.tipo+'</span></td>'+
       '<td>'+$p(v.total)+'</td>'+
@@ -8504,6 +8569,65 @@ async function saveCobro(){
 // ════════════════════════════════════
 // SALDAR HISTÓRICAMENTE (sin movimiento de caja)
 // ════════════════════════════════════
+function abrirSaldoMasivo(){
+  var pendientes=VENTAS.filter(function(v){return v.tipo==='mayorista'&&v.estado!=='cobrado'&&Number(v.saldo)>0;})
+    .sort(function(a,b){return (a.cliente_nombre||'').localeCompare(b.cliente_nombre||'');});
+  var tb=document.getElementById('smv-tbody');
+  tb.innerHTML=pendientes.map(function(v){
+    return '<tr style="border-top:1px solid #f3f4f6;">'+
+      '<td style="padding:6px 10px;text-align:center;"><input type="checkbox" class="smv-chk" data-id="'+v.id+'" data-saldo="'+v.saldo+'" onchange="saldoMasivoRecalc()"/></td>'+
+      '<td style="padding:6px 8px;font-weight:600;">'+esc(v.cliente_nombre||'—')+'</td>'+
+      '<td style="padding:6px 8px;color:#6b7280;">'+fmtF(v.fecha)+'</td>'+
+      '<td style="padding:6px 8px;color:#6c7ae0;">'+(v.nro_factura||'—')+'</td>'+
+      '<td style="padding:6px 8px;text-align:right;">'+$p(Number(v.total))+'</td>'+
+      '<td style="padding:6px 8px;text-align:right;font-weight:700;color:#dc2626;">'+$p(Number(v.saldo))+'</td>'+
+    '</tr>';
+  }).join('');
+  saldoMasivoRecalc();
+  openM('m-saldo-masivo');
+}
+function saldoMasivoSelectAll(val){
+  document.querySelectorAll('.smv-chk').forEach(function(c){c.checked=val;});
+  var allChk=document.getElementById('smv-chk-all');
+  if(allChk)allChk.checked=val;
+  saldoMasivoRecalc();
+}
+function saldoMasivoRecalc(){
+  var chks=document.querySelectorAll('.smv-chk:checked');
+  var total=0;
+  chks.forEach(function(c){total+=parseFloat(c.dataset.saldo)||0;});
+  document.getElementById('smv-sel-count').textContent=chks.length+' seleccionada'+(chks.length!==1?'s':'');
+  document.getElementById('smv-total-sel').textContent=$p(total);
+}
+async function ejecutarSaldoMasivo(){
+  var chks=Array.from(document.querySelectorAll('.smv-chk:checked'));
+  if(!chks.length){toast('Seleccioná al menos una venta','err');return;}
+  if(!confirm('¿Saldar '+chks.length+' ventas históricamente? No generará movimientos de caja.'))return;
+  var btn=document.querySelector('#m-saldo-masivo .btn-green');
+  if(btn){btn.disabled=true;btn.textContent='Procesando...';}
+  var hoy=today();
+  var errores=0;
+  for(var i=0;i<chks.length;i++){
+    var vid=parseInt(chks[i].dataset.id);
+    var saldo=parseFloat(chks[i].dataset.saldo)||0;
+    var v=VENTAS.find(function(x){return x.id===vid;});
+    var rCob=await sb.from('cobros').insert({
+      venta_id:vid,cliente_id:v?v.cliente_id||null:null,
+      fecha:v?v.fecha||hoy:hoy,monto:saldo,
+      medio:'Histórico',nota:'Saldo anterior al sistema'
+    });
+    if(rCob.error){errores++;continue;}
+    await sb.from('ventas').update({saldo:0,estado:'cobrado',updated_at:new Date().toISOString()}).eq('id',vid);
+    var idx=VENTAS.findIndex(function(x){return x.id===vid;});
+    if(idx>=0){VENTAS[idx].saldo=0;VENTAS[idx].estado='cobrado';}
+  }
+  if(btn){btn.disabled=false;btn.textContent='✓ Saldar seleccionadas';}
+  toast((chks.length-errores)+' ventas saldadas'+(errores?' ('+errores+' errores)':''));
+  closeM('m-saldo-masivo');
+  await loadVentas();
+  renderCCMayoristas();renderDash();
+}
+
 async function saldaHistorico(vid, saldo){
   var v=VENTAS.find(function(x){return x.id===vid;});
   if(!v)return;
@@ -8545,8 +8669,8 @@ async function verVenta(id, backSec){
   document.getElementById('vd-body').innerHTML=
     '<div class="panel">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:18px;">'+
-        '<div><h3 style="font-size:18px;font-weight:800;color:#1a1f36;">Venta #'+v.id+'</h3>'+
-        '<div style="color:#9ca3af;font-size:13px;margin-top:4px;">'+fmtF(v.fecha)+' · '+(v.local==='llavallol'?'Llavallol':'Monte Grande')+' · '+v.tipo+'</div></div>'+
+        '<div><h3 style="font-size:18px;font-weight:800;color:#1a1f36;">Venta #'+v.id+(v.nro_factura?' <span style="font-size:14px;font-weight:600;color:#6c7ae0;">— FAC '+esc(v.nro_factura)+'</span>':'')+'</h3>'+
+        '<div style="color:#9ca3af;font-size:13px;margin-top:4px;">'+fmtF(v.fecha)+' · '+(v.local==='llavallol'?'Llavallol':v.local==='mayorista'?'Mayorista':'Monte Grande')+' · '+v.tipo+'</div></div>'+
         '<div style="text-align:right;"><div style="font-size:24px;font-weight:800;color:#6c7ae0;">'+$p(v.total)+'</div>'+
         '<span class="badge '+(v.estado==='cobrado'?'b-green':v.estado==='parcial'?'b-blue':'b-yellow')+'">'+v.estado+'</span></div>'+
       '</div>'+
@@ -10744,6 +10868,7 @@ function mayReset(){
   mayItemsData=[];
   document.getElementById('may-cli').value='';
   document.getElementById('may-nota').value='';
+  document.getElementById('may-nro-factura').value='';
   document.getElementById('may-cobrado').value='';
   document.getElementById('may-fecha').value=today();
   var sr=document.getElementById('may-sel-remito');if(sr)sr.value='';
@@ -10765,6 +10890,7 @@ async function saveMayoristaVenta(){
   var saldo=total-cobrado;
   var medio=document.getElementById('may-medio').value;
   var nota=document.getElementById('may-nota').value.trim()||null;
+  var nroFac=document.getElementById('may-nro-factura').value.trim()||null;
   var fecha=document.getElementById('may-fecha').value||today();
   var estado=saldo<=0?'cobrado':(cobrado>0?'parcial':'pendiente');
 
@@ -10773,7 +10899,8 @@ async function saveMayoristaVenta(){
     cliente_id:cliId,cliente_nombre:cli.nombre||null,
     local:'mayorista',tipo:'mayorista',
     fecha:fecha,estado:estado,
-    total:total,saldo:Math.max(saldo,0),nota:nota
+    total:total,saldo:Math.max(saldo,0),
+    nota:nota,nro_factura:nroFac
   }).select().single();
   if(errV){toast('Error al crear venta: '+errV.message,'err');return;}
 
