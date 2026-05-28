@@ -11940,13 +11940,17 @@ async function saveImputacion(){
     var yaAplicado=COBROS.some(function(cb){return cb.cheque_id===impChequeId&&cb.venta_id===ventaId;});
     if(yaAplicado){errEl.textContent='⚠️ Este cheque ya fue aplicado a esta venta';errEl.style.display='block';return;}
     var cli=CLIENTES.find(function(c){return c.id===venta.cliente_id;})||{};
-    // Registrar cobro — guarda cheque_id para trazabilidad (requiere patch_71)
-    var {error:eCobro}=await sb.from('cobros').insert({
+    // Registrar cobro (sin cheque_id en insert para compatibilidad pre-patch_71)
+    var rCob2=await sb.from('cobros').insert({
       venta_id:ventaId,cliente_id:venta.cliente_id||null,
-      fecha:fechaImp,monto,medio:'cheque',cheque_id:impChequeId,
+      fecha:fechaImp,monto,medio:'cheque',
       nota:(notaImp||'')+((chqImp.numero||chqImp.tipo)?(' · '+(chqImp.tipo==='echeq'?'ECHEQ':'Cheque')+(chqImp.numero?' N°'+chqImp.numero:'')):'')
-    });
-    if(eCobro){errEl.textContent='Error: '+eCobro.message;errEl.style.display='block';return;}
+    }).select('id').single();
+    if(rCob2.error){errEl.textContent='Error: '+rCob2.error.message;errEl.style.display='block';return;}
+    // Linkar cheque_id para trazabilidad (requiere patch_71 — falla silencioso si no está corrido)
+    if(rCob2.data&&rCob2.data.id&&impChequeId){
+      await sb.from('cobros').update({cheque_id:impChequeId}).eq('id',rCob2.data.id);
+    }
     // Actualizar saldo y estado de la venta
     var nuevoSaldo=Math.max(saldoV-monto,0);
     var nuevoEst=nuevoSaldo<=0?'cobrado':'parcial';
