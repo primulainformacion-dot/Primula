@@ -1797,6 +1797,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <button class="tab" onclick="setPedTab('insumos',this)">🧶 Insumos</button>
       <button class="tab" onclick="setPedTab('sugeridas',this)">📐 Tizadas sugeridas</button>
       <button class="tab" onclick="setPedTab('analisis',this)">📅 Análisis</button>
+      <button class="tab" onclick="setPedTab('calendario',this)">🗓️ Calendario</button>
     </div>
 
     <!-- Tab Flujo -->
@@ -1947,6 +1948,21 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <button class="btn" style="font-weight:700;" onclick="renderPedAnalisis()">Ver análisis</button>
       </div>
       <div id="pa-body"></div>
+    </div>
+
+    <!-- Tab Calendario -->
+    <div id="ped-tab-calendario" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="cal-filtro-estado" onchange="renderCalendario()" style="width:170px;">
+          <option value="en_proceso">Solo en proceso</option>
+          <option value="">Todos los estados</option>
+          <option value="completado">Completado</option>
+        </select>
+        <input id="cal-q" placeholder="Buscar pedido o cliente..." oninput="renderCalendario()" style="max-width:240px;"/>
+        <button class="btn btn-gray btn-sm" onclick="renderCalendario()">↻</button>
+        <span id="cal-resumen" style="margin-left:auto;font-size:12px;color:#6b7280;font-weight:600;"></span>
+      </div>
+      <div id="cal-body"></div>
     </div>
   </div>
 
@@ -3682,13 +3698,16 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </select>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:16px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:12px;margin-bottom:16px;">
       <div class="field"><label>Estado</label>
         <select id="mp-estado" style="width:100%;">
           <option value="en_proceso">En proceso</option>
           <option value="completado">Completado</option>
           <option value="cancelado">Cancelado</option>
         </select>
+      </div>
+      <div class="field"><label>📅 Fecha de entrega</label>
+        <input type="date" id="mp-fecha-entrega" title="Fecha comprometida de entrega al cliente"/>
       </div>
       <div class="field"><label>Nota / Observaciones</label>
         <input type="text" id="mp-nota" placeholder="Referencia, instrucciones especiales..."/>
@@ -18421,7 +18440,7 @@ function renderFlujoProduccion(){
 }
 
 function setPedTab(tab, el){
-  ['flujo','resumen','lista','seguimiento','insumos','sugeridas','analisis'].forEach(function(t){
+  ['flujo','resumen','lista','seguimiento','insumos','sugeridas','analisis','calendario'].forEach(function(t){
     var d=document.getElementById('ped-tab-'+t);
     if(d)d.style.display=t===tab?'block':'none';
   });
@@ -18434,6 +18453,7 @@ function setPedTab(tab, el){
   if(tab==='insumos')renderInsumos();
   if(tab==='sugeridas')renderTizadasSugeridas();
   if(tab==='analisis')initPedAnalisis();
+  if(tab==='calendario')renderCalendario();
 }
 
 // ── INSUMOS A UTILIZAR ──────────────────────────────────
@@ -19198,6 +19218,171 @@ function renderPedSeguimiento(pedId){
 // ════════════════════════════════════
 var _paTipo='mensual';
 
+// ═══════════════════════════════════════════════════════
+//  CALENDARIO DE PRODUCCIÓN
+// ═══════════════════════════════════════════════════════
+function renderCalendario(){
+  var cont=document.getElementById('cal-body');
+  if(!cont)return;
+  var q=(document.getElementById('cal-q').value||'').toLowerCase();
+  var estFil=document.getElementById('cal-filtro-estado').value;
+  var hoy=today();
+
+  var list=PEDIDOS.filter(function(p){
+    if(estFil&&p.estado!==estFil)return false;
+    if(q){
+      var cli=CLIENTES.find(function(c){return c.id===p.cliente_id;})||{};
+      if(!(String(p.nro_pedido||'').includes(q)||(cli.nombre||'').toLowerCase().includes(q)))return false;
+    }
+    return true;
+  });
+
+  if(!list.length){
+    cont.innerHTML='<div class="empty"><p>No hay pedidos</p></div>';
+    document.getElementById('cal-resumen').textContent='';
+    return;
+  }
+
+  // Separar: vencidos | próximos 7d | 8–30d | +30d | sin fecha
+  var enHoy=new Date(hoy+'T12:00:00');
+  var en7=new Date(enHoy);en7.setDate(en7.getDate()+7);
+  var en30=new Date(enHoy);en30.setDate(en30.getDate()+30);
+
+  var grupos={vencidos:[],esta_semana:[],proximo_mes:[],mas_adelante:[],sin_fecha:[]};
+
+  list.forEach(function(p){
+    if(!p.fecha_entrega||p.estado==='completado'||p.estado==='cancelado'){
+      if(p.estado==='completado'){
+        // completados con fecha los mostramos igual
+        if(p.fecha_entrega)grupos.mas_adelante.push(p);
+        else grupos.sin_fecha.push(p);
+      } else if(!p.fecha_entrega){
+        grupos.sin_fecha.push(p);
+      } else {
+        var fe=new Date(p.fecha_entrega+'T12:00:00');
+        if(fe<enHoy)grupos.vencidos.push(p);
+        else if(fe<=en7)grupos.esta_semana.push(p);
+        else if(fe<=en30)grupos.proximo_mes.push(p);
+        else grupos.mas_adelante.push(p);
+      }
+      return;
+    }
+    var fe=new Date(p.fecha_entrega+'T12:00:00');
+    if(fe<enHoy)grupos.vencidos.push(p);
+    else if(fe<=en7)grupos.esta_semana.push(p);
+    else if(fe<=en30)grupos.proximo_mes.push(p);
+    else grupos.mas_adelante.push(p);
+  });
+
+  // Dentro de cada grupo: ordenar por fecha_entrega asc (sin fecha: por nro desc)
+  function sortFE(arr){
+    return arr.slice().sort(function(a,b){
+      if(!a.fecha_entrega&&!b.fecha_entrega)return (b.nro_pedido||0)-(a.nro_pedido||0);
+      if(!a.fecha_entrega)return 1;
+      if(!b.fecha_entrega)return -1;
+      return a.fecha_entrega<b.fecha_entrega?-1:1;
+    });
+  }
+
+  function diasRestantes(fe){
+    var d=Math.round((new Date(fe+'T12:00:00')-enHoy)/(1000*60*60*24));
+    return d;
+  }
+
+  function tarjetaPedido(p,grupoKey){
+    var cli=CLIENTES.find(function(c){return c.id===p.cliente_id;})||{};
+    var items=PEDIDOS_ITEMS.filter(function(i){return i.pedido_id===p.id;});
+    var cant=items.reduce(function(s,i){return s+Number(i.cantidad);},0);
+    var ent=items.reduce(function(s,i){return s+Number(i.entregado);},0);
+    var rec=items.reduce(function(s,i){return s+Number(i.recibido);},0);
+    var cos=items.reduce(function(s,i){return s+Number(i.costura);},0);
+    var pct=cant>0?Math.round(ent/cant*100):0;
+
+    // Estado semáforo
+    var venc=grupoKey==='vencidos';
+    var border=venc?'border-left:4px solid #dc2626;':grupoKey==='esta_semana'?'border-left:4px solid #f59e0b;':'border-left:4px solid #e5e7eb;';
+    var barColor=pct===100?'#16a34a':pct>=70?'#2563eb':venc?'#dc2626':'#f59e0b';
+
+    var dias=p.fecha_entrega?diasRestantes(p.fecha_entrega):null;
+    var diasLabel='';
+    if(dias!==null){
+      if(dias<0)diasLabel='<span style="font-size:11px;font-weight:800;color:#dc2626;background:#fee2e2;padding:2px 7px;border-radius:6px;">⚠️ '+Math.abs(dias)+'d vencido</span>';
+      else if(dias===0)diasLabel='<span style="font-size:11px;font-weight:800;color:#92400e;background:#fef3c7;padding:2px 7px;border-radius:6px;">⏰ Hoy</span>';
+      else if(dias===1)diasLabel='<span style="font-size:11px;font-weight:800;color:#92400e;background:#fef3c7;padding:2px 7px;border-radius:6px;">⏰ Mañana</span>';
+      else diasLabel='<span style="font-size:11px;color:#6b7280;background:#f3f4f6;padding:2px 7px;border-radius:6px;">en '+dias+'d</span>';
+    }
+
+    var em={en_proceso:{bg:'#dbeafe',c:'#1d4ed8',t:'En proceso'},completado:{bg:'#d1fae5',c:'#065f46',t:'Completado'},pendiente:{bg:'#fef3c7',c:'#92400e',t:'Pendiente'},cancelado:{bg:'#fee2e2',c:'#dc2626',t:'Cancelado'}};
+    var eb=em[p.estado]||{bg:'#f3f4f6',c:'#374151',t:p.estado||'—'};
+
+    // Tipos de prenda
+    var tipos=[...new Set(items.map(function(i){return i.prenda||'?';}))];
+
+    return '<div style="background:#fff;border-radius:10px;padding:14px 16px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.05);'+border+'">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">'
+        +'<div style="flex:1;min-width:200px;">'
+          +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">'
+            +'<span style="font-weight:900;font-size:15px;color:#1f2937;">#'+p.nro_pedido+'</span>'
+            +'<span style="font-weight:600;color:#374151;font-size:13px;">'+esc(cli.nombre||'— Sin cliente —')+'</span>'
+            +'<span style="background:'+eb.bg+';color:'+eb.c+';padding:1px 8px;border-radius:8px;font-size:11px;font-weight:600;">'+eb.t+'</span>'
+            +(p.caracter==='URGENTE'?'<span style="font-size:11px;background:#fee2e2;color:#dc2626;padding:1px 8px;border-radius:8px;font-weight:700;">🚨 URGENTE</span>':p.caracter==='IMPORTANTE'?'<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 8px;border-radius:8px;font-weight:700;">⭐ IMPORTANTE</span>':'')
+          +'</div>'
+          +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+            +'<span style="font-size:11px;color:#9ca3af;">Pedido: '+fmtF(p.fecha)+'</span>'
+            +(p.fecha_entrega?'<span style="font-size:12px;font-weight:700;color:#374151;">📅 Entrega: '+fmtF(p.fecha_entrega)+'</span>':'<span style="font-size:11px;color:#d1d5db;font-style:italic;">Sin fecha de entrega</span>')
+            +diasLabel
+          +'</div>'
+          +(tipos.length?'<div style="margin-top:5px;">'+tipos.map(function(t){return '<span style="font-size:10px;background:#f3f4f6;padding:1px 7px;border-radius:5px;color:#6b7280;margin-right:4px;">'+esc(t)+'</span>';}).join('')+'</div>':'')
+        +'</div>'
+        +'<div style="text-align:right;flex-shrink:0;">'
+          +'<div style="font-size:11px;color:#9ca3af;margin-bottom:2px;">'+ent+'/'+cant+' entregadas</div>'
+          +'<div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">'
+            +'<div style="width:100px;height:8px;background:#e5e7eb;border-radius:4px;">'
+              +'<div style="height:8px;background:'+barColor+';border-radius:4px;width:'+pct+'%;"></div>'
+            +'</div>'
+            +'<span style="font-weight:800;color:'+barColor+';font-size:13px;">'+pct+'%</span>'
+          +'</div>'
+          +'<div style="margin-top:6px;display:flex;gap:6px;justify-content:flex-end;">'
+            +'<span style="font-size:10px;color:#6b7280;background:#f3f4f6;padding:2px 7px;border-radius:5px;">✂️ '+cos+'</span>'
+            +'<span style="font-size:10px;color:#6b7280;background:#f3f4f6;padding:2px 7px;border-radius:5px;">📥 '+rec+'</span>'
+            +'<button class="btn btn-sm" style="font-size:11px;padding:3px 10px;background:#ede9fe;color:#6d28d9;border:none;" onclick="verSeguimientoPedido('+p.id+')">Seguimiento</button>'
+          +'</div>'
+        +'</div>'
+      +'</div>'
+    +'</div>';
+  }
+
+  function seccion(titulo,color,icono,pedidos,key){
+    if(!pedidos.length)return '';
+    var sorted=sortFE(pedidos);
+    return '<div style="margin-bottom:20px;">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid '+color+'20;">'
+        +'<span style="font-size:18px;">'+icono+'</span>'
+        +'<h4 style="margin:0;color:'+color+';font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;">'+titulo+'</h4>'
+        +'<span style="background:'+color+'20;color:'+color+';font-size:12px;font-weight:800;padding:2px 9px;border-radius:10px;">'+pedidos.length+'</span>'
+      +'</div>'
+      +sorted.map(function(p){return tarjetaPedido(p,key);}).join('')
+    +'</div>';
+  }
+
+  var html='';
+  html+=seccion('VENCIDOS — fecha de entrega superada','#dc2626','🔴',grupos.vencidos,'vencidos');
+  html+=seccion('ESTA SEMANA — entrega en los próximos 7 días','#d97706','⏰',grupos.esta_semana,'esta_semana');
+  html+=seccion('PRÓXIMO MES — entrega en 8 a 30 días','#2563eb','📆',grupos.proximo_mes,'proximo_mes');
+  html+=seccion('MÁS ADELANTE — más de 30 días','#16a34a','✅',grupos.mas_adelante,'mas_adelante');
+  html+=seccion('SIN FECHA DE ENTREGA','#9ca3af','⚪',grupos.sin_fecha,'sin_fecha');
+
+  if(!html)html='<div class="empty"><p>No hay pedidos en estas categorías</p></div>';
+  cont.innerHTML=html;
+
+  var totalPed=list.length;
+  var conFecha=list.filter(function(p){return p.fecha_entrega;}).length;
+  var vencN=grupos.vencidos.length;
+  var res=document.getElementById('cal-resumen');
+  if(res)res.innerHTML=totalPed+' pedidos · '+conFecha+' con fecha'+
+    (vencN?'<span style="color:#dc2626;margin-left:8px;font-weight:800;">⚠️ '+vencN+' vencido'+(vencN>1?'s':'')+'</span>':'');
+}
+
 function initPedAnalisis(){
   // Poblar año en selects si vacíos
   var now=new Date();
@@ -19544,6 +19729,7 @@ function openPedidoModal(id){
   document.getElementById('mp-id').value=id||'';
   document.getElementById('m-pedido-title').textContent=id?'Editar pedido':'Nuevo pedido';
   document.getElementById('mp-fecha').value=today();
+  document.getElementById('mp-fecha-entrega').value='';
   document.getElementById('mp-nro').value='';
   document.getElementById('mp-caracter').value='URGENTE';
   document.getElementById('mp-estado').value='en_proceso';
@@ -19561,6 +19747,7 @@ function openPedidoModal(id){
     if(!p)return;
     document.getElementById('mp-nro').value=p.nro_pedido||'';
     document.getElementById('mp-fecha').value=p.fecha||today();
+    document.getElementById('mp-fecha-entrega').value=p.fecha_entrega||'';
     document.getElementById('mp-caracter').value=p.caracter||'URGENTE';
     document.getElementById('mp-estado').value=p.estado||'en_proceso';
     document.getElementById('mp-nota').value=p.nota||'';
@@ -19642,6 +19829,7 @@ function pedActualizarTotales(){
 async function savePedido(){
   var nro=document.getElementById('mp-nro').value.trim();
   var fecha=document.getElementById('mp-fecha').value;
+  var fechaEntrega=document.getElementById('mp-fecha-entrega').value||null;
   var caracter=document.getElementById('mp-caracter').value;
   var estado=document.getElementById('mp-estado').value;
   var nota=document.getElementById('mp-nota').value.trim();
@@ -19675,7 +19863,7 @@ async function savePedido(){
   var items=[].concat(toUpdate,toInsert); // para el total al final
   if(!items.length&&!toDelete.length){toast('Al menos un ítem con cantidad > 0','err');return;}
 
-  var header={nro_pedido:nro,fecha:fecha,caracter:caracter,estado:estado,nota:nota||null,
+  var header={nro_pedido:nro,fecha:fecha,fecha_entrega:fechaEntrega,caracter:caracter,estado:estado,nota:nota||null,
     cliente_id:cliId?parseInt(cliId):null,updated_at:new Date().toISOString()};
 
   var pedId;
@@ -21258,7 +21446,7 @@ function closeManual(){document.getElementById('man-overlay').classList.remove('
     <div class="man-cover">
       <div class="man-cover-badge">Manual de Usuario</div>
       <h1>Prímula <span>ERP</span></h1>
-      <p>Guía completa para operar el sistema: movimientos, cajas, cheques, ventas, clientes, proveedores, personal y el flujo productivo completo.</p>
+      <p>Guía completa de todos los módulos del sistema: finanzas, ventas, clientes, proveedores, producción, costos y mucho más. Diseñada para que cualquier persona pueda operarlo sin conocimientos previos.</p>
     </div>
     <div class="man-content">
 
@@ -21268,51 +21456,56 @@ function closeManual(){document.getElementById('man-overlay').classList.remove('
         <div class="man-idx-grid">
           <a class="man-idx-item" href="#man-intro"><div class="man-idx-num">1</div> Introducción al sistema</a>
           <a class="man-idx-item" href="#man-inicio"><div class="man-idx-num">2</div> Pantalla de Inicio</a>
-          <a class="man-idx-item" href="#man-movs"><div class="man-idx-num">3</div> Movimientos</a>
+          <a class="man-idx-item" href="#man-movs"><div class="man-idx-num">3</div> Movimientos y Cajas</a>
           <a class="man-idx-item" href="#man-panel"><div class="man-idx-num">4</div> Panel General</a>
           <a class="man-idx-item" href="#man-cheques"><div class="man-idx-num">5</div> Cheques</a>
           <a class="man-idx-item" href="#man-locales"><div class="man-idx-num">6</div> Locales — Punto de Venta</a>
           <a class="man-idx-item" href="#man-mayorista"><div class="man-idx-num">7</div> Ropa Mayorista</a>
-          <a class="man-idx-item" href="#man-clientes"><div class="man-idx-num">8</div> Clientes y CC</a>
-          <a class="man-idx-item" href="#man-proveedores"><div class="man-idx-num">9</div> Proveedores</a>
-          <a class="man-idx-item" href="#man-personal"><div class="man-idx-num">10</div> Personal</a>
-          <a class="man-idx-item" href="#man-talleristas"><div class="man-idx-num">11</div> Talleristas</a>
-          <a class="man-idx-item" href="#man-productos"><div class="man-idx-num">12</div> Productos y Stock</a>
-          <a class="man-idx-item" href="#man-moratorias"><div class="man-idx-num">13</div> Moratorias</a>
-          <a class="man-idx-item" href="#man-gastos"><div class="man-idx-num">14</div> Gastos Fijos</a>
+          <a class="man-idx-item" href="#man-clientes"><div class="man-idx-num">8</div> Clientes y Cuenta Corriente</a>
+          <a class="man-idx-item" href="#man-nc"><div class="man-idx-num">9</div> Notas de Crédito (NC)</a>
+          <a class="man-idx-item" href="#man-proveedores"><div class="man-idx-num">10</div> Proveedores y Compras</a>
+          <a class="man-idx-item" href="#man-personal"><div class="man-idx-num">11</div> Personal</a>
+          <a class="man-idx-item" href="#man-talleristas"><div class="man-idx-num">12</div> Talleristas</a>
+          <a class="man-idx-item" href="#man-productos"><div class="man-idx-num">13</div> Productos y Stock</a>
+          <a class="man-idx-item" href="#man-moratorias"><div class="man-idx-num">14</div> Moratorias</a>
+          <a class="man-idx-item" href="#man-gastos"><div class="man-idx-num">15</div> Gastos Fijos</a>
           <a class="man-idx-item" href="#man-pedidos"><div class="man-idx-num prod">16</div> Producción — Pedidos</a>
-          <a class="man-idx-item" href="#man-tizadas"><div class="man-idx-num prod">17</div> Tizadas y Corte</a>
-          <a class="man-idx-item" href="#man-costura"><div class="man-idx-num prod">18</div> Costura y Bordado</a>
-          <a class="man-idx-item" href="#man-entregas"><div class="man-idx-num prod">19</div> Entregas a Clientes</a>
-          <a class="man-idx-item" href="#man-costos"><div class="man-idx-num prod">20</div> Costos y Fichas</a>
-          <a class="man-idx-item" href="#man-faq"><div class="man-idx-num">15</div> Preguntas Frecuentes</a>
+          <a class="man-idx-item" href="#man-calendario"><div class="man-idx-num prod">17</div> Calendario de Producción</a>
+          <a class="man-idx-item" href="#man-tizadas"><div class="man-idx-num prod">18</div> Tizadas y Corte</a>
+          <a class="man-idx-item" href="#man-costura"><div class="man-idx-num prod">19</div> Costura y Bordado</a>
+          <a class="man-idx-item" href="#man-entregas"><div class="man-idx-num prod">20</div> Entregas a Clientes</a>
+          <a class="man-idx-item" href="#man-costos"><div class="man-idx-num prod">21</div> Costos y Fichas</a>
+          <a class="man-idx-item" href="#man-excel"><div class="man-idx-num">22</div> Exportar a Excel</a>
+          <a class="man-idx-item" href="#man-faq"><div class="man-idx-num">23</div> Preguntas Frecuentes</a>
         </div>
       </div>
 
       <!-- 1. INTRO -->
       <div class="man-sec" id="man-intro">
         <div class="man-sec-title"><div class="man-icon">🏢</div>Introducción al sistema</div>
-        <p class="man-desc">Prímula ERP es un sistema de gestión diseñado para la empresa. Controlá finanzas, locales, stock, personal, proveedores y todo el proceso productivo desde un solo lugar.</p>
+        <p class="man-desc">Prímula ERP es el sistema de gestión integral de la empresa. Desde acá controlás finanzas, ventas, clientes, proveedores, stock, personal, talleristas y todo el proceso productivo — en un solo lugar y desde cualquier dispositivo con internet.</p>
         <div class="man-sub">¿Cómo acceder?</div>
-        <div class="man-step"><div class="man-snum">1</div><div><h4>Abrí el sistema</h4><p>Ingresá al link del sistema desde Chrome o Edge. Necesitás conexión a internet.</p></div></div>
-        <div class="man-step"><div class="man-snum">2</div><div><h4>Ingresá con usuario y contraseña</h4><p>Usá el correo y contraseña que te dieron. Si no tenés acceso, contactá al administrador.</p></div></div>
-        <div class="man-step"><div class="man-snum">3</div><div><h4>El sistema carga automáticamente</h4><p>Al ingresar, descarga todos los datos de la nube. Tarda unos segundos.</p></div></div>
-        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div><b>Tip:</b> Todos los datos se guardan en la nube en tiempo real. Cada vez que confirmás una acción, queda grabado al instante.</div></div>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Abrí el sistema en el navegador</h4><p>Ingresá al link del sistema desde Chrome o Edge. El sistema funciona en la nube: necesitás conexión a internet. No hay nada que instalar.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Ingresá con tu usuario y contraseña</h4><p>Usá el correo y contraseña que te asignaron. Si olvidaste la contraseña o no tenés acceso, contactá al administrador.</p></div></div>
+        <div class="man-step"><div class="man-snum">3</div><div><h4>Esperá que cargue</h4><p>Al entrar, el sistema descarga todos los datos de la nube automáticamente. Tarda unos segundos. Verás la pantalla de Inicio con los indicadores del día.</p></div></div>
+        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div><b>Guardado automático:</b> cada vez que confirmás una acción (guardar, cobrar, completar, etc.) el dato se guarda en la nube de inmediato. Si cerrás un formulario sin confirmar, los cambios de ese formulario se pierden.</div></div>
         <div class="man-sub">El menú lateral</div>
+        <p class="man-txt">En la columna izquierda están todas las secciones del sistema. En celular, usá el botón ☰ arriba a la izquierda para abrir el menú.</p>
         <table class="man-tbl"><thead><tr><th>Sección</th><th>¿Para qué sirve?</th></tr></thead><tbody>
-          <tr><td><strong>🏠 Inicio</strong></td><td>Alertas del día, ventas y deudas</td></tr>
-          <tr><td><strong>💰 Movimientos</strong></td><td>Todos los ingresos y egresos de dinero</td></tr>
-          <tr><td><strong>📊 Panel General</strong></td><td>Resumen financiero, control semanal y proyecciones</td></tr>
-          <tr><td><strong>📝 Cheques</strong></td><td>Cheques propios emitidos y cheques en cartera</td></tr>
-          <tr><td><strong>🏪 Locales</strong></td><td>Punto de venta, stock e historial de cada local</td></tr>
-          <tr><td><strong>👔 Ropa Mayorista</strong></td><td>Ventas al por mayor y presupuestos</td></tr>
-          <tr><td><strong>👥 Clientes</strong></td><td>Base de clientes y cuenta corriente</td></tr>
-          <tr><td><strong>🤝 Proveedores</strong></td><td>Proveedores, datos bancarios y deudas a pagar</td></tr>
-          <tr><td><strong>👤 Personal</strong></td><td>Empleados, sueldos y datos laborales</td></tr>
-          <tr><td><strong>✂️ Talleristas</strong></td><td>Costureros externos y pagos por prenda</td></tr>
-          <tr><td><strong>📦 Productos</strong></td><td>Catálogo de productos y precios</td></tr>
-          <tr><td><strong>📋 Pedidos / Producción</strong></td><td>Pedidos, corte, costura, bordado y entregas</td></tr>
-          <tr><td><strong>💰 Costos</strong></td><td>Avíos, fichas de costo y rentabilidad por modelo</td></tr>
+          <tr><td><strong>🏠 Inicio</strong></td><td>Panel de alertas del día y 6 indicadores clave</td></tr>
+          <tr><td><strong>💰 Finanzas</strong></td><td>Todos los ingresos y egresos, transferencias entre cajas, resumen de gastos</td></tr>
+          <tr><td><strong>📊 Panel General</strong></td><td>Resumen financiero completo: activos, pasivos, patrimonio y control semanal</td></tr>
+          <tr><td><strong>📝 Cheques</strong></td><td>Cheques propios emitidos y cheques en cartera recibidos de clientes</td></tr>
+          <tr><td><strong>🏪 Locales</strong></td><td>Punto de venta, historial de ventas y stock de Llavallol y Monte Grande</td></tr>
+          <tr><td><strong>👔 Ropa Mayorista</strong></td><td>Ventas al por mayor, presupuestos y resumen por período</td></tr>
+          <tr><td><strong>👥 Clientes</strong></td><td>Base de clientes, cuenta corriente y gestión de deudas</td></tr>
+          <tr><td><strong>🤝 Proveedores</strong></td><td>Proveedores, facturas, pagos y órdenes de compra</td></tr>
+          <tr><td><strong>👤 Personal</strong></td><td>Empleados, datos laborales y sueldos</td></tr>
+          <tr><td><strong>✂️ Talleristas</strong></td><td>Costureros externos, precios por prenda, liquidaciones y bordado de stock</td></tr>
+          <tr><td><strong>📦 Productos</strong></td><td>Catálogo de productos con precios y stock por local</td></tr>
+          <tr><td><strong>📋 Materia Prima</strong></td><td>Stock de telas por color y tipo, y materiales auxiliares</td></tr>
+          <tr><td><strong>🏭 Producción</strong></td><td>Pedidos, calendario, tizadas, costura, bordado y entregas</td></tr>
+          <tr><td><strong>💰 Costos</strong></td><td>Fichas de costo por modelo, avíos, rentabilidad y costo por pedido</td></tr>
         </tbody></table>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
@@ -21320,187 +21513,298 @@ function closeManual(){document.getElementById('man-overlay').classList.remove('
       <!-- 2. INICIO -->
       <div class="man-sec" id="man-inicio">
         <div class="man-sec-title"><div class="man-icon">🏠</div>Pantalla de Inicio</div>
-        <p class="man-desc">Primera pantalla al entrar. Muestra el panorama del día: alertas urgentes y 4 indicadores clave.</p>
+        <p class="man-desc">Primera pantalla al entrar al sistema. Muestra en un vistazo todo lo que necesitás saber del día: alertas urgentes y los 6 indicadores más importantes del negocio.</p>
         <div class="man-sub">Panel de Alertas</div>
-        <table class="man-tbl"><thead><tr><th>Color</th><th>Significa</th><th>Ejemplos</th></tr></thead><tbody>
-          <tr><td>🔴 <strong>Rojo</strong></td><td>Urgente</td><td>Cheque que vence hoy, caja en negativo</td></tr>
-          <tr><td>🟡 <strong>Amarillo</strong></td><td>Atención pronto</td><td>Gasto fijo sin pagar, moratoria próxima</td></tr>
-          <tr><td>✅ <strong>Verde</strong></td><td>Todo en orden</td><td>Sin situaciones pendientes</td></tr>
+        <p class="man-txt">La franja de alertas aparece arriba de todo cuando hay situaciones que requieren atención. Cada alerta tiene un botón <strong>"Ver →"</strong> que te lleva directamente al lugar donde resolver el problema.</p>
+        <table class="man-tbl"><thead><tr><th>Color</th><th>Urgencia</th><th>Ejemplos de situaciones</th></tr></thead><tbody>
+          <tr><td>🔴 <strong>Rojo</strong></td><td>Urgente — hoy</td><td>Cheque propio vence hoy o mañana, caja con saldo negativo</td></tr>
+          <tr><td>🟡 <strong>Amarillo</strong></td><td>Próximamente</td><td>Cheques que vencen en 7 días, gasto fijo sin pagar este mes</td></tr>
         </tbody></table>
-        <div class="man-call man-call-green"><div class="man-ci">✅</div><div>Cada alerta tiene un botón <b>"Ver →"</b> que te lleva directamente a la sección para resolver el problema.</div></div>
+        <div class="man-sub">Los 6 indicadores (KPIs)</div>
+        <table class="man-tbl"><thead><tr><th>Tarjeta</th><th>Qué muestra</th><th>Al hacer clic</th></tr></thead><tbody>
+          <tr><td><strong>📈 Facturación del mes</strong></td><td>Total vendido (mayorista + locales) en el mes actual</td><td>Va a Ropa Mayorista</td></tr>
+          <tr><td><strong>💳 Deuda clientes</strong></td><td>Total que deben los clientes mayoristas en este momento</td><td>Va a CC Mayoristas</td></tr>
+          <tr><td><strong>🏭 Órdenes activas</strong></td><td>Pedidos de producción en proceso. En rojo si hay pedidos atrasados</td><td>Va a Producción</td></tr>
+          <tr><td><strong>✂️ Deuda talleristas</strong></td><td>Total que se le debe a talleristas por prendas recibidas</td><td>Va a Talleristas</td></tr>
+          <tr><td><strong>📝 Cheques en cartera</strong></td><td>Valor total de cheques de clientes por cobrar en los próximos 15 días</td><td>Va a Cheques</td></tr>
+          <tr><td><strong>📦 Sin stock</strong></td><td>Cantidad de artículos con stock en cero</td><td>Va a Productos</td></tr>
+        </tbody></table>
+        <div class="man-sub">Los 4 paneles operativos</div>
+        <table class="man-tbl"><thead><tr><th>Panel</th><th>Qué muestra</th></tr></thead><tbody>
+          <tr><td><strong>🏭 Órdenes activas</strong></td><td>Pedidos en proceso ordenados por urgencia (URGENTE primero), con barra de progreso</td></tr>
+          <tr><td><strong>📒 Top deudores</strong></td><td>Los 5 clientes mayoristas con mayor deuda pendiente</td></tr>
+          <tr><td><strong>🛒 Últimas ventas</strong></td><td>Las ventas más recientes de todos los canales</td></tr>
+          <tr><td><strong>👗 Deuda talleristas</strong></td><td>Talleristas con prendas recibidas pendientes de pago</td></tr>
+        </tbody></table>
+        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div>El Inicio se actualiza cada vez que entrás al sistema o cuando navegás a él desde otro módulo. Si acabás de cargar algo y no aparece, recargá la página.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
       <!-- 3. MOVIMIENTOS -->
       <div class="man-sec" id="man-movs">
-        <div class="man-sec-title"><div class="man-icon">💰</div>Movimientos</div>
-        <p class="man-desc">El corazón financiero del sistema. Registrá cada peso que entra o sale de la empresa, sin importar de qué caja.</p>
+        <div class="man-sec-title"><div class="man-icon">💰</div>Movimientos y Cajas</div>
+        <p class="man-desc">El corazón financiero del sistema. Todo el dinero que entra o sale de la empresa se registra acá, sin importar de qué caja proviene. El saldo de cada caja se calcula automáticamente a partir de los movimientos.</p>
         <div class="man-sub">Las Cajas del sistema</div>
         <table class="man-tbl"><thead><tr><th>Caja</th><th>¿Qué representa?</th></tr></thead><tbody>
-          <tr><td><strong>Efectivo Administración</strong></td><td>Dinero en efectivo en la oficina</td></tr>
-          <tr><td><strong>Banco SRL / Banco Poly</strong></td><td>Cuentas bancarias de la empresa</td></tr>
-          <tr><td><strong>Mercado Pago</strong></td><td>Billetera virtual</td></tr>
-          <tr><td><strong>ECHEQ / Cheque</strong></td><td>Cheques propios en tránsito</td></tr>
-          <tr><td><strong>Local Monte Grande / Llavallol</strong></td><td>Cajas registradoras de los locales</td></tr>
-          <tr><td><strong>Caja USD</strong></td><td>Dólares en efectivo</td></tr>
+          <tr><td><strong>Efectivo Administración</strong></td><td>Dinero en efectivo guardado en la oficina o caja chica</td></tr>
+          <tr><td><strong>Banco SRL / Banco Poly</strong></td><td>Cuentas bancarias de la empresa (saldo según extracto)</td></tr>
+          <tr><td><strong>Mercado Pago</strong></td><td>Billetera virtual de Mercado Pago</td></tr>
+          <tr><td><strong>ECHEQ / Cheques AL COBRO</strong></td><td>Cheques en cartera que ya se presentaron al banco pero aún no acreditaron</td></tr>
+          <tr><td><strong>Local Monte Grande / Llavallol</strong></td><td>Efectivo en caja de cada local</td></tr>
+          <tr><td><strong>$ CAJA USD</strong></td><td>Dólares en efectivo. El Panel General lo convierte a pesos usando el tipo de cambio que configurés</td></tr>
         </tbody></table>
-        <div class="man-sub">Registrar un movimiento</div>
-        <div class="man-step"><div class="man-snum">1</div><div><h4>Clic en "+ Nuevo movimiento"</h4><p>Se abre el formulario en una ventana emergente.</p></div></div>
-        <div class="man-step"><div class="man-snum">2</div><div><h4>Elegí el tipo</h4><p><span class="man-pill mpr">Egreso</span> para dinero que sale. <span class="man-pill mpg">Ingreso</span> para dinero que entra.</p></div></div>
-        <div class="man-step"><div class="man-snum">3</div><div><h4>Seleccioná caja y concepto</h4><p>Elegí de qué caja sale o entra el dinero y el concepto (Sueldos, Proveedores, Alquiler, etc.).</p></div></div>
-        <div class="man-step"><div class="man-snum">4</div><div><h4>Completá fecha, detalle y monto</h4><p>La fecha viene con hoy por defecto. El detalle es texto libre.</p></div></div>
-        <div class="man-step"><div class="man-snum">5</div><div><h4>Guardá</h4><p>El saldo de la caja se actualiza al instante.</p></div></div>
-        <div class="man-call man-call-amber"><div class="man-ci">⚠️</div><div><b>Importante:</b> Un movimiento mal cargado afecta el saldo de la caja. Corregilo con ✏️ o eliminalo con 🗑️.</div></div>
+        <div class="man-sub">Cómo registrar un movimiento</div>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Clic en "+ Nuevo movimiento" (o en el botón ⊕ flotante)</h4><p>Se abre el formulario. Si ya tenés una caja filtrada activa, el campo "Caja" viene pre-completado.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Elegí el tipo de movimiento</h4><p><span class="man-pill mpr">Egreso</span>: dinero que sale (gastos, pagos, sueldos). <span class="man-pill mpg">Ingreso</span>: dinero que entra (ventas en efectivo, cobros).</p></div></div>
+        <div class="man-step"><div class="man-snum">3</div><div><h4>Seleccioná la caja</h4><p>Elegí de qué caja entra o sale el dinero. Si seleccionás Costureros, aparece un selector de tallerista para imputarlo correctamente.</p></div></div>
+        <div class="man-step"><div class="man-snum">4</div><div><h4>Elegí el concepto</h4><p>El concepto clasifica el movimiento para los reportes. Ejemplos: Sueldos, Alquiler, Proveedores, Ventas locales, Materia Prima.</p></div></div>
+        <div class="man-step"><div class="man-snum">5</div><div><h4>Completá fecha, monto y detalle</h4><p>La fecha viene con el día de hoy por defecto. El campo detalle es texto libre para aclarar qué fue exactamente.</p></div></div>
+        <div class="man-step"><div class="man-snum">6</div><div><h4>Guardá</h4><p>El saldo de la caja se actualiza al instante. El movimiento aparece en la tabla con su número de ID.</p></div></div>
+        <div class="man-call man-call-amber"><div class="man-ci">⚠️</div><div><b>Error al cargar:</b> si registraste mal un monto o caja, usá el ✏️ para editarlo o 🗑️ para eliminarlo. Hacerlo revierte el saldo automáticamente. También podés buscarlo por su #número en la barra de búsqueda.</div></div>
+        <div class="man-sub">Filtrar movimientos</div>
+        <p class="man-txt">Usá los filtros de año/mes para ver solo los movimientos de un período. El filtro de caja muestra solo los movimientos de esa caja y actualiza el saldo mostrado en pantalla.</p>
         <div class="man-sub">Transferencias entre cajas</div>
-        <p class="man-txt">Usá la pestaña <strong>"Transferencias"</strong> para mover dinero entre cajas. Genera automáticamente el egreso en origen y el ingreso en destino.</p>
-        <div class="man-sub">Cierre de caja</div>
-        <p class="man-txt">Congela el saldo de una caja en un momento dado para hacer arqueos físicos.</p>
-        <div class="man-call man-call-red"><div class="man-ci">⚠️</div><div><b>Atención:</b> El cierre de caja no se puede deshacer. Asegurate de que el monto físico coincida antes de confirmar.</div></div>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Andá a la pestaña "🔄 Transferencias"</h4><p>Sirve para mover dinero de una caja a otra: por ejemplo, de Banco a Efectivo Administración cuando retirás plata.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Completá origen, destino y monto</h4><p>El sistema crea automáticamente el egreso en la caja origen y el ingreso en la caja destino. No hay que cargar dos movimientos.</p></div></div>
+        <div class="man-sub">Resumen de gastos</div>
+        <p class="man-txt">La pestaña <strong>"📊 Resumen de gastos"</strong> muestra los egresos del período agrupados por concepto, con gráfico de barras y comparación entre meses. Ideal para ver en qué se fue el dinero.</p>
+        <div class="man-call man-call-red"><div class="man-ci">⚠️</div><div><b>Cierre de caja:</b> congela el saldo de una caja en un momento dado para hacer arqueos físicos. <strong>No se puede deshacer.</strong> Usalo solo cuando el conteo físico coincide con el sistema.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
       <!-- 4. PANEL -->
       <div class="man-sec" id="man-panel">
         <div class="man-sec-title"><div class="man-icon">📊</div>Panel General</div>
-        <p class="man-desc">Tres sub-pestañas: Resumen Financiero, Control Semanal y Objetivos. Para tomar decisiones estratégicas.</p>
+        <p class="man-desc">Vista estratégica de la situación económica de la empresa. Tres pestañas: Resumen Financiero, Control Semanal y Objetivos.</p>
         <div class="man-sub">Resumen Financiero</div>
         <table class="man-tbl"><thead><tr><th>Tarjeta</th><th>¿Qué incluye?</th></tr></thead><tbody>
-          <tr><td><span class="man-pill mpg">ACTIVOS</span></td><td>Efectivo, saldos bancarios, MP, cheques en cartera, ventas por cobrar, stock</td></tr>
-          <tr><td><span class="man-pill mpr">PASIVOS</span></td><td>Deuda con proveedores, moratorias, cheques propios sin acreditar</td></tr>
-          <tr><td><span class="man-pill mpb">PATRIMONIO NETO</span></td><td>Activos − Pasivos. El valor real de la empresa</td></tr>
+          <tr><td><span class="man-pill mpg">ACTIVOS</span></td><td>Efectivo en todas las cajas + saldos bancarios + Mercado Pago + Caja USD (convertida a pesos) + cheques en cartera + ventas por cobrar + valor del stock</td></tr>
+          <tr><td><span class="man-pill mpr">PASIVOS</span></td><td>Deuda con proveedores + moratorias pendientes + cheques propios sin acreditar</td></tr>
+          <tr><td><span class="man-pill mpb">PATRIMONIO NETO</span></td><td>Activos − Pasivos. El valor real de la empresa en este momento</td></tr>
         </tbody></table>
+        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div>La tarjeta <b>$ CAJA USD</b> muestra el monto en dólares y su equivalente en pesos. Podés editar el tipo de cambio directamente en la tarjeta haciendo clic en el ✏️ — se guarda en el navegador.</div></div>
         <div class="man-sub">Control Semanal</div>
-        <p class="man-txt">Responde: <strong>¿Con lo que tengo hoy, puedo cubrir todos los compromisos de los próximos días?</strong> Elegí horizonte de 7, 14 o 30 días. La tarjeta principal muestra si hay déficit y cuánto necesitás vender extra.</p>
-        <div class="man-sub">Proyección de Flujo — 90 días</div>
-        <p class="man-txt">Muestra el saldo proyectado mes a mes. 🟢 positivo cómodo · 🟡 ajustado · 🔴 negativo.</p>
+        <p class="man-txt">Proyección de compromisos de la semana: sueldos, gastos fijos, moratorias y cheques que vencen. Comparado con el dinero disponible en cajas para saber si alcanza o hay que buscar fondos.</p>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
       <!-- 5. CHEQUES -->
       <div class="man-sec" id="man-cheques">
         <div class="man-sec-title"><div class="man-icon">📝</div>Cheques</div>
-        <p class="man-desc">Cheques propios (emitidos por la empresa) y cheques en cartera (recibidos de clientes).</p>
-        <div class="man-sub">Cheques Propios — estados</div>
-        <table class="man-tbl"><thead><tr><th>Estado</th><th>Significado</th></tr></thead><tbody>
-          <tr><td><span class="man-pill mpy">Pendiente</span></td><td>Emitido pero aún no cobrado</td></tr>
-          <tr><td><span class="man-pill mpg">Cobrado</span></td><td>Debitado de la cuenta bancaria</td></tr>
-          <tr><td><span class="man-pill mpr">Rechazado</span></td><td>Rechazado por el banco</td></tr>
-          <tr><td><span class="man-pill mpgr">Anulado</span></td><td>Anulado antes de ser presentado</td></tr>
+        <p class="man-desc">Administrá los cheques propios que emite la empresa y los cheques en cartera recibidos de clientes como pago. El sistema alerta automáticamente sobre vencimientos próximos.</p>
+        <div class="man-sub">Cheques Propios — flujo completo</div>
+        <p class="man-txt">Son cheques que la empresa emite para pagar a proveedores, talleristas u otros. El estado avanza así:</p>
+        <div class="man-flow" style="flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+          <div class="man-fstep" style="background:#fef3c7;color:#92400e;">Pendiente</div><div class="man-farrow">→</div>
+          <div class="man-fstep" style="background:#d1fae5;color:#065f46;">Cobrado</div>
+        </div>
+        <table class="man-tbl"><thead><tr><th>Estado</th><th>Significado</th><th>¿Qué hacer?</th></tr></thead><tbody>
+          <tr><td><span class="man-pill mpy">Pendiente</span></td><td>Emitido, aún no debitado del banco</td><td>Esperar que el banco lo procese</td></tr>
+          <tr><td><span class="man-pill mpg">Cobrado</span></td><td>Ya debitado de la cuenta bancaria</td><td>Registrar fecha de débito en el sistema</td></tr>
+          <tr><td><span class="man-pill mpr">Rechazado</span></td><td>El banco lo rechazó por falta de fondos</td><td>Resolver con el acreedor y registrar el rechazo</td></tr>
+          <tr><td><span class="man-pill mpgr">Anulado</span></td><td>Se anuló antes de presentarlo</td><td>Marcar como anulado para que no genere alerta</td></tr>
         </tbody></table>
-        <div class="man-call man-call-red"><div class="man-ci">⚠️</div><div><b>Cheques urgentes:</b> El sistema alerta cuando un cheque propio vence en los próximos 7 días. Revisá la pantalla de Inicio.</div></div>
-        <div class="man-sub">Cheques en Cartera — estados</div>
+        <div class="man-call man-call-red"><div class="man-ci">⚠️</div><div><b>Alerta de vencimiento:</b> el sistema alerta en Inicio cuando un cheque propio vence en los próximos 7 días. Verificá que haya fondos suficientes en el banco.</div></div>
+        <div class="man-sub">Cheques en Cartera — flujo completo</div>
+        <p class="man-txt">Son cheques que recibís de clientes como pago. El flujo tiene 3 estados posibles:</p>
+        <div class="man-flow" style="flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+          <div class="man-fstep" style="background:#dbeafe;color:#1d4ed8;">En cartera</div><div class="man-farrow">→</div>
+          <div class="man-fstep" style="background:#fef3c7;color:#92400e;">Al cobro</div><div class="man-farrow">→</div>
+          <div class="man-fstep" style="background:#d1fae5;color:#065f46;">Depositado</div>
+        </div>
         <table class="man-tbl"><thead><tr><th>Estado</th><th>Significado</th></tr></thead><tbody>
-          <tr><td><span class="man-pill mpb">En Cartera</span></td><td>En poder de la empresa, pendiente de usar</td></tr>
+          <tr><td><span class="man-pill mpb">En Cartera</span></td><td>En poder de la empresa, aún no presentado al banco</td></tr>
           <tr><td><span class="man-pill mpg">Depositado</span></td><td>Depositado en el banco</td></tr>
           <tr><td><span class="man-pill mpp">Vendido</span></td><td>Descontado a una financiera</td></tr>
           <tr><td><span class="man-pill mpgr">Endosado</span></td><td>Entregado a un tercero como pago</td></tr>
-          <tr><td><span class="man-pill mpr">Rechazado</span></td><td>Rechazado al intentar cobrarlo</td></tr>
+          <tr><td><span class="man-pill mpy">Al cobro</span></td><td>Presentado al banco, esperando que acredite</td></tr>
+          <tr><td><span class="man-pill mpg">Depositado</span></td><td>Ya acreditado en la cuenta bancaria</td></tr>
+          <tr><td><span class="man-pill mpp">Vendido</span></td><td>Descontado a una financiera (recibís dinero antes del vencimiento)</td></tr>
+          <tr><td><span class="man-pill mpgr">Endosado</span></td><td>Entregado a un tercero como pago (por ejemplo a un proveedor)</td></tr>
+          <tr><td><span class="man-pill mpr">Rechazado</span></td><td>Rechazado al intentar cobrarlo — el cliente incumplió</td></tr>
         </tbody></table>
+        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div><b>Estado "Al cobro":</b> cuando presentás un cheque al banco pero todavía no acreditó, usá este estado intermedio. Una vez que acredita, pasalo a "Depositado" con la fecha real de depósito. Esto evita contar el dinero dos veces.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
       <!-- 6. LOCALES -->
       <div class="man-sec" id="man-locales">
         <div class="man-sec-title"><div class="man-icon">🏪</div>Locales — Punto de Venta</div>
-        <p class="man-desc">Igual para Local Llavallol y Local Monte Grande. Incluye POS, historial de ventas, stock y cobros.</p>
+        <p class="man-desc">Módulo de venta para Local Llavallol y Local Monte Grande. Incluye POS (punto de venta), historial de ventas, stock del local y cobros pendientes.</p>
         <div class="man-sub">Cómo hacer una venta</div>
-        <div class="man-step"><div class="man-snum">1</div><div><h4>Buscá el producto</h4><p>Escribí el nombre en la barra o navegá por categorías. Hacé clic para agregarlo al ticket.</p></div></div>
-        <div class="man-step"><div class="man-snum">2</div><div><h4>Ajustá cantidades</h4><p>En el panel TICKET usá <strong>+</strong> y <strong>−</strong> para cambiar cantidades, o ✕ para quitar un ítem.</p></div></div>
-        <div class="man-step"><div class="man-snum">3</div><div><h4>Cobrá o facturá</h4><p>Clic en <strong>"💳 Cobrar"</strong> para venta simple. Elegí método de pago (efectivo, tarjeta, MP, transferencia).</p></div></div>
-        <div class="man-step"><div class="man-snum">4</div><div><h4>Confirmá</h4><p>El stock se descuenta automáticamente y el ingreso entra en la caja del local.</p></div></div>
-        <div class="man-call man-call-green"><div class="man-ci">💡</div><div>Al pagar en <b>efectivo</b>, el precio se reduce el 20% automáticamente. El sistema registra la diferencia como descuento.</div></div>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Elegí el local (Llavallol o Monte Grande)</h4><p>El sistema muestra el stock de ese local específico.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Buscá el producto</h4><p>Escribí el nombre en la barra de búsqueda o navegá por categorías. Solo aparecen los productos con stock disponible en ese local.</p></div></div>
+        <div class="man-step"><div class="man-snum">3</div><div><h4>Hacé clic para agregar al ticket</h4><p>Cada clic agrega una unidad. Usá <strong>+</strong> y <strong>−</strong> en el ticket para ajustar cantidades, o ✕ para quitar un artículo.</p></div></div>
+        <div class="man-step"><div class="man-snum">4</div><div><h4>Clic en "💳 Cobrar"</h4><p>Elegí el método de pago: efectivo, tarjeta, Mercado Pago o transferencia. Al pagar en <strong>efectivo</strong> se aplica automáticamente el 20% de descuento.</p></div></div>
+        <div class="man-step"><div class="man-snum">5</div><div><h4>Confirmá la venta</h4><p>El stock del local se descuenta automáticamente y el ingreso entra en la caja correspondiente (Local LL o Local MG).</p></div></div>
+        <div class="man-sub">Historial de ventas del local</div>
+        <p class="man-txt">La pestaña <strong>Ventas</strong> muestra el historial con filtros de fecha y estado. Podés buscar por nombre de cliente o número de factura. El botón <strong>📥 Excel</strong> exporta la lista visible.</p>
+        <div class="man-sub">Resumen de facturación</div>
+        <p class="man-txt">La pestaña <strong>Resumen</strong> muestra pivotes de facturación y unidades vendidas por año y mes, desde 2013 en adelante. Incluye botón para exportar a Excel.</p>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
-      <!-- 7-8. MAYORISTA / CLIENTES -->
+      <!-- 7. MAYORISTA -->
       <div class="man-sec" id="man-mayorista">
         <div class="man-sec-title"><div class="man-icon">👔</div>Ropa Mayorista</div>
-        <p class="man-desc">Ventas al por mayor. Usa precio mayorista, sin descuento automático por efectivo, y puede quedar cuenta corriente.</p>
-        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div>Podés generar <b>presupuestos</b> para clientes mayoristas. Cuando el cliente acepta, se convierte en venta con un clic.</div></div>
+        <p class="man-desc">Canal de ventas al por mayor. Usa precios mayoristas, sin descuento por efectivo, y puede quedar cuenta corriente. Incluye presupuestos y resumen de facturación.</p>
+        <div class="man-sub">Cómo registrar una venta mayorista</div>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Clic en "+ Nueva venta"</h4><p>Se abre el formulario de venta.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Seleccioná el cliente</h4><p>Elegí de la lista. Si el cliente es nuevo, crealo primero en Clientes.</p></div></div>
+        <div class="man-step"><div class="man-snum">3</div><div><h4>Completá los ítems</h4><p>Agregá líneas con descripción, cantidad y precio unitario. El sistema calcula el total.</p></div></div>
+        <div class="man-step"><div class="man-snum">4</div><div><h4>Ingresá el número de factura</h4><p>Campo "N° Factura" — es el número del comprobante real emitido al cliente. Sirve para buscar y conciliar.</p></div></div>
+        <div class="man-step"><div class="man-snum">5</div><div><h4>Guardá</h4><p>La venta queda con estado <span class="man-pill mpy">Pendiente</span>. Cuando se cobra pasa a <span class="man-pill mpg">Cobrado</span>.</p></div></div>
+        <div class="man-sub">Presupuestos</div>
+        <p class="man-txt">Podés generar presupuestos para clientes antes de confirmar la venta. Cuando el cliente acepta, el presupuesto se convierte en venta con un clic desde la lista de presupuestos.</p>
+        <div class="man-sub">Resumen de facturación</div>
+        <p class="man-txt">La pestaña <strong>Resumen</strong> muestra pivotes de facturación ($ vendidos) y unidades por año/mes. Podés filtrar por período y exportar a Excel con el botón <strong>📥 Excel</strong>.</p>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
+      <!-- 8. CLIENTES -->
       <div class="man-sec" id="man-clientes">
         <div class="man-sec-title"><div class="man-icon">👥</div>Clientes y Cuenta Corriente</div>
-        <p class="man-desc">Base de clientes. La pestaña "CC Mayoristas" muestra quién debe y cuánto.</p>
-        <div class="man-sub">Registrar un cobro</div>
-        <div class="man-step"><div class="man-snum">1</div><div><h4>Identificá al cliente con deuda</h4><p>Los clientes con saldo aparecen primero con borde rojo.</p></div></div>
-        <div class="man-step"><div class="man-snum">2</div><div><h4>Clic en "💰 Cobrar"</h4><p>Completá monto, medio de pago y caja. Podés hacer cobros parciales.</p></div></div>
-        <div class="man-step"><div class="man-snum">3</div><div><h4>Confirmá</h4><p>El saldo se actualiza. Si llega a cero, la venta queda automáticamente como "cobrada".</p></div></div>
+        <p class="man-desc">Base de datos de clientes con cuenta corriente integrada. La pestaña "CC Mayoristas" es el lugar principal para controlar quién debe y cuánto.</p>
+        <div class="man-sub">Cómo registrar un cobro</div>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Andá a Clientes → CC Mayoristas</h4><p>Los clientes con deuda aparecen primero con borde rojo. En cada tarjeta ves el total de deuda pendiente.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Expandí al cliente y buscá la venta</h4><p>Hacé clic en la tarjeta del cliente para ver todas sus ventas con saldo pendiente.</p></div></div>
+        <div class="man-step"><div class="man-snum">3</div><div><h4>Clic en "💰 Cobrar" en la venta correspondiente</h4><p>Completá: monto cobrado, medio de pago (efectivo, transferencia, cheque, etc.) y caja donde entra el dinero.</p></div></div>
+        <div class="man-step"><div class="man-snum">4</div><div><h4>Confirmá</h4><p>El saldo de esa venta se reduce. Si llega a $0, pasa automáticamente a <span class="man-pill mpg">Cobrado</span>. Si es pago parcial, queda en <span class="man-pill mpy">Parcial</span>.</p></div></div>
+        <div class="man-sub">Ver cuenta completa de un cliente</div>
+        <p class="man-txt">Clic en <strong>"Ver cuenta"</strong> en la tarjeta del cliente para ver todo el historial: ventas, cobros, NCs, número de factura. Desde ahí podés buscar por número de factura y también dar de baja NCs antiguas.</p>
+        <div class="man-sub">Eliminar un cliente</div>
+        <p class="man-txt">Usá el botón 🗑️ en la fila del cliente (pestaña Lista). Si el cliente tiene ventas asociadas, el sistema te avisa antes de confirmar. Las ventas quedan en el sistema pero sin cliente asignado.</p>
+        <div class="man-sub">Herramientas de mantenimiento (botones en CC Mayoristas)</div>
+        <table class="man-tbl"><thead><tr><th>Botón</th><th>Cuándo usarlo</th></tr></thead><tbody>
+          <tr><td><strong>📥 Excel</strong></td><td>Exportar la lista de clientes con su deuda actual a un archivo Excel</td></tr>
+          <tr><td><strong>🔧 Recalcular saldos</strong></td><td>Si una venta tiene saldo negativo o mayor al total, este botón detecta y corrige los valores incorrectos</td></tr>
+          <tr><td><strong>🕰️ Saldar histórico</strong></td><td>Marcar ventas antiguas como saldadas cuando no se cargaron los cobros históricos (ver sección 9)</td></tr>
+        </tbody></table>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
-      <!-- 9. PROVEEDORES -->
+      <!-- 9. NOTAS DE CRÉDITO -->
+      <div class="man-sec" id="man-nc">
+        <div class="man-sec-title"><div class="man-icon">📄</div>Notas de Crédito (NC)</div>
+        <p class="man-desc">Una Nota de Crédito (NC) es una venta con total negativo. Representa una devolución o descuento que genera un crédito a favor del cliente. El sistema las identifica automáticamente y las trata de forma especial.</p>
+        <div class="man-sub">¿Cómo se ve una NC en el sistema?</div>
+        <p class="man-txt">En la cuenta corriente del cliente, las NCs aparecen con fondo rosado y la etiqueta <strong>NC</strong>. El monto es negativo (ejemplo: -$15.000). Esto significa que la empresa <em>le debe</em> ese importe al cliente.</p>
+        <div class="man-sub">Opción 1 — Compensar una NC contra una venta pendiente</div>
+        <p class="man-txt">Usá esto cuando querés aplicar el crédito de la NC para reducir lo que debe el cliente en una venta específica.</p>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Entrá a la tarjeta del cliente en CC Mayoristas</h4><p>Si hay NCs pendientes, aparece el botón <strong>"⚡ Compensar NC"</strong> en la tarjeta.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Seleccioná la NC a aplicar</h4><p>Elegí la NC del dropdown. El monto se completa automáticamente.</p></div></div>
+        <div class="man-step"><div class="man-snum">3</div><div><h4>Seleccioná la venta a reducir</h4><p>Elegí qué venta pendiente querés que se descuente con ese crédito.</p></div></div>
+        <div class="man-step"><div class="man-snum">4</div><div><h4>(Opcional) Saldar el resto históricamente</h4><p>Si el crédito de la NC no alcanza para cubrir toda la venta y querés considerar el resto como histórico, marcá el checkbox <strong>"Saldar saldo restante históricamente"</strong>.</p></div></div>
+        <div class="man-step"><div class="man-snum">5</div><div><h4>Confirmar</h4><p>El sistema registra la compensación, actualiza ambos saldos y los marca como cobrados si llegaron a cero.</p></div></div>
+        <div class="man-sub">Opción 2 — Dar de baja una NC antigua</div>
+        <p class="man-txt">Usá esto cuando la NC es vieja, ya no tiene razón de ser y querés cerrarla sin afectar ninguna venta específica.</p>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Buscá la NC en la cuenta del cliente</h4><p>Puede ser desde la tarjeta en CC Mayoristas o desde "Ver cuenta" del cliente.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Clic en "✖ Dar de baja"</h4><p>Aparece en las filas de NCs con estado pendiente.</p></div></div>
+        <div class="man-step"><div class="man-snum">3</div><div><h4>Confirmá</h4><p>La NC queda con saldo $0 y estado cobrado. No genera movimiento de caja.</p></div></div>
+        <div class="man-sub">Opción 3 — Saldar históricamente en masa</div>
+        <p class="man-txt">Usá esto cuando hay muchas ventas antiguas con saldo pendiente porque no se cargaron los cobros históricos.</p>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Clic en "🕰️ Saldar histórico" en CC Mayoristas</h4><p>Se abre el modal de saldado masivo.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Filtrá por cliente y/o año</h4><p>Podés seleccionar un cliente específico o todos. Y un año de corte (por ejemplo: todas las ventas anteriores a 2024).</p></div></div>
+        <div class="man-step"><div class="man-snum">3</div><div><h4>Revisá la lista y destildá las que no querés saldar</h4><p>Por defecto vienen todas seleccionadas. Podés destildar individualmente las que no correspondan.</p></div></div>
+        <div class="man-step"><div class="man-snum">4</div><div><h4>Editá la nota si querés</h4><p>La nota dice "Saldo histórico — factura previa al sistema" por defecto. Podés cambiarla.</p></div></div>
+        <div class="man-step"><div class="man-snum">5</div><div><h4>Clic en "✅ Saldar seleccionadas"</h4><p>Todas las ventas seleccionadas quedan con saldo $0 y estado cobrado. No genera movimientos de caja.</p></div></div>
+        <div class="man-call man-call-amber"><div class="man-ci">⚠️</div><div>El saldado histórico es irreversible. Revisá bien la selección antes de confirmar, especialmente si hay ventas que sí tienen deuda real.</div></div>
+        <a class="man-back" href="#man-body">▲ Volver al índice</a>
+      </div>
+
+      <!-- 10. PROVEEDORES -->
       <div class="man-sec" id="man-proveedores">
-        <div class="man-sec-title"><div class="man-icon">🤝</div>Proveedores</div>
-        <p class="man-desc">Gestión de proveedores y control de lo que le debés a cada uno.</p>
+        <div class="man-sec-title"><div class="man-icon">🤝</div>Proveedores y Compras</div>
+        <p class="man-desc">Gestión completa de proveedores: datos de contacto, cuenta corriente y órdenes de compra con historial de precios.</p>
         <div class="man-sub">Ficha del proveedor</div>
         <table class="man-tbl"><thead><tr><th>Sección</th><th>Campos</th></tr></thead><tbody>
-          <tr><td><strong>General</strong></td><td>Nombre, CUIT, Rubro, Condición IVA, Email, Teléfono</td></tr>
-          <tr><td><strong>Datos bancarios</strong></td><td>CBU y Banco (para transferencias)</td></tr>
-          <tr><td><strong>Condiciones comerciales</strong></td><td>Forma de pago, Días de plazo, Tiempo de entrega, Nota</td></tr>
+          <tr><td><strong>General</strong></td><td>Nombre, CUIT, Rubro, Condición IVA, Email, Teléfono, Web</td></tr>
+          <tr><td><strong>Datos bancarios</strong></td><td>CBU y Banco — para hacer transferencias desde el sistema</td></tr>
+          <tr><td><strong>Condiciones</strong></td><td>Forma de pago habitual, días de plazo, tiempo de entrega promedio, notas</td></tr>
         </tbody></table>
-        <div class="man-sub">Cuenta Corriente — registrar pago</div>
-        <div class="man-step"><div class="man-snum">1</div><div><h4>Cargá una factura</h4><p>Clic en "+ Cargar factura". Completá proveedor, número, monto y fecha de vencimiento.</p></div></div>
-        <div class="man-step"><div class="man-snum">2</div><div><h4>Registrá el pago con 💸</h4><p>Ingresá monto pagado, caja y fecha. El saldo se reduce; si llega a cero pasa a "Pagada".</p></div></div>
-        <div class="man-call man-call-amber"><div class="man-ci">⚠️</div><div>Las facturas vencidas aparecen en <b>rojo</b>. Atendalas para evitar recargos o corte de crédito.</div></div>
+        <div class="man-sub">Cuenta Corriente de proveedores</div>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Cargá la factura recibida</h4><p>Clic en "+ Cargar factura". Completá proveedor, número de factura, tipo (A/B/C/Remito), monto total y fecha de vencimiento.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Registrá el pago cuando lo hacés</h4><p>Clic en 💸 junto a la factura. Ingresá monto pagado, caja y fecha. El saldo se reduce; si llega a cero pasa a "Pagada".</p></div></div>
+        <div class="man-call man-call-amber"><div class="man-ci">⚠️</div><div>Las facturas vencidas sin pago aparecen resaltadas en rojo. Monitoreá esto para evitar recargos o corte de crédito con el proveedor.</div></div>
+        <div class="man-sub">Órdenes de Compra</div>
+        <p class="man-txt">Las órdenes de compra registran qué compraste, qué recibiste y actualizan automáticamente el stock y las fichas de costo al marcar recepción.</p>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Nueva orden de compra</h4><p>Completá proveedor, fecha y agregá ítems: pueden ser productos, telas o materiales.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Cuando llega la mercadería: marcar recepción</h4><p>Clic en "📥 Recibir". Ingresá cantidades recibidas y precio real pagado. El sistema actualiza el stock y guarda el precio en el historial.</p></div></div>
+        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div><b>Historial de precios:</b> cada recepción registra el precio pagado con su fecha. Desde el resumen de compras podés ver la evolución de precio de cada artículo a lo largo del tiempo.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
-      <!-- 10. PERSONAL -->
+      <!-- 11. PERSONAL -->
       <div class="man-sec" id="man-personal">
         <div class="man-sec-title"><div class="man-icon">👤</div>Personal</div>
-        <p class="man-desc">Registro de empleados con todos los datos laborales y configuración de sueldo semanal.</p>
-        <table class="man-tbl"><thead><tr><th>Campo</th><th>Uso</th></tr></thead><tbody>
-          <tr><td><strong>Sueldo semanal</strong></td><td>Lo usa el Control Semanal para proyectar compromisos</td></tr>
-          <tr><td><strong>Horas semanales</strong></td><td>Horas fijas dedicadas a la empresa</td></tr>
-          <tr><td><strong>Fecha de inicio</strong></td><td>Referencia de antigüedad</td></tr>
-          <tr><td><strong>Días de vacaciones</strong></td><td>Por defecto 14 días</td></tr>
-          <tr><td><strong>Cobra vacaciones / Aguinaldo</strong></td><td>Por defecto: Sí en ambos</td></tr>
+        <p class="man-desc">Registro de empleados con datos laborales, sueldo y configuración para el control semanal de compromisos.</p>
+        <table class="man-tbl"><thead><tr><th>Campo</th><th>Uso en el sistema</th></tr></thead><tbody>
+          <tr><td><strong>Sueldo semanal</strong></td><td>Se usa en el Panel General → Control Semanal para proyectar cuánto se paga en sueldos esa semana</td></tr>
+          <tr><td><strong>Horas semanales</strong></td><td>Referencia del compromiso horario del empleado</td></tr>
+          <tr><td><strong>Fecha de inicio</strong></td><td>Para calcular antigüedad</td></tr>
+          <tr><td><strong>Días de vacaciones</strong></td><td>Por defecto 14 días corridos</td></tr>
+          <tr><td><strong>Cobra vacaciones / Aguinaldo</strong></td><td>Afecta los cálculos de proyección de costos laborales</td></tr>
         </tbody></table>
-        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div>Si un empleado se va, <b>desactivalo</b> en lugar de eliminarlo. Así conservás el historial de pagos.</div></div>
+        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div>Si un empleado se va, <b>desactivalo</b> en lugar de eliminarlo. Así conservás el historial. Los empleados inactivos no aparecen en proyecciones ni alertas.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
-      <!-- 11-14. OTROS -->
+      <!-- 12. TALLERISTAS -->
       <div class="man-sec" id="man-talleristas">
         <div class="man-sec-title"><div class="man-icon">✂️</div>Talleristas</div>
-        <p class="man-desc">Costureros externos que confeccionan las prendas. Cada uno tiene precios por tipo de prenda.</p>
-        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div>Los talleristas también son los destinatarios de los <b>Envíos de Costura</b> en el módulo de Producción.</div></div>
-        <p class="man-txt">Para pagar a un tallerista, creá un egreso en Movimientos con concepto <strong>"Costureros"</strong> y seleccioná el tallerista en el selector que aparece.</p>
+        <p class="man-desc">Costureros y bordadoras externos. El sistema controla qué se les envía, qué recibiste, cuánto se les debe y el historial de precios por prenda.</p>
+        <div class="man-sub">Precios por prenda</div>
+        <p class="man-txt">Cada tallerista tiene una tabla de precios con el valor por tipo de prenda (Pantalón, Remera, Campera, etc.). Podés agregar, editar y ver el historial de cambios de precios.</p>
+        <div class="man-sub">Cómo funciona el flujo de costura</div>
+        <p class="man-txt">Los envíos y recepciones de prendas a talleristas se gestionan desde <strong>Producción → Costura</strong>. Lo que hacés en Talleristas es solo la parte de <em>liquidación y pago</em>.</p>
+        <div class="man-sub">Liquidación — cómo pagar a un tallerista</div>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Revisá la deuda acumulada</h4><p>Cada tallerista muestra el total de prendas recibidas que aún no se pagaron, calculado con sus precios por prenda.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Registrá el pago desde Movimientos</h4><p>Creá un egreso con concepto <strong>"Costureros"</strong> y seleccioná el tallerista en el selector. Esto reduce la deuda acumulada.</p></div></div>
+        <div class="man-sub">Bordado de Stock</div>
+        <p class="man-txt">Para prendas de stock que se envían a bordar (fuera del flujo de pedidos de producción). Usá la pestaña <strong>🏷️ Bordado Stock</strong> en Talleristas.</p>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Clic en "+ Nuevo lote bordado"</h4><p>Seleccioná tallerista, fecha de envío y agregá ítems: producto del catálogo, talle, color, cantidad y precio por prenda bordada.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Cuando vuelven: clic en "📥 Recibir"</h4><p>El lote pasa a estado Recibido con la fecha de retorno.</p></div></div>
+        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div>El bordado de stock es independiente de los pedidos de producción. Sirve para cuando bordás prendas que ya tenés en stock para venta en local.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
+      <!-- 13. PRODUCTOS -->
       <div class="man-sec" id="man-productos">
         <div class="man-sec-title"><div class="man-icon">📦</div>Productos y Stock</div>
-        <p class="man-desc">Catálogo de productos con precio minorista y mayorista. Stock por local, talle y color.</p>
-        <div class="man-call man-call-amber"><div class="man-ci">⚠️</div><div>El POS solo muestra productos con stock &gt; 0. Si un producto no aparece, verificá que tenga stock cargado en ese local.</div></div>
+        <p class="man-desc">Catálogo de prendas y artículos con precios minorista y mayorista, y stock diferenciado por local y talle/color.</p>
+        <div class="man-sub">Alta de un producto</div>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Clic en "+ Nuevo producto"</h4><p>Completá nombre, familia, categoría y precios (minorista y mayorista).</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Cargá el stock inicial por local</h4><p>Para cada local (Mayorista, Llavallol, Monte Grande) agregá las combinaciones talle/color con su cantidad.</p></div></div>
+        <div class="man-sub">Movimientos de stock</div>
+        <p class="man-txt">El stock se actualiza automáticamente con las ventas de los locales y las entregas de producción. También podés registrar entradas manuales (ej: mercadería recibida de proveedor) o salidas (ej: merma, robo).</p>
+        <div class="man-call man-call-amber"><div class="man-ci">⚠️</div><div>El POS solo muestra productos con stock &gt; 0 en ese local. Si un producto no aparece al vender, verificá que tenga stock cargado para ese local específico.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
+      <!-- 14. MORATORIAS -->
       <div class="man-sec" id="man-moratorias">
         <div class="man-sec-title"><div class="man-icon">📋</div>Moratorias y Planes de Pago</div>
-        <p class="man-desc">Seguimiento de planes de pago con AFIP u otros acreedores. El sistema avanza la cuota automáticamente al registrar cada pago.</p>
+        <p class="man-desc">Seguimiento de planes de pago con AFIP u otros acreedores. El sistema lleva la cuenta de las cuotas pagadas y el próximo vencimiento.</p>
         <div class="man-sub">Pagar una cuota — dos formas</div>
-        <div class="man-step"><div class="man-snum">A</div><div><h4>Desde Moratorias — "💸 Pagar cuota"</h4><p>Completá monto, caja y fecha. El sistema crea el egreso y avanza al próximo vencimiento.</p></div></div>
-        <div class="man-step"><div class="man-snum">B</div><div><h4>Desde Movimientos — concepto Moratorias/Planes</h4><p>Seleccioná la moratoria en el selector. Al guardar, el movimiento se registra y la cuota avanza al mismo tiempo.</p></div></div>
-        <div class="man-call man-call-green"><div class="man-ci">✅</div><div>Al pagar la última cuota, la moratoria pasa automáticamente a <b>"Finalizada"</b> y deja de aparecer en alertas.</div></div>
+        <div class="man-step"><div class="man-snum">A</div><div><h4>Desde Moratorias — botón "💸 Pagar cuota"</h4><p>Completá monto, caja y fecha. El sistema crea el egreso automáticamente y avanza al próximo vencimiento.</p></div></div>
+        <div class="man-step"><div class="man-snum">B</div><div><h4>Desde Movimientos — concepto "Moratorias/Planes"</h4><p>Seleccioná la moratoria en el selector. Al guardar, el movimiento se registra y la cuota avanza al mismo tiempo.</p></div></div>
+        <div class="man-call man-call-green"><div class="man-ci">✅</div><div>Al pagar la última cuota, la moratoria pasa automáticamente a <b>"Finalizada"</b> y deja de aparecer en alertas y proyecciones.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
+      <!-- 15. GASTOS FIJOS -->
       <div class="man-sec" id="man-gastos">
         <div class="man-sec-title"><div class="man-icon">📌</div>Gastos Fijos</div>
-        <p class="man-desc">Gastos recurrentes (alquiler, servicios, seguros). Controlá cuáles ya se pagaron este mes.</p>
-        <div class="man-step"><div class="man-snum">1</div><div><h4>Seleccioná el mes y año</h4><p>El sistema muestra qué gastos tienen pago registrado y cuáles están pendientes.</p></div></div>
-        <div class="man-step"><div class="man-snum">2</div><div><h4>Clic en "💸" junto al gasto a pagar</h4><p>Completá monto, fecha y caja. Si marcás <strong>"Generar movimiento"</strong>, se crea el egreso automáticamente.</p></div></div>
-        <div class="man-call man-call-amber"><div class="man-ci">💡</div><div>El sistema genera una alerta en Inicio cuando hay gastos fijos sin pago registrado en el mes actual.</div></div>
+        <p class="man-desc">Gastos mensuales recurrentes: alquiler, servicios, seguros, expensas. El sistema controla cuáles se pagaron en cada mes y alerta sobre los pendientes.</p>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Seleccioná el mes a controlar</h4><p>Elegí mes y año. El sistema muestra qué gastos tienen pago registrado y cuáles no.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Clic en 💸 junto al gasto a pagar</h4><p>Completá monto, fecha y caja de egreso. Si marcás <strong>"Generar movimiento"</strong>, se crea automáticamente el egreso en Finanzas.</p></div></div>
+        <div class="man-call man-call-amber"><div class="man-ci">💡</div><div>El sistema genera una alerta en la pantalla de Inicio cuando hay gastos fijos sin pago registrado en el mes actual. Revisá Inicio regularmente para no perderte ninguno.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
-
       <!-- BANNER PRODUCCIÓN -->
       <div class="man-prod-banner">
         <div style="font-size:13px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🏭 Módulos de Producción</div>
-        <p style="font-size:13.5px;color:#78350f;line-height:1.75;margin:0 0 12px;">Las secciones 16 a 19 cubren el flujo productivo completo.</p>
+        <p style="font-size:13.5px;color:#78350f;line-height:1.75;margin:0 0 12px;">Las secciones 16 a 21 cubren el flujo productivo completo, desde el pedido hasta la entrega y el análisis de rentabilidad.</p>
         <div class="man-flow">
           <div class="man-fstep amb">📋 Pedido</div><div class="man-farrow">→</div>
           <div class="man-fstep amb">✂️ Tizada/Corte</div><div class="man-farrow">→</div>
@@ -21513,112 +21817,174 @@ function closeManual(){document.getElementById('man-overlay').classList.remove('
       <!-- 16. PEDIDOS -->
       <div class="man-sec" id="man-pedidos">
         <div class="man-sec-title"><div class="man-icon amb">📋</div>Producción — Pedidos</div>
-        <p class="man-desc">Punto de partida del proceso productivo. Registra qué prendas fabricar, para qué cliente y cuándo deben estar listas. Todos los módulos siguientes se vinculan a los ítems de los pedidos.</p>
-        <div class="man-sub amb">Estados y urgencia</div>
-        <table class="man-tbl"><thead><tr><th>Estado / Carácter</th><th>Significado</th></tr></thead><tbody>
-          <tr><td><span class="man-pill mpb">En proceso</span></td><td>Pedido activo en fabricación</td></tr>
-          <tr><td><span class="man-pill mpg">Completado</span></td><td>Todas las prendas entregadas — se cierra automáticamente</td></tr>
-          <tr><td><span class="man-pill mpgr">Cancelado</span></td><td>Pedido cancelado</td></tr>
-          <tr><td><strong>Carácter A 🔴</strong></td><td>Urgente — prioridad máxima</td></tr>
-          <tr><td><strong>Carácter B 🟡</strong></td><td>Normal — seguimiento regular</td></tr>
-          <tr><td><strong>Carácter C ⚪</strong></td><td>Sin urgencia</td></tr>
+        <p class="man-desc">El pedido es el punto de partida de todo el proceso productivo. Define qué prendas fabricar, para qué cliente, y cuándo deben estar listas. Todos los módulos siguientes (tizada, costura, bordado, entrega) se vinculan a los ítems del pedido.</p>
+        <div class="man-sub amb">Cómo crear un pedido</div>
+        <div class="man-step"><div class="man-snum amb">1</div><div><h4>Clic en "+ Nuevo pedido"</h4><p>Se abre el formulario de pedido.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">2</div><div><h4>Completá los datos del encabezado</h4><p><strong>Cliente:</strong> a quién es el pedido. <strong>Nº Pedido:</strong> número correlativo interno. <strong>Fecha:</strong> fecha del pedido. <strong>Fecha de entrega:</strong> cuándo comprometiste entregarlo (importante para el Calendario). <strong>Carácter:</strong> URGENTE / IMPORTANTE / STOCK.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">3</div><div><h4>Agregá los ítems (prendas)</h4><p>Para cada tipo de prenda: escribí el nombre (Pantalón, Remera, etc.), la tela, el color y la cantidad por talle (XS, S, M, L, XL, etc.). Podés agregar varias filas para distintos modelos.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">4</div><div><h4>Guardá el pedido</h4><p>El pedido queda en estado <span class="man-pill mpb">En proceso</span> y aparece en el flujo de producción.</p></div></div>
+        <div class="man-sub amb">Estados y carácter</div>
+        <table class="man-tbl"><thead><tr><th>Estado</th><th>Significado</th></tr></thead><tbody>
+          <tr><td><span class="man-pill mpb">En proceso</span></td><td>Pedido activo, en fabricación</td></tr>
+          <tr><td><span class="man-pill mpg">Completado</span></td><td>Todas las prendas fueron entregadas al cliente — se cierra automáticamente</td></tr>
+          <tr><td><span class="man-pill mpgr">Cancelado</span></td><td>Pedido cancelado antes de completarse</td></tr>
         </tbody></table>
-        <div class="man-sub amb">Dashboard — pestaña Resumen</div>
-        <p class="man-txt">Muestra el avance de cada pedido activo con barras de progreso en 4 etapas:</p>
-        <div class="man-pipegrid">
-          <div class="man-pipecard"><div class="pci">✂️</div><div class="pcl">Cortado</div><div class="pcd">Prendas con tizada completada</div></div>
-          <div class="man-pipecard"><div class="pci">🧵</div><div class="pcl">Costura</div><div class="pcd">Enviadas a tallerista</div></div>
-          <div class="man-pipecard"><div class="pci">📥</div><div class="pcl">Recibido</div><div class="pcd">De vuelta del tallerista</div></div>
-          <div class="man-pipecard"><div class="pci">📦</div><div class="pcl">Entregado</div><div class="pcd">Ya entregadas al cliente</div></div>
-        </div>
-        <div class="man-call man-call-green"><div class="man-ci">✅</div><div>Cuando el 100% de los ítems están entregados, el sistema <b>completa el pedido automáticamente</b>.</div></div>
+        <table class="man-tbl" style="margin-top:8px;"><thead><tr><th>Carácter</th><th>Cuándo usarlo</th></tr></thead><tbody>
+          <tr><td>🚨 <strong>URGENTE</strong></td><td>Fecha de entrega muy próxima o cliente con prioridad máxima. Aparece primero en el Inicio y el Calendario.</td></tr>
+          <tr><td>⭐ <strong>IMPORTANTE</strong></td><td>Pedido que requiere seguimiento más frecuente que el habitual.</td></tr>
+          <tr><td>📦 <strong>STOCK</strong></td><td>Producción para reponer stock propio, sin cliente asignado.</td></tr>
+        </tbody></table>
+        <div class="man-sub amb">Las pestañas de Producción</div>
+        <table class="man-tbl"><thead><tr><th>Pestaña</th><th>¿Qué muestra?</th></tr></thead><tbody>
+          <tr><td>🔄 <strong>Flujo</strong></td><td>Vista tipo Kanban: todos los pedidos activos con barra de progreso en 4 etapas (cortado, costura, recibido, entregado)</td></tr>
+          <tr><td>📊 <strong>Resumen</strong></td><td>Tabla compacta con número, cliente, estado y porcentaje de avance de cada pedido</td></tr>
+          <tr><td>📋 <strong>Pedidos</strong></td><td>Lista completa con filtros de estado y búsqueda</td></tr>
+          <tr><td>🔍 <strong>Seguimiento</strong></td><td>Vista detallada de un pedido específico: ítem por ítem, estado en cada etapa</td></tr>
+          <tr><td>🧶 <strong>Insumos</strong></td><td>Materiales necesarios para los pedidos activos pendientes de tizada</td></tr>
+          <tr><td>🗓️ <strong>Calendario</strong></td><td>Pedidos agrupados por urgencia según su fecha de entrega (ver sección 17)</td></tr>
+        </tbody></table>
+        <div class="man-call man-call-green"><div class="man-ci">✅</div><div>Cuando el 100% de los ítems están entregados, el sistema <b>completa el pedido automáticamente</b> sin necesidad de hacerlo manualmente.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
-      <!-- 17. TIZADAS -->
+      <!-- 17. CALENDARIO -->
+      <div class="man-sec" id="man-calendario">
+        <div class="man-sec-title"><div class="man-icon amb">🗓️</div>Calendario de Producción</div>
+        <p class="man-desc">Vista de todos los pedidos agrupados por urgencia según su fecha de entrega comprometida. Sirve para identificar de un vistazo qué pedidos están atrasados, cuáles vencen esta semana y cuáles tienen más tiempo.</p>
+        <div class="man-call man-call-amber"><div class="man-ci">📌</div><div>Para que el Calendario funcione correctamente, cada pedido debe tener cargada su <strong>Fecha de entrega</strong>. Podés agregarla al crear o editar el pedido desde el campo "📅 Fecha de entrega".</div></div>
+        <div class="man-sub amb">Los grupos del calendario</div>
+        <table class="man-tbl"><thead><tr><th>Grupo</th><th>Criterio</th><th>¿Qué hacer?</th></tr></thead><tbody>
+          <tr><td>🔴 <strong>Vencidos</strong></td><td>La fecha de entrega ya pasó y el pedido sigue abierto</td><td>Prioridad máxima: contactar al cliente y acelerar producción</td></tr>
+          <tr><td>⏰ <strong>Esta semana</strong></td><td>La entrega es en los próximos 7 días</td><td>Verificar avance y asegurarse de que todo esté encaminado</td></tr>
+          <tr><td>📆 <strong>Próximo mes</strong></td><td>La entrega es entre 8 y 30 días</td><td>Planificar tizadas y envíos a talleristas</td></tr>
+          <tr><td>✅ <strong>Más adelante</strong></td><td>La entrega es en más de 30 días</td><td>Sin urgencia inmediata</td></tr>
+          <tr><td>⚪ <strong>Sin fecha</strong></td><td>El pedido no tiene fecha de entrega asignada</td><td>Asignarle una fecha editando el pedido</td></tr>
+        </tbody></table>
+        <div class="man-sub amb">Cada tarjeta muestra</div>
+        <p class="man-txt">Número de pedido · Cliente · Estado · Carácter (🚨/⭐) · Fecha comprometida · Días restantes o vencidos · Tipos de prenda · Barra de progreso (% entregado) · Botón "Seguimiento" para ver el detalle.</p>
+        <div class="man-sub amb">Filtros disponibles</div>
+        <p class="man-txt">Podés filtrar por <strong>estado del pedido</strong> (por defecto muestra solo "En proceso") y buscar por número de pedido o nombre de cliente.</p>
+        <a class="man-back" href="#man-body">▲ Volver al índice</a>
+      </div>
+
+      <!-- 18. TIZADAS -->
       <div class="man-sec" id="man-tizadas">
         <div class="man-sec-title"><div class="man-icon amb">✂️</div>Tizadas y Corte</div>
-        <p class="man-desc">Una tizada es el plan de corte de tela. Se registran qué prendas se van a cortar juntas y en qué cantidad. Al completar, el sistema actualiza el avance del pedido.</p>
-        <div class="man-step"><div class="man-snum amb">1</div><div><h4>Creá la tizada</h4><p>Completá número, fecha y molde.</p></div></div>
-        <div class="man-step"><div class="man-snum amb">2</div><div><h4>Agregá ítems de pedidos</h4><p>Seleccioná qué prendas incluir. El sistema muestra solo ítems con cantidad pendiente de cortar.</p></div></div>
-        <div class="man-step"><div class="man-snum amb">3</div><div><h4>Ingresá cantidades cortadas (columna ✏️ Cortado)</h4><p>Escribí cuántas unidades se cortaron de cada ítem.</p></div></div>
-        <div class="man-step"><div class="man-snum amb">4</div><div><h4>Completá con "✅ Completar"</h4><p>El sistema guarda las cantidades y suma al contador Cortado de cada ítem de pedido.</p></div></div>
-        <div class="man-call man-call-amber"><div class="man-ci">⚠️</div><div><b>Importante:</b> Revisá los números antes de completar. Una vez completada no se puede editar. Para corregir, eliminá y volvé a crear.</div></div>
+        <p class="man-desc">Una tizada es el plan de corte de tela. Define qué prendas se van a cortar juntas y en qué cantidad. Al completar la tizada, el sistema suma las cantidades al contador "Cortado" de cada ítem del pedido.</p>
+        <div class="man-sub amb">Cómo registrar una tizada</div>
+        <div class="man-step"><div class="man-snum amb">1</div><div><h4>Clic en "+ Nueva tizada"</h4><p>Completá número de tizada, fecha y molde utilizado.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">2</div><div><h4>Agregá ítems de pedidos</h4><p>El sistema muestra solo los ítems con cantidad pendiente de cortar (cantidad total menos lo ya cortado). Seleccioná los que vas a cortar en esta tirada.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">3</div><div><h4>Ingresá las cantidades cortadas</h4><p>En la columna "Cortado" de cada fila, escribí cuántas unidades de ese ítem se cortaron.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">4</div><div><h4>Clic en "✅ Completar tizada"</h4><p>El sistema guarda y suma las cantidades al contador Cortado de cada ítem de pedido correspondiente.</p></div></div>
+        <div class="man-call man-call-amber"><div class="man-ci">⚠️</div><div><b>Revisá antes de completar.</b> Una vez completada, la tizada no se puede editar. Si te equivocaste, debés eliminarla (esto revierte los contadores) y volver a crearla.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
-      <!-- 18. COSTURA/BORDADO -->
+      <!-- 19. COSTURA/BORDADO -->
       <div class="man-sec" id="man-costura">
         <div class="man-sec-title"><div class="man-icon amb">🧵</div>Costura y Bordado</div>
-        <p class="man-desc">Después del corte, las prendas se envían a talleristas (costura) y opcionalmente a bordado. Este módulo registra cada envío y recepción, manteniendo el conteo actualizado en el pedido.</p>
-        <div class="man-sub amb">Costura — enviar y recibir</div>
-        <div class="man-step"><div class="man-snum amb">1</div><div><h4>Nuevo envío de costura</h4><p>Elegí el tallerista, seleccioná ítems y cantidades a enviar. Al guardar, sube el contador Costura.</p></div></div>
-        <div class="man-step"><div class="man-snum amb">2</div><div><h4>Registrá la recepción con "📥 Recibir"</h4><p>Ingresá cuántas prendas volvieron. Sube el contador Recibido. Si es parcial, el estado queda "Parcial".</p></div></div>
-        <table class="man-tbl"><thead><tr><th>Estado envío</th><th>Significado</th></tr></thead><tbody>
-          <tr><td><span class="man-pill mpb">En proceso</span></td><td>Prendas con el tallerista</td></tr>
-          <tr><td><span class="man-pill mpy">Parcial</span></td><td>Volvió una parte, falta el resto</td></tr>
-          <tr><td><span class="man-pill mpg">Recibido</span></td><td>Todas las prendas de vuelta</td></tr>
-        </tbody></table>
-        <div class="man-sub amb">Bordado</div>
-        <p class="man-txt">Funciona igual que costura en cuanto a envío y recepción, pero es <strong>solo de seguimiento</strong>: no modifica los contadores del pedido. Sirve para saber dónde están las prendas en todo momento.</p>
-        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div>Si eliminás un envío, el sistema revierte automáticamente los contadores de costura y recibido de los ítems afectados.</div></div>
+        <p class="man-desc">Después del corte, las prendas se envían a talleristas para costura y opcionalmente a bordado. Este módulo registra cada envío y cada recepción, manteniendo actualizados los contadores del pedido en tiempo real.</p>
+        <div class="man-sub amb">Costura — cómo enviar prendas</div>
+        <div class="man-step"><div class="man-snum amb">1</div><div><h4>Clic en "+ Nuevo envío de costura"</h4><p>Elegí el tallerista al que vas a enviar las prendas.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">2</div><div><h4>Seleccioná los ítems y cantidades</h4><p>El sistema muestra solo ítems con prendas cortadas y disponibles para enviar. Completá cuántas vas a mandar de cada uno.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">3</div><div><h4>Guardá el envío</h4><p>El contador "Costura" de cada ítem sube. El envío queda en estado <span class="man-pill mpb">En proceso</span>.</p></div></div>
+        <div class="man-sub amb">Costura — cómo registrar la recepción</div>
+        <div class="man-step"><div class="man-snum amb">1</div><div><h4>Buscá el envío en la lista y clic en "📥 Recibir"</h4><p>Se abre el formulario de recepción.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">2</div><div><h4>Ingresá las cantidades recibidas</h4><p>Podés recibir menos de lo enviado (recepción parcial). Lo que ingresás sube el contador "Recibido" del pedido.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">3</div><div><h4>Confirmá</h4><p>Si recibiste todo: el envío pasa a <span class="man-pill mpg">Recibido</span>. Si fue parcial: queda en <span class="man-pill mpy">Parcial</span> y podés hacer otra recepción más adelante.</p></div></div>
+        <div class="man-sub amb">Bordado (de producción)</div>
+        <p class="man-txt">El bordado de producción funciona igual que costura (envío y recepción), pero <strong>no modifica los contadores del pedido</strong>. Su propósito es de seguimiento: saber en qué momento las prendas están en la bordadora y cuándo vuelven.</p>
+        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div>Si eliminás un envío de costura, el sistema revierte automáticamente los contadores de costura y recibido de los ítems afectados. Esto es útil para corregir errores de carga.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
-      <!-- 19. ENTREGAS -->
+      <!-- 20. ENTREGAS -->
       <div class="man-sec" id="man-entregas">
         <div class="man-sec-title"><div class="man-icon amb">📦</div>Entregas a Clientes</div>
-        <p class="man-desc">El paso final. Registrá la entrega de prendas terminadas al cliente. El sistema actualiza el contador Entregado y cierra el pedido automáticamente si todo está entregado.</p>
-        <div class="man-step"><div class="man-snum amb">1</div><div><h4>Nueva entrega</h4><p>Completá número de remito, fecha y el cliente al que se le entrega.</p></div></div>
-        <div class="man-step"><div class="man-snum amb">2</div><div><h4>El sistema filtra los ítems del cliente</h4><p>Muestra solo los ítems de sus pedidos con prendas pendientes de entrega.</p></div></div>
-        <div class="man-step"><div class="man-snum amb">3</div><div><h4>Ingresá las cantidades entregadas y confirmá</h4><p>Podés entregar todo de una o hacer entregas parciales en varias remesas.</p></div></div>
-        <div class="man-call man-call-green"><div class="man-ci">✅</div><div><b>Cierre automático:</b> cuando entregado ≥ cantidad en todos los ítems, el pedido pasa a "Completado" sin hacer nada extra.</div></div>
+        <p class="man-desc">El paso final del proceso. Registrá la entrega de prendas terminadas al cliente. El sistema actualiza el contador "Entregado" y cierra el pedido automáticamente cuando todo está entregado.</p>
+        <div class="man-sub amb">Cómo registrar una entrega</div>
+        <div class="man-step"><div class="man-snum amb">1</div><div><h4>Clic en "+ Nueva entrega"</h4><p>Completá número de remito (opcional), fecha de entrega y seleccioná el cliente.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">2</div><div><h4>El sistema filtra automáticamente los ítems disponibles</h4><p>Muestra solo los ítems de los pedidos de ese cliente que tienen prendas recibidas y pendientes de entregar (recibido > entregado).</p></div></div>
+        <div class="man-step"><div class="man-snum amb">3</div><div><h4>Ingresá las cantidades a entregar</h4><p>Podés entregar todo en una sola remesa o hacer entregas parciales en varias veces. No hay obligación de entregar todo junto.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">4</div><div><h4>Confirmá la entrega</h4><p>El contador "Entregado" de cada ítem sube. Si en todos los ítems entregado ≥ cantidad total, el pedido pasa automáticamente a <span class="man-pill mpg">Completado</span>.</p></div></div>
+        <div class="man-call man-call-green"><div class="man-ci">✅</div><div><b>Cierre automático:</b> no tenés que marcar manualmente el pedido como completado. El sistema lo detecta solo cuando todas las prendas están entregadas.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
-      <!-- 20. COSTOS -->
+      <!-- 21. COSTOS -->
       <div class="man-sec" id="man-costos">
         <div class="man-sec-title"><div class="man-icon amb">💰</div>Costos y Fichas de Costo</div>
-        <p class="man-desc">Módulo para calcular el costo de producción por modelo y analizar la rentabilidad. Incluye catálogo de avíos y fichas de costo por prenda.</p>
-        <div class="man-sub amb">Avíos</div>
-        <p class="man-txt">Catálogo de materiales no-tela: hilos, botones, cierres, etiquetas, entretelas, ribetes. Cada avío tiene costo unitario, stock actual y stock mínimo. Las filas en rojo indican stock bajo el mínimo.</p>
-        <div class="man-sub amb">Fichas de Costo</div>
-        <p class="man-txt">Una ficha por modelo de prenda. Cada ficha define:</p>
-        <table class="man-tbl"><thead><tr><th>Componente</th><th>Detalle</th></tr></thead><tbody>
-          <tr><td><strong>Telas</strong></td><td>Nombre de la tela, unidad, cantidad por prenda y costo por unidad</td></tr>
-          <tr><td><strong>Avíos</strong></td><td>Avíos del catálogo con cantidad por prenda (el sistema toma el costo del catálogo)</td></tr>
-          <tr><td><strong>Confección</strong></td><td>Costo de tallerista por unidad</td></tr>
-          <tr><td><strong>Bordado</strong></td><td>Costo de bordado por unidad (opcional)</td></tr>
+        <p class="man-desc">Módulo para calcular el costo de producción por modelo y analizar la rentabilidad. Incluye catálogo de avíos, fichas de costo, análisis de rentabilidad y costo real por pedido.</p>
+        <div class="man-sub amb">Avíos — catálogo de materiales</div>
+        <p class="man-txt">Catálogo de materiales no-tela: hilos, botones, cierres, etiquetas, entretelas, ribetes. Cada avío tiene:</p>
+        <table class="man-tbl"><thead><tr><th>Campo</th><th>Uso</th></tr></thead><tbody>
+          <tr><td><strong>Nombre y tipo</strong></td><td>Identificación del avío</td></tr>
+          <tr><td><strong>Costo unitario</strong></td><td>Precio actual del avío. Las fichas de costo usan este valor</td></tr>
+          <tr><td><strong>Stock actual / mínimo</strong></td><td>Las filas en rojo indican stock bajo el mínimo. El sistema alerta sobre esto en Rentabilidad</td></tr>
         </tbody></table>
-        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div>El <b>costo total y los márgenes</b> (minorista y mayorista) se calculan en tiempo real mientras completás la ficha. El color del borde indica: 🟢 margen ≥40% · 🟡 20-39% · 🔴 &lt;20%.</div></div>
-        <div class="man-sub amb">Rentabilidad</div>
-        <p class="man-txt">La pestaña <strong>Rentabilidad</strong> muestra todos los modelos ordenados de mayor a menor margen, y alerta sobre los avíos con stock bajo el mínimo.</p>
+        <div class="man-sub amb">Fichas de Costo — cómo cargar una ficha</div>
+        <p class="man-txt">Una ficha por modelo de prenda. Definí todos los componentes del costo:</p>
+        <div class="man-step"><div class="man-snum amb">1</div><div><h4>Completá el encabezado</h4><p>Nombre del modelo, precios de venta (mayorista y minorista). El margen se calcula automáticamente.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">2</div><div><h4>Agregá telas</h4><p>Para cada tela: nombre, unidad de medida, cantidad por prenda y costo por unidad.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">3</div><div><h4>Agregá avíos</h4><p>Seleccioná del catálogo. El sistema toma automáticamente el costo actual del avío.</p></div></div>
+        <div class="man-step"><div class="man-snum amb">4</div><div><h4>Ingresá confección y bordado</h4><p>Costo de tallerista por prenda (confección). Si tiene bordado, el costo por prenda bordada.</p></div></div>
+        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div>El <b>costo total y los márgenes</b> (minorista y mayorista) se recalculan en tiempo real. El color del borde de la ficha indica: 🟢 margen ≥40% · 🟡 entre 20-39% · 🔴 menor al 20%.</div></div>
+        <div class="man-sub amb">Rentabilidad — análisis de todos los modelos</div>
+        <p class="man-txt">La pestaña <strong>📈 Rentabilidad</strong> muestra todos los modelos ordenados de mayor a menor margen, con desglose de telas, avíos, confección y bordado. También lista los avíos con stock bajo el mínimo para que los reabastezcas antes de que frenen la producción.</p>
+        <div class="man-sub amb">Por pedido — costo real de producción</div>
+        <p class="man-txt">La pestaña <strong>💰 Por pedido</strong> es la herramienta más importante para saber si el negocio es rentable. Para cada pedido calcula:</p>
+        <table class="man-tbl"><thead><tr><th>Columna</th><th>Qué significa</th></tr></thead><tbody>
+          <tr><td><strong>Costo total</strong></td><td>Suma de fichas de costo × cantidad de cada prenda</td></tr>
+          <tr><td><strong>Ingreso estimado</strong></td><td>Precio de venta (mayorista o minorista) × cantidad</td></tr>
+          <tr><td><strong>Margen %</strong></td><td>(Ingreso - Costo) / Ingreso. 🟢 ≥40% · 🟡 20-39% · 🔴 &lt;20%</td></tr>
+        </tbody></table>
+        <p class="man-txt">Al hacer clic en un pedido se expande el detalle prenda por prenda, mostrando el desglose de cada componente de costo. Si una prenda no tiene ficha cargada, aparece la advertencia ⚠️ "Sin ficha de costo".</p>
+        <div class="man-call man-call-amber"><div class="man-ci">📌</div><div>Para que "Por pedido" funcione, las prendas del pedido deben tener el mismo nombre que el modelo en la Ficha de Costo (el sistema hace una comparación aproximada ignorando mayúsculas y tildes).</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
-      <!-- 15. FAQ -->
+      <!-- 22. EXCEL -->
+      <div class="man-sec" id="man-excel">
+        <div class="man-sec-title"><div class="man-icon">📥</div>Exportar a Excel</div>
+        <p class="man-desc">El sistema permite exportar datos clave a archivos Excel (.xlsx) desde varios módulos. Los archivos se descargan directamente al dispositivo.</p>
+        <table class="man-tbl"><thead><tr><th>Módulo</th><th>Botón</th><th>¿Qué exporta?</th></tr></thead><tbody>
+          <tr><td><strong>CC Mayoristas</strong></td><td>📥 Excel</td><td>Lista de clientes con deuda actual, número de ventas pendientes y saldo total</td></tr>
+          <tr><td><strong>Ventas (Locales / Mayorista)</strong></td><td>📥 Excel</td><td>Las ventas visibles en pantalla (respetando filtros activos de fecha, estado, etc.)</td></tr>
+          <tr><td><strong>Resumen (Locales / Mayorista)</strong></td><td>📥 Excel</td><td>Dos hojas: Facturación por año/mes y Unidades vendidas por año/mes (pivote completo desde 2013)</td></tr>
+        </tbody></table>
+        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div>El Excel de ventas exporta <b>lo que estás viendo</b>. Si tenés filtros aplicados (período, estado, búsqueda), el archivo refleja solo esos registros. Limpiá los filtros si querés exportar todo.</div></div>
+        <a class="man-back" href="#man-body">▲ Volver al índice</a>
+      </div>
+
+      <!-- 23. FAQ -->
       <div class="man-sec" id="man-faq">
         <div class="man-sec-title"><div class="man-icon">❓</div>Preguntas Frecuentes</div>
-        <p class="man-desc">Respuestas a las dudas más comunes.</p>
+        <p class="man-desc">Respuestas a las situaciones más comunes que pueden surgir en el día a día.</p>
         <div class="man-sub">¿Por qué el saldo de una caja no coincide con lo que tengo físicamente?</div>
-        <p class="man-txt">Puede haber movimientos mal cargados, transferencias incompletas, o un cierre de caja con monto incorrecto. Revisá los últimos movimientos de esa caja.</p>
-        <div class="man-sub">¿Qué hago si cargué un movimiento mal?</div>
-        <p class="man-txt">Hacé clic en ✏️ para editarlo o en 🗑️ para eliminarlo y volver a cargarlo. Los cambios se aplican de inmediato.</p>
-        <div class="man-sub">¿Cómo registro que un cliente pagó una deuda vieja?</div>
-        <p class="man-txt">Andá a <strong>Clientes → CC Mayoristas</strong>, encontrá al cliente y hacé clic en <strong>"💰 Cobrar"</strong> en la venta correspondiente.</p>
+        <p class="man-txt">Las causas más frecuentes: un movimiento mal cargado (monto o caja equivocada), una transferencia incompleta (se cargó un lado pero no el otro), o un cierre de caja con monto incorrecto. Revisá los últimos movimientos de esa caja buscando el error con ✏️ o 🗑️.</p>
+        <div class="man-sub">¿Qué hago si cargué un movimiento con el monto o la caja equivocada?</div>
+        <p class="man-txt">Hacé clic en ✏️ para editarlo o en 🗑️ para eliminarlo y volver a cargarlo correctamente. El saldo de la caja se ajusta de inmediato al hacer el cambio.</p>
+        <div class="man-sub">¿Por qué la deuda de un cliente en la tarjeta y en "Ver cuenta" no coincide?</div>
+        <p class="man-txt">Esto puede pasar si hay Notas de Crédito (NC) pendientes. Las NC son ventas con total negativo que reducen la deuda cuando se computan. Usá "⚡ Compensar NC" o "✖ Dar de baja" para regularizar la situación.</p>
+        <div class="man-sub">¿Cómo registro que un cliente pagó una deuda vieja de antes del sistema?</div>
+        <p class="man-txt">Opción A: usá <strong>"💰 Cobrar"</strong> en la venta con la fecha y monto reales del cobro. Opción B: si son muchas ventas históricas que se consideran saldadas, usá el botón <strong>"🕰️ Saldar histórico"</strong> en CC Mayoristas para hacerlo en masa.</p>
         <div class="man-sub">El pedido dice "En proceso" pero ya entregamos todo. ¿Qué hago?</div>
-        <p class="man-txt">Verificá que todas las entregas estén registradas en <strong>Producción → Entregas</strong>. El sistema cierra el pedido automáticamente cuando entregado ≥ cantidad en todos los ítems.</p>
-        <div class="man-sub">¿El sistema guarda automáticamente?</div>
-        <p class="man-txt">Sí. Cada vez que confirmás una acción (guardar, cobrar, completar, etc.) el dato se guarda en la nube al instante. Si cerrás un formulario sin confirmar, esa información se pierde.</p>
+        <p class="man-txt">Verificá en <strong>Producción → Seguimiento</strong> que las entregas estén registradas para cada ítem. El sistema cierra el pedido automáticamente cuando el contador "Entregado" ≥ "Cantidad" en todos los ítems. Si hay un error en los números, editá la entrega correspondiente.</p>
+        <div class="man-sub">Un producto no aparece en el POS del local. ¿Por qué?</div>
+        <p class="man-txt">El POS muestra solo productos con stock &gt; 0 en ese local específico. Verificá en <strong>Productos</strong> que el artículo tenga stock cargado para el local Llavallol o Monte Grande (no solo para Mayorista).</p>
+        <div class="man-sub">¿El sistema guarda automáticamente mientras escribo?</div>
+        <p class="man-txt">No. El guardado ocurre cuando confirmás una acción: hacés clic en "Guardar", "Cobrar", "Completar", etc. Si cerrás un formulario o ventana emergente sin confirmar, los datos de ese formulario se pierden. Los datos ya guardados no se ven afectados.</p>
         <div class="man-sub">¿Puedo usar el sistema desde el celular?</div>
-        <p class="man-txt">Sí, funciona en el navegador del celular, pero está optimizado para pantallas grandes. En celular algunas tablas se ven más comprimidas.</p>
+        <p class="man-txt">Sí. El sistema tiene menú hamburguesa (☰) en celular y está adaptado para pantallas pequeñas. Algunas tablas con muchas columnas pueden requerir scroll horizontal. Para operaciones complejas (carga de pedidos, fichas de costo), es más cómodo usar una computadora.</p>
+        <div class="man-sub">Las tablas de facturación muestran datos solo hasta cierto año. ¿Es normal?</div>
+        <p class="man-txt">El sistema carga los datos de años anteriores correctamente. Si un período no aparece, verificá que haya ventas cargadas para esa fecha. Las ventas históricas importadas deberían estar disponibles desde 2013 en adelante.</p>
         <div class="man-divider"></div>
-        <div class="man-call man-call-purple"><div class="man-ci">📞</div><div><b>¿Necesitás ayuda?</b> Si encontrás algún error o necesitás hacer algo que no está explicado acá, contactá al administrador del sistema.</div></div>
+        <div class="man-call man-call-purple"><div class="man-ci">📞</div><div><b>¿Encontraste algo que no funciona o no está explicado acá?</b> Contactá al administrador del sistema. Describí qué estabas haciendo cuando ocurrió el problema y, si podés, tomá una captura de pantalla del error.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
       <div style="text-align:center;margin-top:60px;padding-top:24px;border-top:1px solid #e5e7eb;">
-        <div style="font-size:11px;color:#9ca3af;letter-spacing:.5px;">PRÍMULA ERP · Manual de Usuario · Versión 4</div>
+        <div style="font-size:11px;color:#9ca3af;letter-spacing:.5px;">PRÍMULA ERP · Manual de Usuario · Versión 4.1 · Mayo 2026</div>
       </div>
 
     </div><!-- /man-content -->
