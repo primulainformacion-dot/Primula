@@ -11999,7 +11999,6 @@ function renderChqCartera(){
         (c.estado==='en_cartera'&&saldo>0?'<button class="btn btn-sm" onclick="openChqAlCobroModal('+c.id+')" title="Depositar al cobro" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">🏦</button> ':'')+
         (c.estado==='al_cobro'?'<button class="btn btn-sm" onclick="openChqDepositarModal('+c.id+')" title="Confirmar acreditación en banco" style="background:#dcfce7;color:#166534;border-color:#bbf7d0;">✅</button> ':'')+
         (c.estado==='endosado'?'<button class="btn btn-sm" onclick="abrirChqDevuelto('+c.id+')" title="Cheque devuelto por proveedor — reingresa a cartera" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5;">↩ Dev.</button> ':'')+
-        (c.estado==='vendido'&&!c.cupo_liberado?'<button class="btn btn-sm" onclick="abrirChqDevuelto('+c.id+')" title="Cheque rechazado por el banco — reingresa a cartera" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5;">↩ Banco</button> ':'')+
         (cupoALiberar?'<button class="btn btn-sm" onclick="liberarCupo('+c.id+')" title="Confirmar liberación de cupo" style="background:#fef3c7;color:#92400e;border-color:#fbbf24;">🔓 Liberar</button> ':'')+
         (c.estado==='en_cartera'&&saldoCheque(c.id)>0?'<button class="btn btn-sm" onclick="openImputarModal('+c.id+')" title="Imputar a factura" style="background:#ede9fe;color:#7c3aed;border-color:#ddd6fe;">🔗 Imputar</button> ':'')+
         '<button class="btn btn-gray btn-sm" onclick="openChqUsoModal('+c.id+')" title="Registrar uso como pago">💸</button> '+
