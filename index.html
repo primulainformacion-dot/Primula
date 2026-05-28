@@ -8456,6 +8456,83 @@ async function verVenta(id, backSec){
 }
 
 // ════════════════════════════════════
+// EDITAR ÍTEMS DE VENTA
+// ════════════════════════════════════
+var eivVentaId=null, eivItems=[];
+async function openEditItemsVenta(ventaId){
+  eivVentaId=ventaId;
+  document.getElementById('eiv-venta-id').textContent=ventaId;
+  var {data}=await sb.from('items_venta').select('*').eq('venta_id',ventaId);
+  eivItems=(data||[]).map(function(it){
+    return {id:it.id,descripcion:it.descripcion||'',cantidad:Number(it.cantidad||1),precio_unitario:Number(it.precio_unitario||0)};
+  });
+  if(!eivItems.length) eivItems=[{id:null,descripcion:'',cantidad:1,precio_unitario:0}];
+  eivRender();
+  openM('m-edit-items-venta');
+}
+function eivRender(){
+  document.getElementById('eiv-rows').innerHTML=eivItems.map(function(row,i){
+    var sub=row.cantidad*row.precio_unitario;
+    return '<div style="display:grid;grid-template-columns:1fr 80px 110px 90px 36px;gap:6px;margin-bottom:6px;align-items:center;">'+
+      '<input value="'+esc(row.descripcion)+'" placeholder="Descripción" oninput="eivSet('+i+',\'descripcion\',this.value)" style="padding:7px 10px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:13px;"/>'+
+      '<input type="number" value="'+row.cantidad+'" min="0" oninput="eivSet('+i+',\'cantidad\',+this.value)" style="padding:7px 8px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:13px;text-align:right;"/>'+
+      '<input type="number" value="'+row.precio_unitario+'" min="0" step="0.01" oninput="eivSet('+i+',\'precio_unitario\',+this.value)" style="padding:7px 8px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:13px;text-align:right;"/>'+
+      '<div style="text-align:right;font-size:13px;font-weight:600;color:#6c7ae0;padding-right:4px;">'+$p(sub)+'</div>'+
+      '<button onclick="eivRemove('+i+')" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;width:32px;height:32px;cursor:pointer;font-size:18px;line-height:1;font-weight:700;">×</button>'+
+    '</div>';
+  }).join('');
+  eivRecalc();
+}
+function eivSet(i,field,val){
+  eivItems[i][field]=val;
+  // Recalcular subtotal visual del row
+  var rows=document.getElementById('eiv-rows').children;
+  if(rows[i]){
+    var sub=eivItems[i].cantidad*eivItems[i].precio_unitario;
+    rows[i].children[3].textContent=$p(sub);
+  }
+  eivRecalc();
+}
+function eivAddRow(){
+  eivItems.push({id:null,descripcion:'',cantidad:1,precio_unitario:0});
+  eivRender();
+}
+function eivRemove(i){
+  eivItems.splice(i,1);
+  if(!eivItems.length) eivItems=[{id:null,descripcion:'',cantidad:1,precio_unitario:0}];
+  eivRender();
+}
+function eivRecalc(){
+  var total=eivItems.reduce(function(s,r){return s+r.cantidad*r.precio_unitario;},0);
+  document.getElementById('eiv-total').textContent=$p(total);
+}
+async function saveEditItemsVenta(){
+  if(!eivVentaId)return;
+  var valid=eivItems.filter(function(r){return r.descripcion.trim()&&r.cantidad>0;});
+  if(!valid.length){alert('Agregá al menos un ítem con descripción y cantidad.');return;}
+  // 1. Borrar ítems anteriores
+  await sb.from('items_venta').delete().eq('venta_id',eivVentaId);
+  // 2. Insertar nuevos
+  var inserts=valid.map(function(r){
+    return {venta_id:eivVentaId,descripcion:r.descripcion.trim(),cantidad:r.cantidad,precio_unitario:r.precio_unitario,subtotal:r.cantidad*r.precio_unitario};
+  });
+  await sb.from('items_venta').insert(inserts);
+  // 3. Recalcular total y saldo
+  var newTotal=valid.reduce(function(s,r){return s+r.cantidad*r.precio_unitario;},0);
+  var {data:cobros}=await sb.from('cobros').select('monto').eq('venta_id',eivVentaId);
+  var totalCobrado=(cobros||[]).reduce(function(s,c){return s+Number(c.monto||0);},0);
+  var newSaldo=Math.max(0,newTotal-totalCobrado);
+  var newEstado=newSaldo<=0?'cobrado':totalCobrado>0?'parcial':'pendiente';
+  await sb.from('ventas').update({total:newTotal,saldo:newSaldo,estado:newEstado,updated_at:'now()'}).eq('id',eivVentaId);
+  // 4. Actualizar cache local
+  var idx=VENTAS.findIndex(function(v){return v.id===eivVentaId;});
+  if(idx>=0){VENTAS[idx].total=newTotal;VENTAS[idx].saldo=newSaldo;VENTAS[idx].estado=newEstado;}
+  closeM('m-edit-items-venta');
+  // 5. Refrescar el detalle
+  verVenta(eivVentaId,ventaBackSection);
+}
+
+// ════════════════════════════════════
 // STOCK
 // ════════════════════════════════════
 function openStockModal(id){
