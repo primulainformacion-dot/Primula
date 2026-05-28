@@ -416,6 +416,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1;" id="cli-cc-stats"></div>
         <button class="btn btn-sm btn-gray" onclick="exportarCCMayoristas()" title="Exportar a Excel">📥 Excel</button>
         <button class="btn btn-sm btn-gray" onclick="recalcularSaldosVentas()" title="Recalcula saldo de todas las ventas con saldo incorrecto (negativo o mayor al total)">🔧 Recalcular saldos</button>
+        <button class="btn btn-sm" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;" onclick="abrirSaldarHistoricoMasivo()" title="Saldar históricamente ventas antiguas en masa">🕰️ Saldar histórico</button>
       </div>
       <div id="cli-cc-cont"></div>
     </div>
@@ -2194,6 +2195,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <button class="tab active" onclick="setCosTab('fichas',this)">📊 Fichas de Costo</button>
       <button class="tab" onclick="setCosTab('avios',this)">🪢 Avíos</button>
       <button class="tab" onclick="setCosTab('analisis',this)">📈 Rentabilidad</button>
+      <button class="tab" onclick="setCosTab('pedidos',this)">💰 Por pedido</button>
     </div>
     <!-- Tab Fichas -->
     <div id="cos-tab-fichas">
@@ -2236,6 +2238,25 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <!-- Tab Análisis -->
     <div id="cos-tab-analisis" style="display:none;">
       <div id="cos-analisis-cont"></div>
+    </div>
+    <!-- Tab Por pedido -->
+    <div id="cos-tab-pedidos" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="cos-ped-estado" onchange="renderCostosPedido()" style="width:170px;">
+          <option value="">Todos los pedidos</option>
+          <option value="en_proceso">En proceso</option>
+          <option value="completado">Completado</option>
+          <option value="pendiente">Pendiente</option>
+        </select>
+        <select id="cos-ped-precio" onchange="renderCostosPedido()" style="width:160px;">
+          <option value="may">Precio mayorista</option>
+          <option value="min">Precio minorista</option>
+        </select>
+        <input id="cos-ped-q" placeholder="Buscar pedido o cliente..." oninput="renderCostosPedido()" style="max-width:240px;"/>
+        <button class="btn btn-gray btn-sm" onclick="renderCostosPedido()">↻</button>
+        <span id="cos-ped-resumen" style="margin-left:auto;font-size:12px;color:#6b7280;font-weight:600;"></span>
+      </div>
+      <div id="cos-pedidos-lista"></div>
     </div>
   </div>
 
@@ -3268,6 +3289,37 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
       <button class="btn btn-gray" onclick="closeM('m-recalc-saldos')">Cancelar</button>
       <button class="btn btn-green" onclick="aplicarRecalculoSaldos()">✅ Aplicar correcciones</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Saldar histórico masivo -->
+<div class="modal-bg" id="m-saldar-historico-masivo">
+  <div class="modal" style="max-width:700px;">
+    <h3>🕰️ Saldar históricamente en masa</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:14px;">Marca ventas antiguas como saldadas históricamente. Útil cuando no se cargaron los cobros de años anteriores. El saldo queda en $0 y el estado en <strong>cobrado</strong>.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">Cliente</label>
+        <select id="shm-cliente" onchange="actualizarPreviewSHM()" style="width:100%;">
+          <option value="">Todos los clientes</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">Ventas anteriores a</label>
+        <select id="shm-hasta-anio" onchange="actualizarPreviewSHM()" style="width:100%;"></select>
+      </div>
+    </div>
+    <div>
+      <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">Nota a agregar en cada venta</label>
+      <input id="shm-nota" value="Saldo histórico — factura previa al sistema" style="width:100%;"/>
+    </div>
+    <div id="shm-preview" style="margin-top:12px;padding:12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;"></div>
+    <div style="margin-top:6px;max-height:260px;overflow-y:auto;" id="shm-lista-cont"></div>
+    <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;align-items:center;">
+      <span id="shm-count-label" style="font-size:12px;color:#9ca3af;margin-right:auto;"></span>
+      <button class="btn btn-gray" onclick="closeM('m-saldar-historico-masivo')">Cancelar</button>
+      <button class="btn btn-green" id="shm-btn-aplicar" onclick="aplicarSaldarHistoricoMasivo()" disabled>✅ Saldar seleccionadas</button>
     </div>
   </div>
 </div>
@@ -6569,6 +6621,152 @@ async function darDeBajaNC(ventaId){
   await loadVentas();
   renderCCMayoristas();
 }
+// ─────────────────────────────────────────────────────
+//  SALDAR HISTÓRICO MASIVO
+// ─────────────────────────────────────────────────────
+var _shmSeleccionadas=new Set();
+
+function abrirSaldarHistoricoMasivo(){
+  // Poblar selector de clientes (solo mayoristas con deuda pendiente)
+  var sel=document.getElementById('shm-cliente');
+  sel.innerHTML='<option value="">Todos los clientes</option>';
+  var clisConDeuda=[...new Set(
+    VENTAS.filter(function(v){return v.tipo==='mayorista'&&v.estado!=='cobrado'&&Number(v.total)>0&&Number(v.saldo)>0;})
+      .map(function(v){return v.cliente_id;})
+  )].sort(function(a,b){
+    var na=(CLIENTES.find(function(c){return c.id===a;})||{}).nombre||'';
+    var nb=(CLIENTES.find(function(c){return c.id===b;})||{}).nombre||'';
+    return na.localeCompare(nb);
+  });
+  clisConDeuda.forEach(function(id){
+    var cli=CLIENTES.find(function(c){return c.id===id;})||{};
+    var o=document.createElement('option');o.value=id;o.textContent=cli.nombre||'ID '+id;sel.appendChild(o);
+  });
+
+  // Poblar años (de 2013 al año actual)
+  var selAnio=document.getElementById('shm-hasta-anio');
+  selAnio.innerHTML='';
+  var anioActual=new Date().getFullYear();
+  for(var a=anioActual;a>=2013;a--){
+    var o=document.createElement('option');o.value=a;o.textContent='< '+a;selAnio.appendChild(o);
+  }
+  selAnio.value=anioActual; // default: todos hasta hoy
+
+  _shmSeleccionadas=new Set();
+  actualizarPreviewSHM();
+  openM('m-saldar-historico-masivo');
+}
+
+function actualizarPreviewSHM(){
+  var cliId=document.getElementById('shm-cliente').value;
+  var hastaAnio=parseInt(document.getElementById('shm-hasta-anio').value)||new Date().getFullYear();
+  var hastaFecha=hastaAnio+'-12-31';
+
+  var candidatas=VENTAS.filter(function(v){
+    if(v.tipo!=='mayorista')return false;
+    if(v.estado==='cobrado')return false;
+    if(Number(v.total)<0)return false;  // excluir NCs
+    if(Number(v.saldo)<=0)return false; // ya sin deuda
+    if(cliId&&String(v.cliente_id)!==String(cliId))return false;
+    if(v.fecha>hastaFecha)return false;
+    return true;
+  }).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
+
+  // Reset selección a todas las candidatas
+  _shmSeleccionadas=new Set(candidatas.map(function(v){return v.id;}));
+
+  var totalSaldo=candidatas.reduce(function(s,v){return s+Number(v.saldo);},0);
+  var nClis=new Set(candidatas.map(function(v){return v.cliente_id;})).size;
+
+  var prev=document.getElementById('shm-preview');
+  if(!candidatas.length){
+    prev.innerHTML='<span style="color:#9ca3af;">No hay ventas pendientes que coincidan con estos filtros.</span>';
+    document.getElementById('shm-lista-cont').innerHTML='';
+    document.getElementById('shm-count-label').textContent='';
+    document.getElementById('shm-btn-aplicar').disabled=true;
+    return;
+  }
+
+  prev.innerHTML='<strong>'+candidatas.length+'</strong> ventas · <strong>'+nClis+'</strong> clientes · Deuda total a saldar: <strong style="color:#dc2626;">'+$p(totalSaldo)+'</strong>';
+
+  // Mostrar lista con checkboxes
+  var cont=document.getElementById('shm-lista-cont');
+  cont.innerHTML='<div style="margin-top:8px;">'
+    +'<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:2px solid #e5e7eb;margin-bottom:4px;">'
+      +'<input type="checkbox" id="shm-chk-all" checked onchange="shmToggleAll(this.checked)" style="width:16px;height:16px;">'
+      +'<span style="font-size:12px;font-weight:700;color:#374151;">SELECCIONAR TODO</span>'
+    +'</div>'
+    +candidatas.map(function(v){
+      var cli=CLIENTES.find(function(c){return c.id===v.cliente_id;})||{};
+      return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f3f4f6;">'
+        +'<input type="checkbox" class="shm-chk-item" data-id="'+v.id+'" checked onchange="shmOnChkChange()" style="width:14px;height:14px;">'
+        +'<div style="flex:1;min-width:0;">'
+          +'<span style="font-weight:600;font-size:12px;color:#1f2937;">'+esc(cli.nombre||'—')+'</span>'
+          +' <span style="font-size:11px;color:#9ca3af;">#'+v.id+(v.nro_factura?' / F°'+v.nro_factura:'')+'</span>'
+          +' <span style="font-size:11px;color:#9ca3af;">'+fmtF(v.fecha)+'</span>'
+        +'</div>'
+        +'<div style="text-align:right;flex-shrink:0;">'
+          +'<div style="font-size:11px;color:#9ca3af;">Total: '+$p(v.total)+'</div>'
+          +'<div style="font-size:12px;font-weight:700;color:#dc2626;">Saldo: '+$p(v.saldo)+'</div>'
+        +'</div>'
+      +'</div>';
+    }).join('')
+  +'</div>';
+
+  shmOnChkChange();
+}
+
+function shmToggleAll(checked){
+  document.querySelectorAll('.shm-chk-item').forEach(function(chk){chk.checked=checked;});
+  shmOnChkChange();
+}
+
+function shmOnChkChange(){
+  _shmSeleccionadas=new Set();
+  document.querySelectorAll('.shm-chk-item').forEach(function(chk){
+    if(chk.checked)_shmSeleccionadas.add(parseInt(chk.dataset.id));
+  });
+  var n=_shmSeleccionadas.size;
+  var totalSaldo=VENTAS.filter(function(v){return _shmSeleccionadas.has(v.id);}).reduce(function(s,v){return s+Number(v.saldo);},0);
+  document.getElementById('shm-count-label').textContent=n+' seleccionadas · Deuda a saldar: '+$p(totalSaldo);
+  document.getElementById('shm-btn-aplicar').disabled=n===0;
+  // update "all" checkbox
+  var total=document.querySelectorAll('.shm-chk-item').length;
+  var chkAll=document.getElementById('shm-chk-all');
+  if(chkAll)chkAll.indeterminate=n>0&&n<total;
+}
+
+async function aplicarSaldarHistoricoMasivo(){
+  var ids=[..._shmSeleccionadas];
+  if(!ids.length)return;
+  var nota=(document.getElementById('shm-nota').value||'Saldo histórico').trim();
+  if(!confirm('¿Saldar históricamente '+ids.length+' ventas?\n\nSe marcará saldo=$0 y estado=cobrado.\nEsta acción no genera movimientos de caja.\n\n¿Confirmar?'))return;
+
+  var btn=document.getElementById('shm-btn-aplicar');
+  btn.disabled=true;btn.textContent='Aplicando...';
+
+  var errores=0;
+  // Procesar en lotes de 50 para no saturar
+  var chunk=50;
+  for(var i=0;i<ids.length;i+=chunk){
+    var lote=ids.slice(i,i+chunk);
+    var updates=lote.map(function(id){
+      var v=VENTAS.find(function(x){return x.id===id;})||{};
+      var notaFinal=(v.nota?v.nota+' | ':'') + nota;
+      return sb.from('ventas').update({saldo:0,estado:'cobrado',nota:notaFinal}).eq('id',id);
+    });
+    var results=await Promise.all(updates);
+    results.forEach(function(r){if(r.error)errores++;});
+  }
+
+  if(errores)toast('Se aplicó con '+errores+' error(es). Revisá los saldos.','err');
+  else toast('✅ '+ids.length+' ventas saldadas históricamente');
+
+  closeM('m-saldar-historico-masivo');
+  await loadVentas();
+  renderCCMayoristas();
+}
+
 var _recalcPendientes=[];
 async function recalcularSaldosVentas(){
   // Excluye NCs (total < 0): funcionan distinto, no se recalculan
@@ -19566,13 +19764,158 @@ function renderCostos(){
 
 // ── Tab toggle ──
 function setCosTab(tab,btn){
-  ['fichas','avios','analisis'].forEach(function(t){
+  ['fichas','avios','analisis','pedidos'].forEach(function(t){
     document.getElementById('cos-tab-'+t).style.display=t===tab?'':'none';
   });
   document.querySelectorAll('#cos-tabs .tab').forEach(function(b){b.classList.remove('active');});
   if(btn)btn.classList.add('active');
   if(tab==='avios')renderCostosAvios();
   if(tab==='analisis')renderCostosAnalisis();
+  if(tab==='pedidos')renderCostosPedido();
+}
+
+// ─────────────────────────────────────────────────────
+//  COSTOS — Costo real por pedido
+// ─────────────────────────────────────────────────────
+function renderCostosPedido(){
+  var cont=document.getElementById('cos-pedidos-lista');
+  if(!cont)return;
+  var q=(document.getElementById('cos-ped-q').value||'').toLowerCase();
+  var estFil=document.getElementById('cos-ped-estado').value;
+  var tipoPrecio=(document.getElementById('cos-ped-precio').value)||'may';
+
+  var list=PEDIDOS.filter(function(p){
+    if(estFil&&p.estado!==estFil)return false;
+    if(q){
+      var cli=CLIENTES.find(function(c){return c.id===p.cliente_id;})||{};
+      if(!(String(p.nro_pedido||'').includes(q)||(cli.nombre||'').toLowerCase().includes(q)))return false;
+    }
+    return true;
+  }).slice().sort(function(a,b){return (b.nro_pedido||0)-(a.nro_pedido||0);});
+
+  if(!list.length){
+    cont.innerHTML='<div class="empty"><p>No hay pedidos que coincidan</p></div>';
+    document.getElementById('cos-ped-resumen').textContent='';
+    return;
+  }
+
+  // Normalize string for fuzzy matching
+  function norm(s){
+    return (s||'').toLowerCase().trim()
+      .replace(/[áà]/g,'a').replace(/[éè]/g,'e').replace(/[íì]/g,'i').replace(/[óò]/g,'o').replace(/[úùü]/g,'u').replace(/ñ/g,'n');
+  }
+
+  // Build ficha lookup by normalized nombre_modelo
+  var fichaLookup={};
+  FICHAS_COSTO.forEach(function(f){fichaLookup[norm(f.nombre_modelo)]=f;});
+
+  var totCostoGlobal=0,totIngresoGlobal=0,pedConFicha=0;
+
+  var em={en_proceso:{bg:'#dbeafe',c:'#1d4ed8',t:'En proceso'},completado:{bg:'#d1fae5',c:'#065f46',t:'Completado'},pendiente:{bg:'#fef3c7',c:'#92400e',t:'Pendiente'},cancelado:{bg:'#fee2e2',c:'#dc2626',t:'Cancelado'}};
+
+  var rows=list.map(function(p){
+    var items=PEDIDOS_ITEMS.filter(function(pi){return pi.pedido_id===p.id;});
+    var cli=CLIENTES.find(function(c){return c.id===p.cliente_id;})||{};
+    var eb=em[p.estado]||{bg:'#f3f4f6',c:'#374151',t:p.estado||'—'};
+
+    // Group by prenda, find matching ficha
+    var prendasMap={};
+    items.forEach(function(pi){
+      var k=pi.prenda||'?';
+      if(!prendasMap[k])prendasMap[k]={cant:0,ficha:fichaLookup[norm(k)]||null};
+      prendasMap[k].cant+=Number(pi.cantidad);
+    });
+
+    var totalCant=items.reduce(function(s,pi){return s+Number(pi.cantidad);},0);
+    var costoTotal=0,ingresoTotal=0,prendasSinFicha=[],tieneFicha=false;
+
+    Object.keys(prendasMap).forEach(function(pNom){
+      var pr=prendasMap[pNom];
+      if(pr.ficha){
+        tieneFicha=true;
+        var c=fichaCalcCosto(pr.ficha);
+        costoTotal+=c.total*pr.cant;
+        var precio=tipoPrecio==='min'?Number(pr.ficha.precio_venta_min):Number(pr.ficha.precio_venta_may);
+        ingresoTotal+=precio*pr.cant;
+      } else {
+        prendasSinFicha.push(pNom);
+      }
+    });
+
+    if(tieneFicha){totCostoGlobal+=costoTotal;totIngresoGlobal+=ingresoTotal;pedConFicha++;}
+
+    var margen=ingresoTotal-costoTotal;
+    var pct=ingresoTotal>0?Math.round(margen/ingresoTotal*100):0;
+    var mColor=cosMargenColor(pct);
+    var semaforo=!tieneFicha?'⚪':pct>=40?'🟢':pct>=20?'🟡':'🔴';
+
+    // Detail breakdown per prenda
+    var detalle=Object.keys(prendasMap).map(function(pNom){
+      var pr=prendasMap[pNom];
+      var f=pr.ficha;
+      if(!f){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f3f4f6;">'
+          +'<span style="font-size:13px;color:#374151;font-weight:600;">'+esc(pNom)+' <span style="color:#9ca3af;font-weight:400;">× '+pr.cant+'</span></span>'
+          +'<span style="font-size:11px;color:#9ca3af;background:#f3f4f6;padding:2px 8px;border-radius:8px;">Sin ficha de costo</span>'
+          +'</div>';
+      }
+      var c=fichaCalcCosto(f);
+      var precio=tipoPrecio==='min'?Number(f.precio_venta_min):Number(f.precio_venta_may);
+      var ctot=c.total*pr.cant,itot=precio*pr.cant,marg=itot-ctot;
+      var mpct=itot>0?Math.round(marg/itot*100):0;
+      return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid #f3f4f6;flex-wrap:wrap;gap:6px;">'
+        +'<div>'
+          +'<div style="font-size:13px;font-weight:700;color:#374151;">'+esc(pNom)+' <span style="font-weight:400;color:#9ca3af;">× '+pr.cant+'</span></div>'
+          +'<div style="font-size:11px;color:#9ca3af;margin-top:2px;">'
+            +'Costo u: '+$p(c.total)
+            +' · Telas: '+$p(c.telas)
+            +(c.avios>0?' · Avíos: '+$p(c.avios):'')
+            +' · Conf: '+$p(c.conf)
+            +(c.bord>0?' · Bord: '+$p(c.bord):'')
+          +'</div>'
+        +'</div>'
+        +'<div style="text-align:right;flex-shrink:0;">'
+          +'<div style="font-size:12px;color:#dc2626;">Costo: <strong>'+$p(ctot)+'</strong></div>'
+          +'<div style="font-size:12px;color:#6c7ae0;">Ingreso: <strong>'+$p(itot)+'</strong></div>'
+          +'<div style="font-size:13px;font-weight:800;color:'+cosMargenColor(mpct)+';">Margen: '+mpct+'% <span style="font-weight:600;font-size:11px;">('+$p(marg)+')</span></div>'
+        +'</div>'
+        +'</div>';
+    }).join('');
+
+    return '<div class="panel" style="margin-bottom:10px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;cursor:pointer;" '
+        +'onclick="var d=this.nextElementSibling;d.style.display=d.style.display===\'none\'?\'block\':\'none\';">'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+          +semaforo
+          +' <span style="font-weight:900;font-size:15px;color:#1f2937;">#'+p.nro_pedido+'</span>'
+          +'<span style="font-size:12px;color:#9ca3af;">'+fmtF(p.fecha)+'</span>'
+          +'<span style="font-weight:600;color:#374151;">'+esc(cli.nombre||'—')+'</span>'
+          +'<span style="background:'+eb.bg+';color:'+eb.c+';padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">'+eb.t+'</span>'
+          +(prendasSinFicha.length?'<span style="font-size:11px;color:#f59e0b;background:#fef3c7;padding:2px 8px;border-radius:8px;border:1px solid #fde68a;">⚠️ Sin ficha: '+prendasSinFicha.map(esc).join(', ')+'</span>':'')
+        +'</div>'
+        +(tieneFicha
+          ?'<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">'
+            +'<div style="text-align:right;"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;">'+totalCant+' prendas</div>'
+              +'<div style="font-size:12px;color:#dc2626;font-weight:700;">Costo: '+$p(costoTotal)+'</div></div>'
+            +'<div style="text-align:right;"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;">Ingreso est.</div>'
+              +'<div style="font-size:12px;color:#6c7ae0;font-weight:700;">'+$p(ingresoTotal)+'</div></div>'
+            +'<div style="text-align:right;"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;">Margen</div>'
+              +'<div style="font-size:15px;font-weight:900;color:'+mColor+';">'+pct+'% <span style="font-size:11px;font-weight:600;">('+$p(margen)+')</span></div></div>'
+          +'</div>'
+          :'<span style="font-size:12px;color:#9ca3af;font-style:italic;">Sin fichas cargadas</span>')
+      +'</div>'
+      +'<div style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #f3f4f6;">'
+        +detalle
+      +'</div>'
+    +'</div>';
+  }).join('');
+
+  cont.innerHTML=rows;
+
+  var margGlobal=totIngresoGlobal-totCostoGlobal;
+  var pctGlobal=totIngresoGlobal>0?Math.round(margGlobal/totIngresoGlobal*100):0;
+  var res=document.getElementById('cos-ped-resumen');
+  if(res)res.textContent=list.length+' pedidos · '+pedConFicha+' con fichas · Costo total: '+$p(totCostoGlobal)+' · Ingreso est: '+$p(totIngresoGlobal)+' · Margen: '+pctGlobal+'%';
 }
 
 // ─────────────────────────────────────────────────────
