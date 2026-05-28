@@ -362,21 +362,32 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
   <!-- ════════════ INICIO ════════════ -->
   <div class="section active" id="sec-inicio">
+    <!-- Alertas -->
     <div id="pan-alertas" style="margin-bottom:16px;"></div>
-    <div class="stats">
-      <div class="stat"><div class="stat-icon" style="background:#ede9fe;">💰</div><h3 id="ds-hoy">$0</h3><p>Ventas hoy (ambos locales)</p></div>
-      <div class="stat"><div class="stat-icon" style="background:#fee2e2;">⚠️</div><h3 id="ds-deuda">$0</h3><p>Total por cobrar</p></div>
-      <div class="stat"><div class="stat-icon" style="background:#dcfce7;">👥</div><h3 id="ds-cli">0</h3><p>Clientes activos</p></div>
-      <div class="stat"><div class="stat-icon" style="background:#dbeafe;">🛒</div><h3 id="ds-vmes">0</h3><p>Ventas este mes</p></div>
+
+    <!-- KPIs operativos -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px;" id="dash-kpis"></div>
+
+    <!-- Paneles principales -->
+    <div class="two-col" style="margin-bottom:16px;">
+      <div class="panel">
+        <div class="panel-hdr"><h4>🏭 Órdenes activas</h4><button class="btn btn-sm btn-outline" onclick="nav('produccion',null)">Ver producción →</button></div>
+        <div id="dash-ordenes"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><h4>📒 Top deudores mayoristas</h4><button class="btn btn-sm btn-outline" onclick="setCliTab('cc',null);nav('clientes',null)">Ver CC →</button></div>
+        <div id="dash-deudas"></div>
+      </div>
     </div>
+
     <div class="two-col">
       <div class="panel">
-        <div class="panel-hdr"><h4>Últimas ventas</h4><button class="btn btn-sm btn-outline" onclick="nav('reportes',null)">Ver reporte</button></div>
+        <div class="panel-hdr"><h4>🛒 Últimas ventas</h4></div>
         <div id="dash-ventas"></div>
       </div>
       <div class="panel">
-        <div class="panel-hdr"><h4>Clientes con deuda</h4><button class="btn btn-sm btn-outline" onclick="nav('clientes',null)">Ver todos</button></div>
-        <div id="dash-deudas"></div>
+        <div class="panel-hdr"><h4>👗 Talleristas — deuda pendiente</h4><button class="btn btn-sm btn-outline" onclick="nav('talleristas',null)">Ver talleristas →</button></div>
+        <div id="dash-talleristas"></div>
       </div>
     </div>
   </div>
@@ -5509,7 +5520,7 @@ async function loadMoratorias(){ var {data}=await sb.from('moratorias').select('
 async function loadClientes(){ var {data}=await sb.from('clientes').select('*').order('nombre'); CLIENTES=data||[]; }
 async function loadProveedores(){ var {data}=await sb.from('proveedores').select('*').order('nombre'); PROVEEDORES=data||[]; }
 async function loadProductos(){ var {data}=await sb.from('productos').select('*,categorias(nombre)').order('nombre'); PRODUCTOS=data||[]; }
-async function loadVentas(){ var {data}=await sb.from('ventas').select('*').order('fecha',{ascending:false}); VENTAS=data||[]; }
+async function loadVentas(){ var {data}=await sb.from('ventas').select('*').order('fecha',{ascending:false}).limit(10000); VENTAS=data||[]; }
 async function loadStock(){ var {data}=await sb.from('stock').select('*,productos(nombre,codigo)').order('id'); STOCK=data||[]; }
 async function loadPresupuestos(){ var {data}=await sb.from('presupuestos').select('*').order('fecha',{ascending:false}).limit(200); PRESUPUESTOS=data||[]; }
 async function loadMovs(){
@@ -6196,33 +6207,135 @@ function renderProyeccion(){
 // ════════════════════════════════════
 function renderDash(){
   var hoy=today();
-  var mesNow=mesActual();
-  var ventasHoy=VENTAS.filter(function(v){return v.fecha===hoy;});
-  var totalHoy=ventasHoy.reduce(function(s,v){return s+Number(v.total);},0);
-  var deudaTotal=VENTAS.filter(function(v){return v.estado!=='cobrado';}).reduce(function(s,v){return s+Number(v.saldo);},0);
-  var vtaMes=VENTAS.filter(function(v){return v.fecha&&v.fecha.slice(0,7)===hoy.slice(0,7);}).length;
-  document.getElementById('ds-hoy').textContent=$p(totalHoy);
-  document.getElementById('ds-deuda').textContent=$p(deudaTotal);
-  document.getElementById('ds-cli').textContent=CLIENTES.filter(function(c){return c.activo;}).length;
-  document.getElementById('ds-vmes').textContent=vtaMes;
+  var mesStr=hoy.slice(0,7);
+  var ahora=new Date(); ahora.setHours(0,0,0,0);
+  var en7=new Date(ahora.getTime()+7*86400000);
+  var en15=new Date(ahora.getTime()+15*86400000);
 
-  var dv=document.getElementById('dash-ventas');
-  var recientes=VENTAS.slice(0,8);
-  dv.innerHTML=recientes.length?
-    '<table><thead><tr><th>Cliente</th><th>Local</th><th>Total</th><th>Estado</th></tr></thead><tbody>'+
-    recientes.map(function(v){return '<tr><td>'+(v.cliente_nombre||'<i style="color:#9ca3af">Mostrador</i>')+'</td><td><span class="badge '+(v.local==='llavallol'?'b-ll':v.local==='mayorista'?'b-purple':'b-mg')+'">'+v.local+'</span></td><td>'+$p(v.total)+'</td><td><span class="badge '+(v.estado==='cobrado'?'b-green':v.estado==='parcial'?'b-blue':'b-yellow')+'">'+v.estado+'</span></td></tr>';}).join('')+
-    '</tbody></table>':
-    '<div class="empty"><div class="ei">🛒</div><p>Sin ventas aún</p></div>';
+  // ── KPIs ──
+  var ventasMes=VENTAS.filter(function(v){return v.fecha&&v.fecha.startsWith(mesStr)&&Number(v.total)>0;});
+  var factMes=ventasMes.reduce(function(s,v){return s+Number(v.total||0);},0);
+  var factHoy=VENTAS.filter(function(v){return v.fecha===hoy&&Number(v.total)>0;}).reduce(function(s,v){return s+Number(v.total||0);},0);
 
+  var deudaClientes=Math.max(0,VENTAS.filter(function(v){return v.estado!=='cobrado'&&Number(v.total)>0;}).reduce(function(s,v){return s+Number(v.saldo||0);},0));
+
+  var ordenesActivas=ORDENES.filter(function(o){return o.estado==='pendiente'||o.estado==='en_proceso'||o.estado==='parcial';});
+  var ordenesAtrasadas=ordenesActivas.filter(function(o){return o.fecha_entrega_esperada&&new Date(o.fecha_entrega_esperada+'T12:00:00')<ahora;});
+
+  var deudaTalleristas=TALLERISTAS.reduce(function(s,t){return s+Math.max(0,talDeudaTotal(t.id));},0);
+
+  var chequesCartera=CHEQUES_CARTERA.filter(function(c){
+    if(c.estado!=='en_cartera'&&c.estado!=='al_cobro')return false;
+    if(!c.fecha_deposito)return true;
+    return new Date(c.fecha_deposito+'T12:00:00')<=en15;
+  });
+  var montoChequesCartera=chequesCartera.reduce(function(s,c){return s+Number(c.monto||0);},0);
+
+  var sinStock=STOCK.filter(function(s){return s.cantidad<=0;}).length;
+
+  // ── Render KPIs ──
+  function kpi(icono,bg,color,valor,label,sub,accion){
+    return '<div onclick="'+accion+'" style="background:#fff;border:1.5px solid #e5e7eb;border-radius:14px;padding:16px 14px;cursor:'+(accion?'pointer':'default')+';transition:box-shadow .15s;display:flex;flex-direction:column;gap:4px;" onmouseover="this.style.boxShadow=\'0 4px 12px rgba(0,0,0,.08)\'" onmouseout="this.style.boxShadow=\'none\'">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'+
+        '<span style="font-size:20px;background:'+bg+';border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;">'+icono+'</span>'+
+        '<span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;">'+label+'</span>'+
+      '</div>'+
+      '<div style="font-size:22px;font-weight:900;color:'+color+';">'+valor+'</div>'+
+      (sub?'<div style="font-size:11px;color:#9ca3af;margin-top:2px;">'+sub+'</div>':'')+
+    '</div>';
+  }
+
+  var kpisEl=document.getElementById('dash-kpis');
+  if(kpisEl) kpisEl.innerHTML=
+    kpi('💰','#ede9fe','#5b21b6',$p(factMes),'Facturación del mes',factHoy>0?'Hoy: '+$p(factHoy):'Sin ventas hoy',"nav('reportes',null)")+
+    kpi('📒','#fee2e2','#dc2626',$p(deudaClientes),'Deuda clientes',VENTAS.filter(function(v){return v.estado!=='cobrado'&&Number(v.total)>0;}).length+' ventas pendientes',"setCliTab('cc',null);nav('clientes',null)")+
+    kpi('🏭',ordenesAtrasadas.length?'#fee2e2':'#fef3c7',ordenesAtrasadas.length?'#dc2626':'#d97706',ordenesActivas.length,'Órdenes activas',ordenesAtrasadas.length?'⚠️ '+ordenesAtrasadas.length+' atrasada'+(ordenesAtrasadas.length>1?'s':''):ordenesActivas.length+' en curso',"nav('produccion',null)")+
+    kpi('👗','#fdf4ff','#7c3aed',$p(deudaTalleristas),'Deuda talleristas',TALLERISTAS.filter(function(t){return talDeudaTotal(t.id)>0;}).length+' con saldo pendiente',"nav('talleristas',null)")+
+    kpi('💳',montoChequesCartera>0?'#fef3c7':'#f0fdf4',montoChequesCartera>0?'#92400e':'#166534',$p(montoChequesCartera),'Cheques en cartera',chequesCartera.length+' cheque'+(chequesCartera.length!==1?'s':'')+' (próx. 15 días)',"setFinTab('cartera',null);nav('cheques',null)")+
+    kpi('📦',sinStock>0?'#fef3c7':'#f0fdf4',sinStock>0?'#92400e':'#166534',sinStock,'Artículos sin stock',sinStock>0?'Revisar productos':'Stock completo',"nav('productos',null)");
+
+  // ── Órdenes activas ──
+  var dord=document.getElementById('dash-ordenes');
+  if(dord){
+    if(!ordenesActivas.length){
+      dord.innerHTML='<div class="empty"><div class="ei">✅</div><p>Sin órdenes activas</p></div>';
+    } else {
+      var listaOrd=ordenesActivas.slice().sort(function(a,b){
+        var fa=a.fecha_entrega_esperada||'9999'; var fb=b.fecha_entrega_esperada||'9999';
+        return fa<fb?-1:fa>fb?1:0;
+      }).slice(0,8);
+      dord.innerHTML='<table style="width:100%;font-size:12px;border-collapse:collapse;"><tbody>'+
+        listaOrd.map(function(o){
+          var tal=TALLERISTAS.find(function(t){return t.id===o.tallerista_id;});
+          var atrasada=o.fecha_entrega_esperada&&new Date(o.fecha_entrega_esperada+'T12:00:00')<ahora;
+          var proxima=o.fecha_entrega_esperada&&new Date(o.fecha_entrega_esperada+'T12:00:00')<=en7;
+          var fechaColor=atrasada?'#dc2626':proxima?'#d97706':'#374151';
+          var estadoBadge=o.estado==='parcial'?'b-yellow':o.estado==='en_proceso'?'b-blue':'b-gray';
+          return '<tr style="border-top:1px solid #f3f4f6;">'+
+            '<td style="padding:6px 8px;font-weight:700;color:#6c7ae0;">#'+o.id+'</td>'+
+            '<td style="padding:6px 8px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">'+(o.descripcion||o.cliente_nombre||'—')+'</td>'+
+            '<td style="padding:6px 4px;"><span class="badge '+estadoBadge+'" style="font-size:10px;">'+o.estado+'</span></td>'+
+            '<td style="padding:6px 8px;color:'+fechaColor+';font-weight:'+(atrasada||proxima?'700':'400')+';">'+(o.fecha_entrega_esperada?fmtF(o.fecha_entrega_esperada):'—')+(atrasada?' ⚠️':proxima?' ⏰':'')+'</td>'+
+            '<td style="padding:6px 8px;color:#9ca3af;font-size:11px;">'+(tal?tal.nombre:'—')+'</td>'+
+          '</tr>';
+        }).join('')+
+      '</tbody></table>'+
+      (ordenesActivas.length>8?'<div style="text-align:center;padding:8px;font-size:12px;color:#9ca3af;">+'+( ordenesActivas.length-8)+' más</div>':'');
+    }
+  }
+
+  // ── Top deudores mayoristas ──
   var dd=document.getElementById('dash-deudas');
-  var deudores=CLIENTES.filter(function(c){return VENTAS.some(function(v){return v.cliente_id===c.id&&v.estado!=='cobrado';});}).slice(0,8);
-  dd.innerHTML=deudores.length?
-    '<table><thead><tr><th>Cliente</th><th>Deuda</th></tr></thead><tbody>'+
-    deudores.map(function(c){
-      var d=VENTAS.filter(function(v){return v.cliente_id===c.id&&v.estado!=='cobrado';}).reduce(function(s,v){return s+Number(v.saldo);},0);
-      return '<tr><td><a href="#" onclick="verCuenta('+c.id+')" style="color:#6c7ae0;font-weight:600;">'+c.nombre+'</a></td><td style="color:#dc2626;font-weight:700;">'+$p(d)+'</td></tr>';
-    }).join('')+'</tbody></table>':
-    '<div class="empty"><div class="ei">✅</div><p>Sin deudas pendientes</p></div>';
+  if(dd){
+    var deudoresMay=CLIENTES.filter(function(c){return c.tipo==='mayorista';}).map(function(c){
+      var d=Math.max(0,VENTAS.filter(function(v){return v.cliente_id===c.id&&v.estado!=='cobrado';}).reduce(function(s,v){return s+Number(v.saldo||0);},0));
+      return {c:c,d:d};
+    }).filter(function(x){return x.d>0;}).sort(function(a,b){return b.d-a.d;}).slice(0,8);
+    dd.innerHTML=deudoresMay.length?
+      '<table style="width:100%;font-size:13px;border-collapse:collapse;"><tbody>'+
+      deudoresMay.map(function(x,i){
+        return '<tr style="border-top:1px solid #f3f4f6;">'+
+          '<td style="padding:6px 8px;color:#9ca3af;font-size:11px;font-weight:700;">'+(i+1)+'</td>'+
+          '<td style="padding:6px 8px;"><a href="#" onclick="setCliTab(\'cc\',null);nav(\'clientes\',null);" style="color:#6c7ae0;font-weight:600;">'+esc(x.c.nombre)+'</a></td>'+
+          '<td style="padding:6px 8px;text-align:right;font-weight:800;color:#dc2626;">'+$p(x.d)+'</td>'+
+        '</tr>';
+      }).join('')+'</tbody></table>':
+      '<div class="empty"><div class="ei">✅</div><p>Sin deudas mayoristas</p></div>';
+  }
+
+  // ── Últimas ventas ──
+  var dv=document.getElementById('dash-ventas');
+  if(dv){
+    var recientes=VENTAS.filter(function(v){return Number(v.total)>0;}).slice(0,8);
+    dv.innerHTML=recientes.length?
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;"><tbody>'+
+      recientes.map(function(v){
+        return '<tr style="border-top:1px solid #f3f4f6;">'+
+          '<td style="padding:6px 8px;color:#6b7280;white-space:nowrap;">'+fmtF(v.fecha)+'</td>'+
+          '<td style="padding:6px 8px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(v.cliente_nombre||'<i style="color:#9ca3af">Mostrador</i>')+'</td>'+
+          '<td style="padding:6px 4px;"><span class="badge '+(v.local==='llavallol'?'b-ll':v.local==='mayorista'?'b-purple':'b-mg')+'" style="font-size:10px;">'+v.local+'</span></td>'+
+          '<td style="padding:6px 8px;text-align:right;font-weight:700;">'+$p(v.total)+'</td>'+
+          '<td style="padding:6px 4px;"><span class="badge '+(v.estado==='cobrado'?'b-green':v.estado==='parcial'?'b-blue':'b-yellow')+'" style="font-size:10px;">'+v.estado+'</span></td>'+
+        '</tr>';
+      }).join('')+'</tbody></table>':
+      '<div class="empty"><div class="ei">🛒</div><p>Sin ventas aún</p></div>';
+  }
+
+  // ── Talleristas con deuda ──
+  var dt=document.getElementById('dash-talleristas');
+  if(dt){
+    var talConDeuda=TALLERISTAS.map(function(t){return {t:t,d:talDeudaTotal(t.id)};}).filter(function(x){return x.d>0;}).sort(function(a,b){return b.d-a.d;});
+    dt.innerHTML=talConDeuda.length?
+      '<table style="width:100%;font-size:13px;border-collapse:collapse;"><tbody>'+
+      talConDeuda.map(function(x){
+        return '<tr style="border-top:1px solid #f3f4f6;">'+
+          '<td style="padding:6px 8px;font-weight:600;">'+esc(x.t.nombre)+'</td>'+
+          '<td style="padding:6px 4px;"><span class="badge '+(x.t.tipo==='costura'?'b-blue':'b-purple')+'" style="font-size:10px;">'+x.t.tipo+'</span></td>'+
+          '<td style="padding:6px 8px;text-align:right;font-weight:800;color:#7c3aed;">'+$p(x.d)+'</td>'+
+        '</tr>';
+      }).join('')+'</tbody></table>':
+      '<div class="empty"><div class="ei">✅</div><p>Sin deuda con talleristas</p></div>';
+  }
 }
 
 // ════════════════════════════════════
@@ -12075,7 +12188,7 @@ async function loadEnviosBordado(){ var {data}=await sb.from('envios_bordado').s
 async function loadEnviosBordadoItems(){ var {data}=await sb.from('envios_bordado_items').select('*'); ENVIOS_BORDADO_ITEMS=data||[]; }
 async function loadEntregas(){ var {data}=await sb.from('entregas').select('*').order('fecha',{ascending:false}); ENTREGAS=data||[]; }
 async function loadEntregasItems(){ var {data}=await sb.from('entregas_items').select('*'); ENTREGAS_ITEMS=data||[]; }
-async function loadItemsVenta(){ var {data}=await sb.from('items_venta').select('*'); ITEMS_VENTA=data||[]; }
+async function loadItemsVenta(){ var {data}=await sb.from('items_venta').select('*').limit(20000); ITEMS_VENTA=data||[]; }
 
 var COLORES_TELAS=['MARINO','NEGRO','GRIS MELANGE','GRIS TOPO','GRIS PERLA','BLANCO','ROJO','BORDO','FRANCIA','AMARILLO','NARANJA','BEIGE','CELESTE','VERDE'];
 var TALLES_PRENDAS=['XS','S','M','L','XL','XXL','3XL','4XL','5XL','6XL','7XL','8XL','UNICO'];
@@ -19725,7 +19838,7 @@ async function deleteFicha(id){
 }
 
 // ── MOVIMIENTOS STOCK ────────────────────────────────────────────────────────
-async function loadMovimientosStock(){var {data}=await sb.from('movimientos_stock').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false});MOVIMIENTOS_STOCK=data||[];}
+async function loadMovimientosStock(){var {data}=await sb.from('movimientos_stock').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false}).limit(10000);MOVIMIENTOS_STOCK=data||[];}
 
 function renderMovimientosStock(){
   var tipo=((document.getElementById('mvstk-tipo')||{}).value||'');
@@ -19865,7 +19978,7 @@ async function saveMovStock(){
 
 // ── LIQUIDACIONES TALLERISTAS ─────────────────────────────────────────────────
 async function loadTalRecepciones(){var {data}=await sb.from('tal_recepciones').select('*').order('fecha',{ascending:false});TAL_RECEPCIONES=data||[];}
-async function loadTalRecepcionesItems(){var {data}=await sb.from('tal_recepciones_items').select('*');TAL_RECEPCIONES_ITEMS=data||[];}
+async function loadTalRecepcionesItems(){var {data}=await sb.from('tal_recepciones_items').select('*').limit(10000);TAL_RECEPCIONES_ITEMS=data||[];}
 async function loadTalPagos(){var {data}=await sb.from('tal_pagos').select('*').order('fecha',{ascending:false});TAL_PAGOS=data||[];}
 async function loadLotesBordStock(){var {data}=await sb.from('lotes_bordado_stock').select('*').order('fecha_envio',{ascending:false});LOTES_BORD_STOCK=data||[];}
 async function loadLotesBordStockItems(){var {data}=await sb.from('lotes_bordado_stock_items').select('*');LOTES_BORD_STOCK_ITEMS=data||[];}
@@ -20094,8 +20207,8 @@ async function deletePagoTal(id){
 
 // ── COMPRAS ──────────────────────────────────────────────────────────────────
 async function loadCompras(){var {data}=await sb.from('compras').select('*').order('fecha',{ascending:false});COMPRAS=data||[];}
-async function loadComprasItems(){var {data}=await sb.from('compras_items').select('*');COMPRAS_ITEMS=data||[];}
-async function loadHistorialPrecios(){var {data}=await sb.from('historial_precios').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false});HISTORIAL_PRECIOS=data||[];}
+async function loadComprasItems(){var {data}=await sb.from('compras_items').select('*').limit(10000);COMPRAS_ITEMS=data||[];}
+async function loadHistorialPrecios(){var {data}=await sb.from('historial_precios').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false}).limit(10000);HISTORIAL_PRECIOS=data||[];}
 
 function renderCompras(){
   var now=new Date().toISOString().slice(0,7);
