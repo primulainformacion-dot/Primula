@@ -9385,6 +9385,29 @@ async function ejecutarSaldoMasivo(){
   renderCCMayoristas();renderDash();
 }
 
+async function eliminarCobro(cobroId, monto, chequeId, ventaId){
+  var v=VENTAS.find(function(x){return x.id===ventaId;})||{};
+  var nuevosaldo=Number(v.saldo||0)+Number(monto||0);
+  var msg='¿Eliminar este cobro de '+$p(monto)+'?\n\nSe va a restaurar el saldo de la venta a '+$p(nuevosaldo)+'.';
+  if(chequeId) msg+='\n\nEl cheque vinculado queda en cartera — si fue creado por error eliminalo desde la sección Cheques.';
+  msg+='\n\nLos movimientos de caja asociados no se revierten automáticamente.';
+  if(!confirm(msg))return;
+
+  // Eliminar cobro
+  var rDel=await sb.from('cobros').delete().eq('id',cobroId);
+  if(rDel.error){toast('Error al eliminar: '+rDel.error.message,'err');return;}
+
+  // Restaurar saldo y estado de la venta
+  var nuevoEstado=nuevosaldo<=0?'cobrado':(nuevosaldo<Number(v.total||0)?'parcial':'pendiente');
+  await sb.from('ventas').update({saldo:nuevosaldo,estado:nuevoEstado,updated_at:new Date().toISOString()}).eq('id',ventaId);
+
+  toast('Cobro eliminado — saldo restaurado a '+$p(nuevosaldo));
+  await Promise.all([loadVentas(),loadCobros(),loadChequesCartera()]);
+  renderDash();
+  verVenta(ventaId,ventaBackSection);
+  if(document.getElementById('sec-clientes').classList.contains('active'))renderCCMayoristas();
+}
+
 async function saldaHistorico(vid, saldo){
   var v=VENTAS.find(function(x){return x.id===vid;});
   if(!v)return;
@@ -9448,14 +9471,14 @@ async function verVenta(id, backSec){
             var chqTxt=(chq.tipo==='echeq'?'⚡ ECHEQ':'📋 CHQ')+(chq.numero?' N°'+chq.numero:'')+(chq.banco?' · '+chq.banco:'')+(chq.emisor?' · '+chq.emisor:'')+(chq.fecha_cobro?'<br><span style="color:#9ca3af;">vto '+fmtF(chq.fecha_cobro)+'</span>':'');
             chqCell='<td style="font-size:11px;color:#374151;">'+chqTxt+'</td>';
           }
-          return '<tr><td>'+fmtF(c.fecha)+'</td><td style="color:#16a34a;font-weight:700;">'+$p(c.monto)+'</td><td>'+c.medio+'</td><td style="font-size:12px;">'+(c.nota||'—')+'</td>'+chqCell+'</tr>';
+          return '<tr><td>'+fmtF(c.fecha)+'</td><td style="color:#16a34a;font-weight:700;">'+$p(c.monto)+'</td><td>'+c.medio+'</td><td style="font-size:12px;">'+(c.nota||'—')+'</td>'+chqCell+'<td><button class="btn btn-sm btn-danger btn-icon" title="Eliminar cobro" onclick="eliminarCobro('+c.id+','+c.monto+','+(c.cheque_id||'null')+','+v.id+')">🗑️</button></td></tr>';
         }).join('');
         var totalRow='<tr style="background:#f0fdf4;border-top:2px solid #bbf7d0;">'+
           '<td style="font-weight:700;color:#166534;" colspan="1">Total cobrado</td>'+
           '<td style="font-weight:800;color:#16a34a;">'+$p(totalCobrado)+'</td>'+
           '<td colspan="2" style="font-size:12px;color:#6b7280;">Saldo pendiente: <strong style="color:'+(Number(v.saldo)>0?'#dc2626':'#16a34a')+';">'+$p(Number(v.saldo))+'</strong></td>'+
-          '<td></td></tr>';
-        return '<div class="tbl"><table><thead><tr><th>Fecha</th><th>Monto</th><th>Medio</th><th>Nota</th><th>Cheque / Trazabilidad</th></tr></thead><tbody>'+rows+totalRow+'</tbody></table></div>';
+          '<td></td><td></td></tr>';
+        return '<div class="tbl"><table><thead><tr><th>Fecha</th><th>Monto</th><th>Medio</th><th>Nota</th><th>Cheque / Trazabilidad</th><th></th></tr></thead><tbody>'+rows+totalRow+'</tbody></table></div>';
       })():
         '<div class="empty"><p>Sin cobros registrados</p></div>')+
       (v.estado!=='cobrado'?
