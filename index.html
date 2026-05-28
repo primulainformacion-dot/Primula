@@ -13544,11 +13544,13 @@ function abrirChqDevuelto(id){
     // Caso venta al banco
     var op=OPERACIONES_VENTA.find(function(o){return o.id===c.venta_id;})||{};
     var cajaLabel=op.caja_destino||'(banco)';
+    var yaHayMovimiento=op.mov_id!=null||op.monto_neto!=null;
     detalleHtml='<div style="background:#fef3c7;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:4px;">'+
       '<div style="font-weight:700;color:#374151;margin-bottom:6px;">⚠️ Cheque rechazado por el banco</div>'+
       (op.banco?'<div style="color:#6b7280;margin-bottom:4px;">Operación de venta: <strong>'+op.banco+'</strong> · '+fmtF(op.fecha_venta)+'</div>':'')+
-      '<div style="color:#6b7280;">Se registrará un <strong>egreso de '+$p(Number(c.monto))+'</strong> en <strong>'+cajaLabel+'</strong> '+
-        '(el banco devuelve el importe que ya había acreditado).</div>'+
+      (yaHayMovimiento
+        ?'<div style="color:#6b7280;">Se registrará un <strong>egreso de '+$p(Number(c.monto))+'</strong> en <strong>'+cajaLabel+'</strong> (la venta ya tenía ingreso registrado).</div>'
+        :'<div style="color:#16a34a;font-weight:600;">La venta aún no tiene ingreso registrado → el cheque se retira de la operación sin crear ningún movimiento financiero.</div>')+
     '</div>';
   }else{
     // Caso endosado a proveedor
@@ -13599,22 +13601,26 @@ async function confirmarChqDevuelto(){
     if(esVendido){
       // ── CASO: vendido al banco y rechazado ──
       var op=OPERACIONES_VENTA.find(function(o){return o.id===c.venta_id;})||{};
-      var cajaDestino=op.caja_destino||'BANCO SRL';
-      var detalleRec='Cheque rechazado por banco · '+(c.emisor||'')+(c.numero?' N°'+c.numero:'')+(nota?' · '+nota:'');
-      // Egreso en la caja del banco (revierte el ingreso que había creado la venta)
-      var {error:eMovB}=await sb.from('movimientos').insert({
-        tipo:'egreso',caja:cajaDestino,fecha,
-        ingreso:0,egreso:Number(c.monto),
-        concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleRec
-      });
-      if(eMovB)throw eMovB;
+      var huboMovimiento=op.mov_id!=null||op.monto_neto!=null;
+      // Solo crear egreso compensatorio si la venta ya tenía un movimiento financiero registrado.
+      // Si no hubo ingreso todavía (comisión pendiente), no hay nada que compensar.
+      if(huboMovimiento){
+        var cajaDestino=op.caja_destino||'BANCO SRL';
+        var detalleRec='Cheque rechazado por banco · '+(c.emisor||'')+(c.numero?' N°'+c.numero:'')+(nota?' · '+nota:'');
+        var {error:eMovB}=await sb.from('movimientos').insert({
+          tipo:'egreso',caja:cajaDestino,fecha,
+          ingreso:0,egreso:Number(c.monto),
+          concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleRec
+        });
+        if(eMovB)throw eMovB;
+      }
       // Cheque vuelve a cartera, se desvincula de la operación de venta
       var {error:eChqV}=await sb.from('cheques_cartera')
         .update({estado:'en_cartera',venta_id:null,cupo_liberado:false,updated_at:new Date().toISOString()})
         .eq('id',id);
       if(eChqV)throw eChqV;
-      // Actualizar operacion_venta: descontar el monto del cheque devuelto del bruto y neto
-      // (la comisión del banco se mantiene — la cobró sobre el lote completo)
+      // Actualizar operacion_venta: descontar el monto del cheque del bruto y neto
+      // (la comisión del banco se mantiene si ya fue registrada — la cobró sobre el lote completo)
       if(op.id){
         var nuevoBruto=Math.max(0, Number(op.monto_bruto||0) - Number(c.monto));
         var nuevoNeto=op.monto_neto!=null ? Math.max(0, Number(op.monto_neto) - Number(c.monto)) : null;
