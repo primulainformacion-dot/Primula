@@ -1319,7 +1319,11 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div style="display:grid;grid-template-columns:1fr 310px;gap:14px;">
         <!-- Izquierda: navegador de productos -->
         <div>
-          <div id="pos-breadcrumb" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;color:#6b7280;min-height:30px;"></div>
+          <div id="pos-breadcrumb" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;color:#6b7280;min-height:30px;"></div>
+          <div id="pos-search-wrap" style="display:none;margin-bottom:10px;">
+            <input id="pos-search-input" type="text" placeholder="🔍 Buscar producto..." oninput="posFilterSearch(this.value)"
+              style="width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;"/>
+          </div>
           <div id="pos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;"></div>
         </div>
         <!-- Derecha: ticket -->
@@ -5006,6 +5010,26 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-chqd')">Cancelar</button>
       <button class="btn btn-green" onclick="saveChqDepositar()">Confirmar acreditación</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: cheque devuelto / no aceptado (endosado → en_cartera) -->
+<div class="modal-bg" id="m-chq-devuelto">
+  <div class="modal" style="max-width:500px;">
+    <h3>↩ Cheque devuelto / no aceptado</h3>
+    <div id="chqdev-info" style="background:#fee2e2;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#374151;"></div>
+    <div id="chqdev-usos" style="margin-bottom:12px;"></div>
+    <div class="field"><label>Motivo / Nota (opcional)</label>
+      <input id="chqdev-nota" placeholder="Ej: proveedor no lo aceptó, fecha muy larga, etc."/>
+    </div>
+    <p style="font-size:12px;color:#9ca3af;margin:10px 0 14px;">
+      El cheque vuelve a <strong>En cartera</strong> y se registra un ingreso compensatorio en CHEQUES/ECHEQ.
+      Las facturas de proveedores abonadas con este cheque quedan <strong>pendientes de pago</strong> nuevamente.
+    </p>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-chq-devuelto')">Cancelar</button>
+      <button class="btn" style="background:#dc2626;border-color:#dc2626;color:#fff;" onclick="confirmarChqDevuelto()">↩ Confirmar devolución</button>
     </div>
   </div>
 </div>
@@ -11963,6 +11987,8 @@ function renderChqCartera(){
       '<td style="white-space:nowrap;">'+
         (c.estado==='en_cartera'&&saldo>0?'<button class="btn btn-sm" onclick="openChqAlCobroModal('+c.id+')" title="Depositar al cobro" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">🏦</button> ':'')+
         (c.estado==='al_cobro'?'<button class="btn btn-sm" onclick="openChqDepositarModal('+c.id+')" title="Confirmar acreditación en banco" style="background:#dcfce7;color:#166534;border-color:#bbf7d0;">✅</button> ':'')+
+        (c.estado==='endosado'?'<button class="btn btn-sm" onclick="abrirChqDevuelto('+c.id+')" title="Cheque devuelto por proveedor — reingresa a cartera" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5;">↩ Dev.</button> ':'')+
+        (c.estado==='vendido'&&!c.cupo_liberado?'<button class="btn btn-sm" onclick="abrirChqDevuelto('+c.id+')" title="Cheque rechazado por el banco — reingresa a cartera" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5;">↩ Banco</button> ':'')+
         (cupoALiberar?'<button class="btn btn-sm" onclick="liberarCupo('+c.id+')" title="Confirmar liberación de cupo" style="background:#fef3c7;color:#92400e;border-color:#fbbf24;">🔓 Liberar</button> ':'')+
         (c.estado==='en_cartera'&&saldoCheque(c.id)>0?'<button class="btn btn-sm" onclick="openImputarModal('+c.id+')" title="Imputar a factura" style="background:#ede9fe;color:#7c3aed;border-color:#ddd6fe;">🔗 Imputar</button> ':'')+
         '<button class="btn btn-gray btn-sm" onclick="openChqUsoModal('+c.id+')" title="Registrar uso como pago">💸</button> '+
@@ -13489,6 +13515,165 @@ async function saveChqDepositar(){
 }
 
 // ══════════════════════════════════════════════
+// CHEQUE DEVUELTO / NO ACEPTADO
+// Cubre dos casos:
+//   endosado → proveedor/tallerista no lo aceptó
+//   vendido  → banco lo rechazó
+// ══════════════════════════════════════════════
+var _chqDevId=null;
+
+function abrirChqDevuelto(id){
+  _chqDevId=id;
+  var c=CHEQUES_CARTERA.find(function(x){return x.id===id;})||{};
+  var esVendido=c.estado==='vendido';
+
+  // Encabezado: datos del cheque
+  document.getElementById('chqdev-info').innerHTML=
+    '<div style="font-weight:700;font-size:14px;margin-bottom:6px;">'+
+      (c.tipo==='echeq'?'<span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:10px;margin-right:6px;">ECHEQ</span>':'')+(c.emisor||'?')+
+    '</div>'+
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#6b7280;">'+
+      '<span>💰 <strong style="color:#374151;">'+$p(Number(c.monto))+'</strong></span>'+
+      (c.numero?'<span>N° '+c.numero+'</span>':'')+
+      (c.banco?'<span>🏦 '+c.banco+'</span>':'')+
+      (c.fecha_cobro?'<span>📅 Vto. '+fmtF(c.fecha_cobro)+'</span>':'')+
+    '</div>';
+
+  var detalleHtml='';
+  if(esVendido){
+    // Caso venta al banco
+    var op=OPERACIONES_VENTA.find(function(o){return o.id===c.venta_id;})||{};
+    var cajaLabel=op.caja_destino||'(banco)';
+    detalleHtml='<div style="background:#fef3c7;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:4px;">'+
+      '<div style="font-weight:700;color:#374151;margin-bottom:6px;">⚠️ Cheque rechazado por el banco</div>'+
+      (op.banco?'<div style="color:#6b7280;margin-bottom:4px;">Operación de venta: <strong>'+op.banco+'</strong> · '+fmtF(op.fecha_venta)+'</div>':'')+
+      '<div style="color:#6b7280;">Se registrará un <strong>egreso de '+$p(Number(c.monto))+'</strong> en <strong>'+cajaLabel+'</strong> '+
+        '(el banco devuelve el importe que ya había acreditado).</div>'+
+    '</div>';
+  }else{
+    // Caso endosado a proveedor
+    var usos=CHEQUE_USOS.filter(function(u){return u.cheque_id===id;});
+    var totalUsos=usos.reduce(function(s,u){return s+Number(u.monto);},0);
+    if(usos.length){
+      detalleHtml='<div style="background:#f9fafb;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:4px;">'+
+        '<div style="font-weight:700;color:#374151;margin-bottom:6px;">Usos registrados que se van a revertir ('+$p(totalUsos)+' total):</div>'+
+        usos.map(function(u){
+          return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f3f4f6;">'+
+            '<span style="color:#6b7280;">'+(u.destinatario||u.concepto||'—')+
+            (u.fecha?' &nbsp;·&nbsp; '+fmtF(u.fecha):'')+'</span>'+
+            '<span style="font-weight:700;color:#dc2626;">'+$p(Number(u.monto))+'</span>'+
+          '</div>';
+        }).join('')+
+      '</div>';
+    }else{
+      detalleHtml='<div style="color:#9ca3af;font-size:12px;margin-bottom:4px;">Sin usos registrados — solo se cambiará el estado.</div>';
+    }
+  }
+  document.getElementById('chqdev-usos').innerHTML=detalleHtml;
+
+  // Actualizar texto explicativo del modal según el caso
+  var párr=document.querySelector('#m-chq-devuelto p');
+  if(párr){
+    if(esVendido){
+      párr.innerHTML='El cheque vuelve a <strong>En cartera</strong>. '+
+        'Se registra un egreso en la caja del banco para compensar el importe que ya había sido acreditado.';
+    }else{
+      párr.innerHTML='El cheque vuelve a <strong>En cartera</strong> y se registra un ingreso compensatorio en CHEQUES/ECHEQ. '+
+        'Las facturas de proveedores abonadas con este cheque quedan <strong>pendientes de pago</strong> nuevamente.';
+    }
+  }
+
+  document.getElementById('chqdev-nota').value='';
+  openM('m-chq-devuelto');
+}
+
+async function confirmarChqDevuelto(){
+  var id=_chqDevId;
+  if(!id)return;
+  var c=CHEQUES_CARTERA.find(function(x){return x.id===id;})||{};
+  var nota=(document.getElementById('chqdev-nota').value||'').trim();
+  var fecha=today();
+  var esVendido=c.estado==='vendido';
+
+  try{
+    if(esVendido){
+      // ── CASO: vendido al banco y rechazado ──
+      var op=OPERACIONES_VENTA.find(function(o){return o.id===c.venta_id;})||{};
+      var cajaDestino=op.caja_destino||'BANCO SRL';
+      var detalleRec='Cheque rechazado por banco · '+(c.emisor||'')+(c.numero?' N°'+c.numero:'')+(nota?' · '+nota:'');
+      // Egreso en la caja del banco (revierte el ingreso que había creado la venta)
+      var {error:eMovB}=await sb.from('movimientos').insert({
+        tipo:'egreso',caja:cajaDestino,fecha,
+        ingreso:0,egreso:Number(c.monto),
+        concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleRec
+      });
+      if(eMovB)throw eMovB;
+      // Cheque vuelve a cartera, se desvincula de la operación de venta
+      var {error:eChqV}=await sb.from('cheques_cartera')
+        .update({estado:'en_cartera',venta_id:null,cupo_liberado:false,updated_at:new Date().toISOString()})
+        .eq('id',id);
+      if(eChqV)throw eChqV;
+      // Actualizar operacion_venta: descontar el monto del cheque devuelto del bruto y neto
+      // (la comisión del banco se mantiene — la cobró sobre el lote completo)
+      if(op.id){
+        var nuevoBruto=Math.max(0, Number(op.monto_bruto||0) - Number(c.monto));
+        var nuevoNeto=op.monto_neto!=null ? Math.max(0, Number(op.monto_neto) - Number(c.monto)) : null;
+        await sb.from('operaciones_venta_cheques')
+          .update({monto_bruto:nuevoBruto, monto_neto:nuevoNeto, updated_at:new Date().toISOString()})
+          .eq('id',op.id);
+      }
+
+    }else{
+      // ── CASO: endosado a proveedor/tallerista y devuelto ──
+      var usos=CHEQUE_USOS.filter(function(u){return u.cheque_id===id;});
+      var totalUsos=usos.reduce(function(s,u){return s+Number(u.monto);},0);
+
+      // 1. Eliminar cheque_usos
+      if(usos.length){
+        var {error:eUsos}=await sb.from('cheque_usos').delete().eq('cheque_id',id);
+        if(eUsos)throw eUsos;
+      }
+      // 2. Revertir factura_pagos y actualizar saldos de facturas
+      var fps=FACTURA_PAGOS.filter(function(fp){return fp.cheque_id===id;});
+      if(fps.length){
+        var {error:eFP}=await sb.from('factura_pagos').delete().eq('cheque_id',id);
+        if(eFP)throw eFP;
+        var factIds=[...new Set(fps.map(function(fp){return fp.factura_id;}))];
+        for(var fi=0;fi<factIds.length;fi++){
+          var fact=PROV_FACTURAS.find(function(f){return f.id===factIds[fi];})||{};
+          var montoPag=fps.filter(function(fp){return fp.factura_id===factIds[fi];})
+            .reduce(function(s,fp){return s+Number(fp.monto);},0);
+          var nuevoSaldo=Math.min(Number(fact.total||0), Number(fact.saldo||0)+montoPag);
+          var nuevoEst=nuevoSaldo>0.01?'pendiente':fact.estado;
+          await sb.from('proveedor_facturas').update({saldo:nuevoSaldo,estado:nuevoEst,updated_at:new Date().toISOString()}).eq('id',factIds[fi]);
+        }
+      }
+      // 3. Movimiento compensatorio ingreso en CHEQUES/ECHEQ
+      if(totalUsos>0.01){
+        var detalleComp='Cheque devuelto/no aceptado · '+(c.emisor||'')+(c.numero?' N°'+c.numero:'')+(nota?' · '+nota:'');
+        var {error:eMov}=await sb.from('movimientos').insert({
+          tipo:'ingreso',caja:'CHEQUES/ECHEQ',fecha,
+          ingreso:totalUsos,egreso:0,
+          concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleComp
+        });
+        if(eMov)throw eMov;
+      }
+      // 4. Cheque vuelve a en_cartera
+      var {error:eChq}=await sb.from('cheques_cartera').update({estado:'en_cartera',updated_at:new Date().toISOString()}).eq('id',id);
+      if(eChq)throw eChq;
+    }
+
+    closeM('m-chq-devuelto');
+    await Promise.all([loadChequesCartera(),loadChequeUsos(),loadFacturaPagos(),loadProvFacturas(),loadOperacionesVenta(),loadMovs()]);
+    renderChqCartera();
+    renderPanelGeneral();
+    toast('✅ Cheque reingresado a cartera');
+  }catch(e){
+    toast('Error: '+(e.message||JSON.stringify(e)),'err');
+  }
+}
+
+// ══════════════════════════════════════════════
 // DEPOSITAR AL COBRO (en_cartera → al_cobro)
 // Sin impacto bancario. Mueve CHEQUES/ECHEQ → CHEQUES AL COBRO
 // ══════════════════════════════════════════════
@@ -14260,6 +14445,8 @@ function posGoRoot(){
   posView='root'; posL2Type=''; posL2Value=''; posL2Label='';
   var bc=document.getElementById('pos-breadcrumb');
   var grid=document.getElementById('pos-grid');
+  var sw=document.getElementById('pos-search-wrap');
+  if(sw)sw.style.display='none';
   if(!bc||!grid)return;
 
   if(currentLocal==='mayorista'){
@@ -14272,24 +14459,36 @@ function posGoRoot(){
     // Categorías con productos San Marcos y stock > 0 en Monte Grande
     bc.innerHTML='<span style="font-weight:700;color:#374151;">📂 Categorías — San Marcos</span>';
     var catMap={};
+    var totalMG=0;
     PRODUCTOS.forEach(function(p){
       if(!p.activo)return;
       var esSM=(p.colegio||'').toLowerCase().includes('san marcos')||!(p.colegio);
       if(!esSM)return;
       var hasStock=STOCK.some(function(s){return s.producto_id===p.id&&s.local==='montegrande'&&s.cantidad>0;});
       if(!hasStock)return;
+      totalMG++;
       var cid=p.categoria_id||0;
       var cnm=p.categorias?p.categorias.nombre:'Sin categoría';
       if(!catMap[cid])catMap[cid]={id:cid,nombre:cnm,count:0};
       catMap[cid].count++;
     });
-    var cats=Object.values(catMap).sort(function(a,b){return a.nombre<b.nombre?-1:1;});
-    if(!cats.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">Sin stock en Monte Grande</div>';return;}
     var btnSt=posNavBtnStyle();
+    // Contar todos los productos con stock en MG (sin filtro colegio)
+    var totalMGAll=PRODUCTOS.filter(function(p){
+      if(!p.activo)return false;
+      return STOCK.some(function(s){return s.producto_id===p.id&&s.local==='montegrande'&&s.cantidad>0;});
+    }).length;
+    var cats=Object.values(catMap).sort(function(a,b){return a.nombre<b.nombre?-1:1;});
+    var btnVerTodos='<button onclick="posGoLevel2(\'all\',\'all\',\'Todos los productos\')" style="padding:18px 10px;background:linear-gradient(135deg,#15803d,#22c55e);color:#fff;border:none;border-radius:14px;cursor:pointer;font-size:14px;font-weight:700;text-align:center;line-height:1.3;width:100%;box-shadow:0 2px 8px rgba(34,197,94,.35);">'+
+      '🔍 Ver todos<div style="font-size:11px;opacity:.85;margin-top:4px;">'+totalMGAll+' con stock</div></button>';
+    if(!cats.length){
+      grid.innerHTML=btnVerTodos+'<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">Sin stock San Marcos en Monte Grande</div>';
+      return;
+    }
     grid.innerHTML=cats.map(function(c){
       return '<button onclick="posGoLevel2(\'cat\',\''+c.id+'\',\''+c.nombre+'\')" style="'+btnSt+'">'+
         c.nombre+'<div style="font-size:11px;opacity:.8;margin-top:4px;">'+c.count+' producto'+(c.count!==1?'s':'')+'</div></button>';
-    }).join('');
+    }).join('')+btnVerTodos;
 
   }else if(currentLocal==='llavallol'){
     bc.innerHTML='<span style="font-weight:700;color:#374151;">🏫 Colegios</span>';
@@ -14306,13 +14505,20 @@ function posGoRoot(){
     var cols=COLEGIOS_LISTA.map(function(nombre){return {value:nombre,label:nombre,count:colCount[nombre]||0};});
     // Agregar "Sin colegio" si hay productos sin colegio con stock
     if(colCount['__gen__'])cols.push({value:'__gen__',label:'🏷️ Sin colegio',count:colCount['__gen__']});
+    // Contar todos los productos con stock en LL
+    var totalLLAll=PRODUCTOS.filter(function(p){
+      if(!p.activo)return false;
+      return STOCK.some(function(s){return s.producto_id===p.id&&s.local==='llavallol'&&s.cantidad>0;});
+    }).length;
+    var btnVerTodosL='<button onclick="posGoLevel2(\'all\',\'all\',\'Todos los productos\')" style="padding:18px 10px;background:linear-gradient(135deg,#15803d,#22c55e);color:#fff;border:none;border-radius:14px;cursor:pointer;font-size:14px;font-weight:700;text-align:center;line-height:1.3;width:100%;box-shadow:0 2px 8px rgba(34,197,94,.35);">'+
+      '🔍 Ver todos<div style="font-size:11px;opacity:.85;margin-top:4px;">'+totalLLAll+' con stock</div></button>';
     grid.innerHTML=cols.map(function(c){
       var sinStock=c.count===0;
       var st=sinStock?posNavBtnStyle().replace('cursor:pointer','cursor:default').replace(/box-shadow:[^;]+;/,'')+'opacity:.45;filter:grayscale(.6);':posNavBtnStyle();
       var click=sinStock?'':'onclick="posGoLevel2(\'colegio\',\''+c.value+'\',\''+c.label+'\')"';
       return '<button '+click+' style="'+st+'">'+
         c.label+'<div style="font-size:11px;opacity:.8;margin-top:4px;">'+(sinStock?'Sin stock':c.count+' producto'+(c.count!==1?'s':''))+'</div></button>';
-    }).join('');
+    }).join('')+btnVerTodosL;
   }
 }
 
@@ -14320,17 +14526,42 @@ function posGoLevel2(type, value, label){
   posView='level2'; posL2Type=type; posL2Value=value; posL2Label=label;
   var bc=document.getElementById('pos-breadcrumb');
   var grid=document.getElementById('pos-grid');
+  var sw=document.getElementById('pos-search-wrap');
   bc.innerHTML='<button onclick="posGoRoot()" style="background:#f3f4f6;border:none;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:13px;color:#374151;">← Volver</button>'+
     '<span style="color:#9ca3af;">›</span><span style="font-weight:700;color:#374151;">'+label+'</span>';
 
+  // Mostrar/ocultar buscador (solo en "Ver todos")
+  if(sw){
+    if(type==='all'){
+      sw.style.display='';
+      var inp=document.getElementById('pos-search-input');
+      if(inp)inp.value='';
+    }else{
+      sw.style.display='none';
+    }
+  }
+
+  posRenderLevel2Grid(type, value, '');
+}
+
+function posRenderLevel2Grid(type, value, q){
+  var grid=document.getElementById('pos-grid');
+  if(!grid)return;
+  var local=currentLocal;
+  var qn=(q||'').toLowerCase().trim();
+
   var prods=PRODUCTOS.filter(function(p){
     if(!p.activo)return false;
+    if(type==='all') return true;
     if(type==='cat') return String(p.categoria_id)===String(value);
     if(value==='__gen__') return !p.colegio;
     return (p.colegio||'')===value;
   });
 
-  var local=currentLocal;
+  if(qn){
+    prods=prods.filter(function(p){ return (p.nombre||'').toLowerCase().includes(qn); });
+  }
+
   var html='';
   prods.forEach(function(p){
     var talles=STOCK.filter(function(s){return s.producto_id===p.id&&s.local===local&&s.cantidad>0;});
@@ -14352,8 +14583,14 @@ function posGoLevel2(type, value, label){
     html+='</div></div>';
   });
 
-  if(!html)html='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">Sin stock disponible</div>';
+  if(!html){
+    html='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">'+(qn?'Sin resultados para "'+q+'"':'Sin stock disponible')+'</div>';
+  }
   grid.innerHTML=html;
+}
+
+function posFilterSearch(q){
+  posRenderLevel2Grid(posL2Type, posL2Value, q);
 }
 
 function posAddItem(prodId,nombre,talle,color,precio,stockDisp){
@@ -21624,6 +21861,7 @@ function closeManual(){document.getElementById('man-overlay').classList.remove('
           <tr><td><span class="man-pill mpr">Rechazado</span></td><td>Rechazado al intentar cobrarlo — el cliente incumplió</td></tr>
         </tbody></table>
         <div class="man-call man-call-blue"><div class="man-ci">💡</div><div><b>Estado "Al cobro":</b> cuando presentás un cheque al banco pero todavía no acreditó, usá este estado intermedio. Una vez que acredita, pasalo a "Depositado" con la fecha real de depósito. Esto evita contar el dinero dos veces.</div></div>
+        <div class="man-call man-call-green"><div class="man-ci">📌</div><div>Los cheques recibidos como pago de clientes se crean <b>automáticamente</b> cuando registrás un cobro con medio "Cheque" en CC Mayoristas. No hace falta cargarlos a mano acá. Ver flujo completo en la sección <a href="#man-clientes" style="color:#16a34a;font-weight:700;">Clientes y CC — Pago con cheque</a>.</div></div>
         <a class="man-back" href="#man-body">▲ Volver al índice</a>
       </div>
 
@@ -21670,6 +21908,19 @@ function closeManual(){document.getElementById('man-overlay').classList.remove('
         <div class="man-step"><div class="man-snum">2</div><div><h4>Expandí al cliente y buscá la venta</h4><p>Hacé clic en la tarjeta del cliente para ver todas sus ventas con saldo pendiente.</p></div></div>
         <div class="man-step"><div class="man-snum">3</div><div><h4>Clic en "💰 Cobrar" en la venta correspondiente</h4><p>Completá: monto cobrado, medio de pago (efectivo, transferencia, cheque, etc.) y caja donde entra el dinero.</p></div></div>
         <div class="man-step"><div class="man-snum">4</div><div><h4>Confirmá</h4><p>El saldo de esa venta se reduce. Si llega a $0, pasa automáticamente a <span class="man-pill mpg">Cobrado</span>. Si es pago parcial, queda en <span class="man-pill mpy">Parcial</span>.</p></div></div>
+        <div class="man-sub">Cómo registrar un pago con cheque</div>
+        <p class="man-txt">Cuando un cliente te paga con un cheque de terceros (cheque físico o ECHEQ), el flujo tiene <strong>dos partes</strong>: registrar el cobro ahora, y luego gestionar el cheque cuando lo depositás.</p>
+        <div class="man-call man-call-blue"><div class="man-ci">💡</div><div><b>Importante:</b> al elegir "Cheque" como medio de pago, el sistema hace todo automáticamente: registra el cobro, actualiza el saldo de la venta <em>y</em> crea el cheque en cartera. No tenés que ir a cargar el cheque por separado.</div></div>
+        <p class="man-txt" style="font-weight:700;color:#374151;margin-top:8px;">— Parte 1: registrar el cobro —</p>
+        <div class="man-step"><div class="man-snum">1</div><div><h4>Clic en "💰 Cobrar" en la venta del cliente</h4><p>Se abre el formulario de cobro con el saldo pendiente precargado.</p></div></div>
+        <div class="man-step"><div class="man-snum">2</div><div><h4>Seleccioná "Cheque" en Medio de pago</h4><p>Aparece automáticamente una sección azul con los datos del cheque.</p></div></div>
+        <div class="man-step"><div class="man-snum">3</div><div><h4>Completá los datos del cheque</h4><p><strong>Tipo:</strong> Cheque físico o ECHEQ. <strong>Emisor:</strong> nombre de quien firmó el cheque (viene con el nombre del cliente por defecto). <strong>N° cheque:</strong> número impreso en el cheque. <strong>Banco:</strong> banco del emisor. <strong>Fecha de cobro:</strong> la fecha que figura en el cheque (cuándo se puede cobrar).</p></div></div>
+        <div class="man-step"><div class="man-snum">4</div><div><h4>Ingresá el monto y confirmá</h4><p>El sistema hace todo solo: reduce el saldo de la venta, crea el cheque en cartera con estado <span class="man-pill mpb">En cartera</span>, y registra un ingreso en la caja CHEQUES/ECHEQ.</p></div></div>
+        <div class="man-call man-call-green"><div class="man-ci">✅</div><div>Después del cobro, el cheque aparece automáticamente en <strong>Cheques → En Cartera</strong>. El dinero figura en la caja "CHEQUES/ECHEQ" hasta que lo depositás.</div></div>
+        <p class="man-txt" style="font-weight:700;color:#374151;margin-top:8px;">— Parte 2: depositar el cheque (cuando llega la fecha) —</p>
+        <div class="man-step"><div class="man-snum">5</div><div><h4>Cuando presentás el cheque al banco → marcá "Al cobro"</h4><p>Andá a <strong>Cheques → En Cartera</strong>, buscá el cheque y cambiá el estado a <span class="man-pill mpy">Al cobro</span>. El cheque pasa a la sección "CHEQUES AL COBRO". El dinero aún no está en el banco.</p></div></div>
+        <div class="man-step"><div class="man-snum">6</div><div><h4>Cuando el banco acredita → marcá "Depositado"</h4><p>Una vez que el banco confirma la acreditación, cambiá el estado a <span class="man-pill mpg">Depositado</span>. El sistema registra el ingreso real en el banco y cierra el ciclo.</p></div></div>
+        <div class="man-call man-call-amber"><div class="man-ci">⚠️</div><div><b>Si el cheque rebota:</b> cambiá el estado a <span class="man-pill mpr">Rechazado</span>. El saldo de la venta NO se revierte automáticamente — vas a necesitar anular el cobro manualmente y acordar con el cliente cómo repaga.</div></div>
         <div class="man-sub">Ver cuenta completa de un cliente</div>
         <p class="man-txt">Clic en <strong>"Ver cuenta"</strong> en la tarjeta del cliente para ver todo el historial: ventas, cobros, NCs, número de factura. Desde ahí podés buscar por número de factura y también dar de baja NCs antiguas.</p>
         <div class="man-sub">Eliminar un cliente</div>
