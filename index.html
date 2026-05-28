@@ -5489,7 +5489,7 @@ var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYWF1c25yZ29ra3ljeHVjZHJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODc4MjU2NiwiZXhwIjoyMDk0MzU4NTY2fQ.eV4oUl1ZhbDzIOFbIHMEkTIBTE_GrQYzJXpDfwF8zDM';
 
 // ── ESTADO GLOBAL ──
-var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CHQP_IMPUTACIONES=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[], ITEMS_VENTA=[], AVIOS=[], FICHAS_COSTO=[], FICHAS_COSTO_TELAS=[], FICHAS_COSTO_AVIOS=[], COMPRAS=[], COMPRAS_ITEMS=[], HISTORIAL_PRECIOS=[], TAL_RECEPCIONES=[], TAL_RECEPCIONES_ITEMS=[], TAL_PAGOS=[], MOVIMIENTOS_STOCK=[], DEVOLUCIONES=[], DEVOLUCIONES_ITEMS=[], LOTES_BORD_STOCK=[], LOTES_BORD_STOCK_ITEMS=[];
+var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CHQP_IMPUTACIONES=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[], ITEMS_VENTA=[], AVIOS=[], FICHAS_COSTO=[], FICHAS_COSTO_TELAS=[], FICHAS_COSTO_AVIOS=[], COMPRAS=[], COMPRAS_ITEMS=[], HISTORIAL_PRECIOS=[], TAL_RECEPCIONES=[], TAL_RECEPCIONES_ITEMS=[], TAL_PAGOS=[], MOVIMIENTOS_STOCK=[], DEVOLUCIONES=[], DEVOLUCIONES_ITEMS=[], LOTES_BORD_STOCK=[], LOTES_BORD_STOCK_ITEMS=[], COBROS=[];
 var CONCEPTOS_POR_TIPO={
   'CONFESIÓN':['Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal','Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre','Chaleco Polar','Campera Polar','Campera Friza','Campera canguro','Sudadera','Joggins','Pantalón común','Cuellos','Bufandas / Cuellos','Reflectivo','Cofia','Arreglo'],
   'BORDADO':[],
@@ -5611,7 +5611,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 // ── LOAD ──
 async function loadAll(){
-  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChqPropiosImputaciones(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems(),loadItemsVenta(),loadAvios(),loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios(),loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadTalRecepciones(),loadTalRecepcionesItems(),loadTalPagos(),loadMovimientosStock(),loadDevoluciones(),loadDevolucionesItems(),loadLotesBordStock(),loadLotesBordStockItems()]);
+  await Promise.all([loadClientes(),loadProveedores(),loadProductos(),loadCategorias(),loadVentas(),loadStock(),loadPresupuestos(),loadMovs(),loadMoratorias(),loadTalleristas(),loadPersonal(),loadTalHistorial(),loadTalPreciosPrenda(),loadTalPreciosPrendaHist(),loadChequesPropios(),loadChqPropiosImputaciones(),loadChequesCartera(),loadChequeUsos(),loadProvFacturas(),loadFacturaPagos(),loadCierresCaja(),loadObjetivos(),loadObjMetas(),loadOperacionesVenta(),loadTransferenciasStock(),loadFacturasClientes(),loadChequeImputaciones(),loadGastosFijos(),loadGfPagos(),loadMateriales(),loadTelasStock(),loadTelasTipos(),loadOrdenes(),loadOrdenesItems(),loadPedidos(),loadPedidosItems(),loadTizadas(),loadTizadasItems(),loadEnviosCostura(),loadEnviosCosturaItems(),loadEnviosBordado(),loadEnviosBordadoItems(),loadEntregas(),loadEntregasItems(),loadItemsVenta(),loadAvios(),loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios(),loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadTalRecepciones(),loadTalRecepcionesItems(),loadTalPagos(),loadMovimientosStock(),loadDevoluciones(),loadDevolucionesItems(),loadLotesBordStock(),loadLotesBordStockItems(),loadCobros()]);
   renderDash(); renderClientes(); renderProveedores(); renderProductos(); renderPres(); renderFinCajas(); renderFin(); renderMoratorias(); renderAlertas(); renderPanelGeneral(); renderTalleristas(); renderPersonal();
   poblarSelectClientes(); poblarSelectProductos(); poblarSelectCategorias(); poblarSelectProveedoresChq();
 }
@@ -5629,6 +5629,7 @@ async function loadChequesPropios(){ var {data}=await sb.from('cheques_propios')
 async function loadChqPropiosImputaciones(){ var {data}=await sb.from('cheques_propios_imputaciones').select('*'); CHQP_IMPUTACIONES=data||[]; }
 async function loadChequesCartera(){ var {data}=await sb.from('cheques_cartera').select('*').order('fecha_cobro',{ascending:true}); CHEQUES_CARTERA=data||[]; }
 async function loadChequeUsos(){ var {data}=await sb.from('cheque_usos').select('*'); CHEQUE_USOS=data||[]; }
+async function loadCobros(){ var {data}=await sb.from('cobros').select('*').order('fecha',{ascending:true}); COBROS=data||[]; }
 async function loadProvFacturas(){ var {data}=await sb.from('proveedor_facturas').select('*').order('fecha',{ascending:false}); PROV_FACTURAS=data||[]; }
 async function loadFacturaPagos(){ var {data}=await sb.from('factura_pagos').select('*'); FACTURA_PAGOS=data||[]; }
 async function loadPersonal(){ var {data}=await sb.from('personal').select('*').order('nombre'); PERSONAL=data||[]; }
@@ -6672,7 +6673,7 @@ async function aplicarCompensacionNC(){
 
   closeM('m-compensar-nc');
   toast('NC compensada'+(saldaResto&&restoSaldo===0?' + saldo histórico':'')+' ✔️');
-  await loadVentas();
+  await Promise.all([loadVentas(),loadCobros()]);
   renderCCMayoristas();
 }
 
@@ -6683,7 +6684,7 @@ async function darDeBajaNC(ventaId){
   var r=await sb.from('ventas').update({saldo:0,estado:'cobrado',nota:(v.nota?v.nota+' ':'')+'[NC dada de baja]'}).eq('id',ventaId);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
   toast('NC #'+ventaId+' dada de baja ✔️');
-  await loadVentas();
+  await Promise.all([loadVentas(),loadCobros()]);
   renderCCMayoristas();
 }
 // ─────────────────────────────────────────────────────
@@ -6828,7 +6829,7 @@ async function aplicarSaldarHistoricoMasivo(){
   else toast('✅ '+ids.length+' ventas saldadas históricamente');
 
   closeM('m-saldar-historico-masivo');
-  await loadVentas();
+  await Promise.all([loadVentas(),loadCobros()]);
   renderCCMayoristas();
 }
 
@@ -6894,7 +6895,7 @@ async function aplicarRecalculoSaldos(){
   _recalcPendientes=[];
   closeM('m-recalc-saldos');
   toast(corregidas+' venta(s) corregida(s) ✔️');
-  await loadVentas();
+  await Promise.all([loadVentas(),loadCobros()]);
   renderCCMayoristas();
 }
 function renderCCMayoristas(){
@@ -6946,7 +6947,8 @@ function renderCCMayoristas(){
     var ventasRows=ventasCli.slice(0,8).map(function(v){
       var estadoBadge=v.estado==='cobrado'?'b-green':v.estado==='parcial'?'b-blue':'b-yellow';
       var esNC=Number(v.total)<0;
-      return '<tr'+(esNC?' style="background:#fff5f5;"':'')+'>'+
+      var cobrosV=COBROS.filter(function(cb){return cb.venta_id===v.id;}).sort(function(a,b){return a.fecha<b.fecha?-1:1;});
+      var mainRow='<tr'+(esNC?' style="background:#fff5f5;"':'')+'>'+
         '<td style="font-size:12px;color:#6b7280;">'+fmtF(v.fecha)+(esNC?' <span class="badge b-red" style="font-size:10px;padding:1px 5px;">NC</span>':'')+' </td>'+
         '<td style="font-size:12px;color:#6c7ae0;font-weight:600;">'+(v.nro_factura||'—')+'</td>'+
         '<td style="text-align:right;font-weight:700;">'+$p(Number(v.total))+'</td>'+
@@ -6958,6 +6960,23 @@ function renderCCMayoristas(){
           '<button class="btn btn-sm btn-gray" onclick="verVenta('+v.id+',\'cuenta\')">Ver</button>'+
         '</td>'+
       '</tr>';
+      var subRow='';
+      if(cobrosV.length){
+        var pills=cobrosV.map(function(cb){
+          var chq=cb.cheque_id?CHEQUES_CARTERA.find(function(ch){return ch.id===cb.cheque_id;}):null;
+          var medio=cb.medio||'';
+          var icon=medio==='cheque'||medio==='echeq'?'🧾':(medio==='efectivo'?'💵':(medio==='transferencia'?'🏦':'💳'));
+          var txt=fmtF(cb.fecha)+' '+icon+' '+$p(cb.monto);
+          if(chq){
+            txt+=' · '+(chq.tipo==='echeq'?'ECHEQ':'Cheq')+(chq.numero?' #'+chq.numero:'')+(chq.banco?' '+chq.banco:'')+(chq.emisor?' · '+chq.emisor:'')+(chq.fecha_cobro?' vto '+fmtF(chq.fecha_cobro):'');
+          }else if(medio&&medio!=='cheque'&&medio!=='echeq'){
+            txt+=' · '+medio;
+          }
+          return '<span style="display:inline-block;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;font-size:11px;padding:2px 8px;border-radius:20px;margin:2px 3px 2px 0;white-space:nowrap;">'+txt+'</span>';
+        }).join('');
+        subRow='<tr><td colspan="6" style="padding:0 10px 7px 28px;background:'+(esNC?'#fff5f5':'#fafafa')+';border-top:none;">'+pills+'</td></tr>';
+      }
+      return mainRow+subRow;
     }).join('');
 
     return '<div style="margin-bottom:14px;border:2px solid '+(hayDeuda?'#fecaca':'#e5e7eb')+';border-radius:12px;overflow:hidden;">'+
@@ -9306,7 +9325,7 @@ async function saveCobro(){
 
   toast('Cobro registrado'+(nuevoEstado==='cobrado'?' — ¡Venta cobrada al 100%!':''));
   closeM('m-cobro');
-  await Promise.all([loadVentas(),loadMovs(),loadChequesCartera()]);
+  await Promise.all([loadVentas(),loadMovs(),loadChequesCartera(),loadCobros()]);
   renderDash();renderFin();
   if(document.getElementById('sec-local').classList.contains('active'))renderLocalVentas();
   if(document.getElementById('sec-cuenta').classList.contains('active')&&cid)verCuenta(cid);
@@ -9371,7 +9390,7 @@ async function ejecutarSaldoMasivo(){
   if(btn){btn.disabled=false;btn.textContent='✓ Saldar seleccionadas';}
   toast((chks.length-errores)+' ventas saldadas'+(errores?' ('+errores+' errores)':''));
   closeM('m-saldo-masivo');
-  await loadVentas();
+  await Promise.all([loadVentas(),loadCobros()]);
   renderCCMayoristas();renderDash();
 }
 
@@ -9398,7 +9417,7 @@ async function saldaHistorico(vid, saldo){
   var idx=VENTAS.findIndex(function(x){return x.id===vid;});
   if(idx>=0){VENTAS[idx].saldo=0;VENTAS[idx].estado='cobrado';}
   toast('Venta #'+vid+' saldada históricamente ✓');
-  await loadVentas();
+  await Promise.all([loadVentas(),loadCobros()]);
   renderDash();
   // Refrescar vista actual
   verVenta(vid,ventaBackSection);
@@ -11902,7 +11921,7 @@ async function saveImputacion(){
     // ya fue registrado cuando se cargó el cheque a la cartera.
     toast('✅ Cobro registrado: '+$p(monto)+' · '+(cli.nombre||'Vta #'+ventaId));
     closeM('m-imputar');
-    await Promise.all([loadChequesCartera(),loadChequeImputaciones(),loadVentas(),loadMovs()]);
+    await Promise.all([loadChequesCartera(),loadChequeImputaciones(),loadVentas(),loadMovs(),loadCobros()]);
     renderChqCartera();
 
   }else{
@@ -11927,7 +11946,7 @@ async function saveImputacion(){
     }
     toast('Imputación registrada: '+$p(monto));
     closeM('m-imputar');
-    await Promise.all([loadChequesCartera(),loadChequeImputaciones(),loadFacturasClientes(),loadVentas(),loadMovs()]);
+    await Promise.all([loadChequesCartera(),loadChequeImputaciones(),loadFacturasClientes(),loadVentas(),loadMovs(),loadCobros()]);
     renderChqCartera();
     renderFacturasClientes();
   }
