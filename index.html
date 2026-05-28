@@ -4872,7 +4872,16 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <h3>✏️ Editar operación bancaria</h3>
     <div id="mvc-info" style="background:#f9fafb;border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:13px;"></div>
     <!-- Lista de cheques vinculados a esta venta -->
-    <div id="mvc-cheques" style="margin-bottom:14px;"></div>
+    <div id="mvc-cheques" style="margin-bottom:10px;"></div>
+    <!-- Agregar cheque quitado por error -->
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="mvc-cheque-agregar" style="flex:1;padding:7px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
+          <option value="">＋ Volver a agregar cheque quitado por error...</option>
+        </select>
+        <button onclick="agregarChequeAVenta()" style="padding:7px 14px;background:#ede9fe;color:#7c3aed;border:1px solid #ddd6fe;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;">＋ Agregar</button>
+      </div>
+    </div>
     <div class="grid2">
       <div class="field"><label>Día de venta *</label>
         <input type="date" id="mvc-fecha-venta"/>
@@ -14339,13 +14348,17 @@ function renderChqOperaciones(){
   cont.innerHTML=html;
 }
 
-function openVentaCostoModal(ventaId){
-  editVentaCostoId=ventaId;
+// Refresca la parte dinámica del modal (header + lista de cheques + select agregar + neto)
+// sin cerrar/abrir el modal — se llama después de cada agregar/quitar
+function mvcRefreshDinamico(ventaId){
   var op=OPERACIONES_VENTA.find(function(o){return o.id===ventaId;});
   if(!op)return;
   var chequesOp=CHEQUES_CARTERA.filter(function(c){return c.venta_id===ventaId;});
+  var hayMovimiento=op.mov_id!=null||op.monto_neto!=null;
+
+  // Header: conteo y bruto actualizados
   var info=document.getElementById('mvc-info');
-  info.innerHTML=
+  if(info) info.innerHTML=
     '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'+
     '<span style="font-weight:700;font-size:14px;">'+op.banco+'</span>'+
     '<span style="color:#6b7280;">'+fmtF(op.fecha_venta)+'</span>'+
@@ -14353,32 +14366,56 @@ function openVentaCostoModal(ventaId){
     '<span style="font-weight:700;color:#374151;">Bruto: '+$p(Number(op.monto_bruto||0))+'</span>'+
     (op.mov_id?'<span class="badge b-green">✓ Ingreso registrado</span>':'<span class="badge b-amber">Sin ingreso aún</span>')+
     '</div>';
-  // Lista de cheques vinculados
+
+  // Lista de cheques
   var chqDiv=document.getElementById('mvc-cheques');
-  if(chequesOp.length){
-    var hayMovimiento=op.mov_id!=null||op.monto_neto!=null;
-    chqDiv.innerHTML=
-      '<div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:6px;letter-spacing:.5px;">CHEQUES EN ESTA VENTA</div>'+
-      '<div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">'+
-      chequesOp.map(function(c,i){
-        var bg=i%2===0?'#fff':'#f9fafb';
-        return '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:'+bg+';font-size:12px;">'+
-          '<span style="flex:1;font-weight:600;color:#374151;">'+(c.emisor||'—')+'</span>'+
-          (c.numero?'<span style="color:#9ca3af;">N° '+c.numero+'</span>':'')+
-          (c.banco?'<span style="color:#9ca3af;">'+c.banco+'</span>':'')+
-          (c.fecha_cobro?'<span style="color:#9ca3af;">vto '+fmtF(c.fecha_cobro)+'</span>':'')+
-          '<span style="font-weight:700;color:#374151;white-space:nowrap;">'+$p(Number(c.monto))+'</span>'+
-          '<button onclick="quitarChequeDeVenta('+c.id+','+ventaId+')" '+
-            'title="Quitar este cheque de la venta — vuelve a En cartera" '+
-            'style="padding:3px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;">'+
-            '↩ Quitar</button>'+
-        '</div>';
-      }).join('')+
-      '</div>'+
-      (hayMovimiento?'<div style="font-size:11px;color:#d97706;margin-top:5px;">⚠️ Esta venta ya tiene ingreso registrado — quitar un cheque creará un egreso compensatorio.</div>':'<div style="font-size:11px;color:#16a34a;margin-top:5px;">✓ Sin ingreso registrado aún — quitar cheques no genera movimientos financieros.</div>');
-  }else{
-    chqDiv.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px 0;">Sin cheques vinculados a esta operación.</div>';
+  if(chqDiv){
+    if(chequesOp.length){
+      chqDiv.innerHTML=
+        '<div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:6px;letter-spacing:.5px;">CHEQUES EN ESTA VENTA</div>'+
+        '<div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">'+
+        chequesOp.map(function(c,i){
+          var bg=i%2===0?'#fff':'#f9fafb';
+          return '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:'+bg+';font-size:12px;">'+
+            '<span style="flex:1;font-weight:600;color:#374151;">'+(c.emisor||'—')+'</span>'+
+            (c.numero?'<span style="color:#9ca3af;">N° '+c.numero+'</span>':'')+
+            (c.banco?'<span style="color:#9ca3af;">'+c.banco+'</span>':'')+
+            (c.fecha_cobro?'<span style="color:#9ca3af;">vto '+fmtF(c.fecha_cobro)+'</span>':'')+
+            '<span style="font-weight:700;color:#374151;white-space:nowrap;">'+$p(Number(c.monto))+'</span>'+
+            '<button onclick="quitarChequeDeVenta('+c.id+','+ventaId+')" '+
+              'style="padding:3px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;">'+
+              '↩ Quitar</button>'+
+          '</div>';
+        }).join('')+
+        '</div>'+
+        (hayMovimiento
+          ?'<div style="font-size:11px;color:#d97706;margin-top:5px;">⚠️ Venta con ingreso registrado — quitar un cheque crea egreso compensatorio.</div>'
+          :'<div style="font-size:11px;color:#16a34a;margin-top:5px;">✓ Sin ingreso registrado — quitar cheques no genera movimientos financieros.</div>');
+    }else{
+      chqDiv.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px 0;">Sin cheques vinculados a esta operación.</div>';
+    }
   }
+
+  // Select de agregar (cheques en_cartera sin operación)
+  var selAgregar=document.getElementById('mvc-cheque-agregar');
+  if(selAgregar){
+    selAgregar.innerHTML='<option value="">＋ Volver a agregar cheque quitado por error...</option>';
+    CHEQUES_CARTERA.filter(function(c){return c.estado==='en_cartera'&&!c.venta_id;}).forEach(function(c){
+      var o=document.createElement('option');
+      o.value=c.id;
+      o.textContent=(c.emisor||'?')+(c.numero?' · N°'+c.numero:'')+(c.banco?' · '+c.banco:'')+(c.fecha_cobro?' · vto '+fmtF(c.fecha_cobro):'')+' · '+$p(Number(c.monto));
+      selAgregar.appendChild(o);
+    });
+  }
+
+  // Neto recalculado
+  mvcActualizar();
+}
+
+function openVentaCostoModal(ventaId){
+  editVentaCostoId=ventaId;
+  var op=OPERACIONES_VENTA.find(function(o){return o.id===ventaId;});
+  if(!op)return;
   document.getElementById('mvc-fecha-venta').value=op.fecha_venta||'';
   document.getElementById('mvc-fecha-acred').value=op.fecha_acreditacion||'';
   document.getElementById('mvc-descuento').value=op.descuento||'';
@@ -14386,7 +14423,7 @@ function openVentaCostoModal(ventaId){
   var sel=document.getElementById('mvc-caja-destino');
   sel.value=op.caja_destino||'BANCO SRL';
   sel.disabled=!!op.mov_id;
-  mvcActualizar();
+  mvcRefreshDinamico(ventaId);
   openM('m-venta-costo');
 }
 
@@ -14396,6 +14433,48 @@ function mvcActualizar(){
   var desc=parseFloat(document.getElementById('mvc-descuento').value)||0;
   var bruto=Number(op.monto_bruto||0);
   document.getElementById('mvc-neto').textContent=desc>0?$p(bruto-desc):(bruto>0?$p(bruto)+' (sin desc.)':'—');
+}
+
+async function agregarChequeAVenta(){
+  var sel=document.getElementById('mvc-cheque-agregar');
+  var chequeId=parseInt(sel.value)||null;
+  if(!chequeId){toast('Seleccioná un cheque','err');return;}
+  var ventaId=editVentaCostoId;
+  var c=CHEQUES_CARTERA.find(function(x){return x.id===chequeId;})||{};
+  var op=OPERACIONES_VENTA.find(function(o){return o.id===ventaId;})||{};
+  if(!c.id||!op.id)return;
+  var hayMovimiento=op.mov_id!=null||op.monto_neto!=null;
+  try{
+    // 1. Vincular cheque a la operación y marcarlo como vendido
+    var {error:eChq}=await sb.from('cheques_cartera')
+      .update({estado:'vendido',venta_id:ventaId,updated_at:new Date().toISOString()})
+      .eq('id',chequeId);
+    if(eChq)throw eChq;
+    // 2. Actualizar monto_bruto (y neto si corresponde) de la operación
+    var nuevoBruto=Number(op.monto_bruto||0)+Number(c.monto);
+    var nuevoNeto=op.monto_neto!=null?Number(op.monto_neto)+Number(c.monto):null;
+    var {error:eOp}=await sb.from('operaciones_venta_cheques')
+      .update({monto_bruto:nuevoBruto,monto_neto:nuevoNeto,updated_at:new Date().toISOString()})
+      .eq('id',ventaId);
+    if(eOp)throw eOp;
+    // 3. Si la operación ya tenía movimiento financiero, crear ingreso compensatorio
+    if(hayMovimiento){
+      await sb.from('movimientos').insert({
+        tipo:'ingreso',caja:op.caja_destino||'BANCO SRL',fecha:today(),
+        ingreso:Number(c.monto),egreso:0,
+        concepto:'CHEQUES/TRANSFERENCIAS',
+        detalle:'Cheque reincorporado a venta · '+(c.emisor||'')+(c.numero?' N°'+c.numero:'')
+      });
+    }
+    // 4. Recargar y reabrir modal
+    await Promise.all([loadChequesCartera(),loadOperacionesVenta(),loadMovs()]);
+    renderChqCartera();
+    renderPanelGeneral();
+    mvcRefreshDinamico(ventaId);
+    toast('✅ Cheque reincorporado a la venta');
+  }catch(e){
+    toast('Error: '+(e.message||JSON.stringify(e)),'err');
+  }
 }
 
 async function quitarChequeDeVenta(chequeId, ventaId){
@@ -14434,7 +14513,7 @@ async function quitarChequeDeVenta(chequeId, ventaId){
     await Promise.all([loadChequesCartera(),loadOperacionesVenta(),loadMovs()]);
     renderChqCartera();
     renderPanelGeneral();
-    openVentaCostoModal(ventaId);
+    mvcRefreshDinamico(ventaId);
     toast('✅ Cheque quitado de la venta — volvió a En cartera');
   }catch(e){
     toast('Error: '+(e.message||JSON.stringify(e)),'err');
