@@ -7725,6 +7725,9 @@ function renderLocalCierre(){
   }
 }
 async function renderLocalResumen(){
+  var ML=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var MESES_NUM=[1,2,3,4,5,6,7,8,9,10,11,12];
+  var anioActual=String(new Date().getFullYear());
   // Poblar selector de años si está vacío
   var anioEl=document.getElementById('lres-anio');
   if(anioEl&&anioEl.options.length===1){
@@ -7732,7 +7735,7 @@ async function renderLocalResumen(){
     var aniosSet={};venAll.forEach(function(v){aniosSet[v.fecha.slice(0,4)]=1;});
     Object.keys(aniosSet).sort().forEach(function(a){
       var o=document.createElement('option');o.value=a;o.textContent=a;
-      if(a===String(new Date().getFullYear()))o.selected=true;
+      if(a===anioActual)o.selected=true;
       anioEl.appendChild(o);
     });
   }
@@ -7742,139 +7745,201 @@ async function renderLocalResumen(){
   var contenedor=document.getElementById('lres-contenido');
   if(!contenedor)return;
   contenedor.innerHTML='<div class="empty"><p>Cargando...</p></div>';
-  // Filtrar ventas por local y período
-  var ventas=VENTAS.filter(function(v){
-    if(v.local!==currentLocal||!v.fecha)return false;
+
+  // ── Todas las ventas del local (para pivots históricos) ──
+  var ventasTodas=VENTAS.filter(function(v){return v.local===currentLocal&&v.fecha;});
+  // ── Ventas del período seleccionado (para KPIs y top) ──
+  var ventas=ventasTodas.filter(function(v){
     if(anio&&!v.fecha.startsWith(anio))return false;
     if(anio&&mes&&!v.fecha.startsWith(anio+'-'+mes))return false;
     return true;
   });
-  if(!ventas.length){
-    contenedor.innerHTML='<div class="empty"><p>No hay ventas para el período seleccionado.</p></div>';
-    return;
+
+  // ── Una sola query: todos los items del local ──
+  var todosIds=ventasTodas.map(function(v){return v.id;});
+  var idToFecha={};ventasTodas.forEach(function(v){idToFecha[v.id]=v.fecha;});
+  var filtradosSet=new Set(ventas.map(function(v){return v.id;}));
+  var todosItems=[];
+  if(todosIds.length>0){
+    var {data:itemsData}=await sb.from('items_venta').select('venta_id,descripcion,cantidad,subtotal').in('venta_id',todosIds);
+    todosItems=itemsData||[];
   }
-  // KPIs básicos (client-side)
-  var totalVentas=ventas.reduce(function(s,v){return s+Number(v.total||0);},0);
+  // Separar items filtrados vs todos
+  var itemsFiltrados=todosItems.filter(function(it){return filtradosSet.has(it.venta_id);});
+
+  // ── KPIs del período ──
+  var totalFact=ventas.reduce(function(s,v){return s+Number(v.total||0);},0);
   var totalCobrado=ventas.reduce(function(s,v){return s+(Number(v.total||0)-Number(v.saldo||0));},0);
   var totalPendiente=ventas.reduce(function(s,v){return s+Number(v.saldo||0);},0);
   var nVentas=ventas.length;
-  // Consultar items_venta para las ventas filtradas
-  var ids=ventas.map(function(v){return v.id;});
-  var totalUnidades=0;
-  var itemsMap={};
-  if(ids.length>0){
-    var {data:items}=await sb.from('items_venta').select('descripcion,cantidad,subtotal').in('venta_id',ids);
-    if(items){
-      items.forEach(function(it){
-        totalUnidades+=Number(it.cantidad||0);
-        var desc=it.descripcion||'Sin descripción';
-        if(!itemsMap[desc])itemsMap[desc]={cantidad:0,subtotal:0};
-        itemsMap[desc].cantidad+=Number(it.cantidad||0);
-        itemsMap[desc].subtotal+=Number(it.subtotal||0);
-      });
-    }
-  }
-  // Top clientes
+  var totalUnidades=itemsFiltrados.reduce(function(s,it){return s+Number(it.cantidad||0);},0);
+
+  // ── Top clientes del período ──
   var clienteMap={};
   ventas.forEach(function(v){
     var n=v.cliente_nombre||'Mostrador';
     if(!clienteMap[n])clienteMap[n]={total:0,count:0,saldo:0};
-    clienteMap[n].total+=Number(v.total||0);
-    clienteMap[n].count++;
-    clienteMap[n].saldo+=Number(v.saldo||0);
+    clienteMap[n].total+=Number(v.total||0);clienteMap[n].count++;clienteMap[n].saldo+=Number(v.saldo||0);
   });
   var topClientes=Object.entries(clienteMap).sort(function(a,b){return b[1].total-a[1].total;}).slice(0,10);
-  // Evolución mensual
+
+  // ── Top ítems del período ──
+  var itemsMap={};
+  itemsFiltrados.forEach(function(it){
+    var d=it.descripcion||'Sin descripción';
+    if(!itemsMap[d])itemsMap[d]={cantidad:0,subtotal:0};
+    itemsMap[d].cantidad+=Number(it.cantidad||0);itemsMap[d].subtotal+=Number(it.subtotal||0);
+  });
+  var topItems=Object.entries(itemsMap).sort(function(a,b){return b[1].subtotal-a[1].subtotal;}).slice(0,10);
+
+  // ── Evolución mensual del período ──
   var mesesMap={};
   ventas.forEach(function(v){
-    var m=v.fecha?v.fecha.slice(0,7):'????';
+    var m=v.fecha.slice(0,7);
     if(!mesesMap[m])mesesMap[m]={total:0,count:0};
     mesesMap[m].total+=Number(v.total||0);mesesMap[m].count++;
   });
   var mesesList=Object.entries(mesesMap).sort(function(a,b){return a[0].localeCompare(b[0]);});
   var maxMes=Math.max.apply(null,mesesList.map(function(e){return e[1].total;}))||1;
-  // Top items
-  var topItems=Object.entries(itemsMap).sort(function(a,b){return b[1].subtotal-a[1].subtotal;}).slice(0,10);
-  var ML=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  var html='';
-  // ── KPIs ──
-  html+='<div class="stats" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px;">'+
-    '<div class="stat"><div class="stat-icon" style="background:#ede9fe;">🧾</div><h3>'+nVentas+'</h3><p>Ventas</p></div>'+
-    '<div class="stat"><div class="stat-icon" style="background:#dbeafe;">💰</div><h3>'+$p(totalVentas)+'</h3><p>Facturado</p></div>'+
-    '<div class="stat"><div class="stat-icon" style="background:#dcfce7;">✅</div><h3>'+$p(totalCobrado)+'</h3><p>Cobrado</p></div>'+
-    '<div class="stat"><div class="stat-icon" style="background:#fee2e2;">⏳</div><h3 style="color:#dc2626;">'+$p(totalPendiente)+'</h3><p>Pendiente</p></div>'+
-    '<div class="stat"><div class="stat-icon" style="background:#fef3c7;">📦</div><h3>'+totalUnidades.toLocaleString('es-AR')+'</h3><p>Unidades</p></div>'+
-  '</div>';
-  // ── Dos columnas: top clientes + top ítems ──
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">';
-  // Top clientes
-  html+='<div class="panel"><div class="panel-hdr"><h4>🏆 Top clientes</h4></div>'+
-    '<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;border-collapse:collapse;">'+
-    '<thead><tr style="background:#f9fafb;">'+
-      '<th style="padding:7px 8px;text-align:left;font-weight:600;color:#6b7280;">#</th>'+
-      '<th style="padding:7px 8px;text-align:left;font-weight:600;color:#6b7280;">Cliente</th>'+
-      '<th style="padding:7px 8px;text-align:right;font-weight:600;color:#6b7280;">Ventas</th>'+
-      '<th style="padding:7px 8px;text-align:right;font-weight:600;color:#6b7280;">Total</th>'+
-      '<th style="padding:7px 8px;text-align:right;font-weight:600;color:#dc2626;">Deuda</th>'+
-    '</tr></thead><tbody>';
-  topClientes.forEach(function(e,i){
-    html+='<tr style="border-top:1px solid #f3f4f6;">'+
-      '<td style="padding:5px 8px;font-size:11px;color:#9ca3af;">'+(i+1)+'</td>'+
-      '<td style="padding:5px 8px;font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(e[0])+'</td>'+
-      '<td style="padding:5px 8px;text-align:right;color:#6b7280;">'+e[1].count+'</td>'+
-      '<td style="padding:5px 8px;text-align:right;font-weight:700;color:#6c7ae0;">'+$p(e[1].total)+'</td>'+
-      '<td style="padding:5px 8px;text-align:right;font-weight:700;color:'+(e[1].saldo>0?'#dc2626':'#16a34a')+';">'+$p(e[1].saldo)+'</td>'+
-    '</tr>';
+
+  // ── Pivots históricos (todos los años × meses) ──
+  var revPivot={},undPivot={},allYearsSet={};
+  ventasTodas.forEach(function(v){
+    var yr=v.fecha.slice(0,4);var mo=parseInt(v.fecha.slice(5,7));
+    allYearsSet[yr]=1;
+    if(!revPivot[yr])revPivot[yr]={};
+    revPivot[yr][mo]=(revPivot[yr][mo]||0)+Number(v.total||0);
   });
-  html+='</tbody></table></div></div>';
-  // Top ítems
-  html+='<div class="panel"><div class="panel-hdr"><h4>📦 Ítems más vendidos</h4></div>'+
-    '<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;border-collapse:collapse;">'+
-    '<thead><tr style="background:#f9fafb;">'+
-      '<th style="padding:7px 8px;text-align:left;font-weight:600;color:#6b7280;">#</th>'+
-      '<th style="padding:7px 8px;text-align:left;font-weight:600;color:#6b7280;">Ítem</th>'+
-      '<th style="padding:7px 8px;text-align:right;font-weight:600;color:#6b7280;">Unidades</th>'+
-      '<th style="padding:7px 8px;text-align:right;font-weight:600;color:#6b7280;">Total</th>'+
-    '</tr></thead><tbody>';
-  if(topItems.length){
-    topItems.forEach(function(e,i){
-      html+='<tr style="border-top:1px solid #f3f4f6;">'+
-        '<td style="padding:5px 8px;font-size:11px;color:#9ca3af;">'+(i+1)+'</td>'+
-        '<td style="padding:5px 8px;font-weight:600;">'+esc(e[0])+'</td>'+
-        '<td style="padding:5px 8px;text-align:right;font-weight:700;color:#6c7ae0;">'+Number(e[1].cantidad).toLocaleString('es-AR')+'</td>'+
-        '<td style="padding:5px 8px;text-align:right;font-weight:700;color:#16a34a;">'+$p(e[1].subtotal)+'</td>'+
+  todosItems.forEach(function(it){
+    var fecha=idToFecha[it.venta_id];if(!fecha)return;
+    var yr=fecha.slice(0,4);var mo=parseInt(fecha.slice(5,7));
+    if(!undPivot[yr])undPivot[yr]={};
+    undPivot[yr][mo]=(undPivot[yr][mo]||0)+Number(it.cantidad||0);
+  });
+  var allYears=Object.keys(allYearsSet).sort();
+
+  // ── Helper: construir tabla pivot ──
+  function buildPivot(pivot,years,fmtCell,colorVal){
+    var colTot={};MESES_NUM.forEach(function(m){colTot[m]=0;});var grandTot=0;
+    var rows='';
+    years.forEach(function(yr){
+      var isCur=yr===anioActual;
+      var rowTot=0;
+      var cells='';
+      MESES_NUM.forEach(function(m){
+        var val=(pivot[yr]&&pivot[yr][m])||0;
+        colTot[m]+=val;rowTot+=val;
+        var bg=isCur&&val>0?'background:#f5f3ff;':'';
+        cells+='<td style="padding:5px 6px;text-align:right;font-size:11px;color:'+(val>0?colorVal:'#d1d5db')+';'+bg+'">'+(val>0?fmtCell(val):'—')+'</td>';
+      });
+      grandTot+=rowTot;
+      rows+='<tr style="border-top:1px solid #f3f4f6;'+(isCur?'font-weight:700;':'')+'">'+
+        '<td style="padding:5px 10px;font-weight:'+(isCur?'800':'600')+';color:#374151;white-space:nowrap;">'+(isCur?'▶ ':'')+yr+'</td>'+
+        cells+
+        '<td style="padding:5px 10px;text-align:right;font-weight:800;color:#6c7ae0;border-left:1px solid #e5e7eb;">'+fmtCell(rowTot)+'</td>'+
       '</tr>';
     });
-  } else {
-    html+='<tr><td colspan="4" style="text-align:center;padding:20px;color:#9ca3af;font-size:13px;">Sin ítems detallados — cargá ventas con productos para ver este ranking.</td></tr>';
-  }
-  html+='</tbody></table></div></div>';
-  html+='</div>'; // end grid 2 cols
-  // ── Evolución mensual ──
-  html+='<div class="panel"><div class="panel-hdr"><h4>📅 Evolución mensual</h4></div>'+
-    '<div style="overflow-x:auto;"><table style="width:100%;font-size:12px;border-collapse:collapse;">'+
-    '<thead><tr style="background:#f9fafb;">'+
-      '<th style="padding:7px 10px;text-align:left;font-weight:600;color:#6b7280;">Mes</th>'+
-      '<th style="padding:7px 10px;text-align:right;font-weight:600;color:#6b7280;">Ventas</th>'+
-      '<th style="padding:7px 10px;text-align:right;font-weight:600;color:#6b7280;">Total</th>'+
-      '<th style="padding:7px 10px;font-weight:600;color:#6b7280;min-width:180px;">Progreso</th>'+
-    '</tr></thead><tbody>';
-  mesesList.forEach(function(e){
-    var p=e[0].split('-');
-    var label=(ML[parseInt(p[1])]||p[1])+' '+p[0];
-    var pct=Math.round(e[1].total/maxMes*100);
-    html+='<tr style="border-top:1px solid #f3f4f6;">'+
-      '<td style="padding:6px 10px;font-weight:600;">'+label+'</td>'+
-      '<td style="padding:6px 10px;text-align:right;color:#6b7280;">'+e[1].count+'</td>'+
-      '<td style="padding:6px 10px;text-align:right;font-weight:700;color:#6c7ae0;">'+$p(e[1].total)+'</td>'+
-      '<td style="padding:6px 10px;">'+
-        '<div style="background:#f3f4f6;border-radius:4px;height:8px;">'+
-        '<div style="background:#6c7ae0;border-radius:4px;height:8px;width:'+pct+'%;"></div>'+
-        '</div>'+
-      '</td>'+
+    // Fila total
+    var totCells='';
+    MESES_NUM.forEach(function(m){
+      totCells+='<td style="padding:5px 6px;text-align:right;font-size:11px;font-weight:700;color:#374151;">'+(colTot[m]>0?fmtCell(colTot[m]):'—')+'</td>';
+    });
+    rows+='<tr style="border-top:2px solid #e5e7eb;background:#f9fafb;">'+
+      '<td style="padding:6px 10px;font-weight:800;color:#374151;">TOTAL</td>'+
+      totCells+
+      '<td style="padding:6px 10px;text-align:right;font-weight:800;color:#6c7ae0;border-left:1px solid #e5e7eb;">'+fmtCell(grandTot)+'</td>'+
     '</tr>';
-  });
-  html+='</tbody></table></div></div>';
+    var hdrCells=MESES_NUM.map(function(m){return '<th style="padding:6px 6px;text-align:right;font-weight:600;color:#6b7280;font-size:11px;">'+ML[m]+'</th>';}).join('');
+    return '<div style="overflow-x:auto;">'+
+      '<table style="width:100%;border-collapse:collapse;min-width:780px;">'+
+      '<thead><tr style="background:#f9fafb;">'+
+        '<th style="padding:6px 10px;text-align:left;font-weight:700;color:#6b7280;min-width:70px;">Año</th>'+
+        hdrCells+
+        '<th style="padding:6px 10px;text-align:right;font-weight:700;color:#374151;border-left:1px solid #e5e7eb;">Total</th>'+
+      '</tr></thead>'+
+      '<tbody>'+rows+'</tbody>'+
+      '</table></div>';
+  }
+
+  // ════════════════ RENDER HTML ════════════════
+  var html='';
+
+  if(nVentas){
+    var periodoLabel=anio?(mes?ML[parseInt(mes)]+' '+anio:anio):'Todo el historial';
+    html+='<div style="font-size:11px;font-weight:700;color:#6b7280;letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px;">📌 Período: '+periodoLabel+'</div>';
+    // KPIs
+    html+='<div class="stats" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px;">'+
+      '<div class="stat"><div class="stat-icon" style="background:#ede9fe;">🧾</div><h3>'+nVentas+'</h3><p>Ventas</p></div>'+
+      '<div class="stat"><div class="stat-icon" style="background:#dbeafe;">💰</div><h3>'+$p(totalFact)+'</h3><p>Facturado</p></div>'+
+      '<div class="stat"><div class="stat-icon" style="background:#dcfce7;">✅</div><h3>'+$p(totalCobrado)+'</h3><p>Cobrado</p></div>'+
+      '<div class="stat"><div class="stat-icon" style="background:#fee2e2;">⏳</div><h3 style="color:#dc2626;">'+$p(totalPendiente)+'</h3><p>Pendiente</p></div>'+
+      '<div class="stat"><div class="stat-icon" style="background:#fef3c7;">📦</div><h3>'+totalUnidades.toLocaleString('es-AR')+'</h3><p>Unidades</p></div>'+
+    '</div>';
+    // Top clientes + top ítems
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">';
+    html+='<div class="panel"><div class="panel-hdr"><h4>🏆 Top clientes</h4></div>'+
+      '<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;border-collapse:collapse;">'+
+      '<thead><tr style="background:#f9fafb;"><th style="padding:6px 8px;color:#6b7280;font-weight:600;">#</th><th style="padding:6px 8px;color:#6b7280;font-weight:600;">Cliente</th><th style="padding:6px 8px;text-align:right;color:#6b7280;font-weight:600;">Vtas</th><th style="padding:6px 8px;text-align:right;color:#6b7280;font-weight:600;">Total</th><th style="padding:6px 8px;text-align:right;color:#dc2626;font-weight:600;">Deuda</th></tr></thead><tbody>';
+    topClientes.forEach(function(e,i){
+      html+='<tr style="border-top:1px solid #f3f4f6;"><td style="padding:5px 8px;font-size:11px;color:#9ca3af;">'+(i+1)+'</td>'+
+        '<td style="padding:5px 8px;font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(e[0])+'</td>'+
+        '<td style="padding:5px 8px;text-align:right;color:#6b7280;">'+e[1].count+'</td>'+
+        '<td style="padding:5px 8px;text-align:right;font-weight:700;color:#6c7ae0;">'+$p(e[1].total)+'</td>'+
+        '<td style="padding:5px 8px;text-align:right;font-weight:700;color:'+(e[1].saldo>0?'#dc2626':'#16a34a')+';">'+$p(e[1].saldo)+'</td></tr>';
+    });
+    html+='</tbody></table></div></div>';
+    html+='<div class="panel"><div class="panel-hdr"><h4>📦 Ítems más vendidos</h4></div>'+
+      '<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;border-collapse:collapse;">'+
+      '<thead><tr style="background:#f9fafb;"><th style="padding:6px 8px;color:#6b7280;font-weight:600;">#</th><th style="padding:6px 8px;color:#6b7280;font-weight:600;">Ítem</th><th style="padding:6px 8px;text-align:right;color:#6b7280;font-weight:600;">Unidades</th><th style="padding:6px 8px;text-align:right;color:#6b7280;font-weight:600;">Total</th></tr></thead><tbody>';
+    if(topItems.length){
+      topItems.forEach(function(e,i){
+        html+='<tr style="border-top:1px solid #f3f4f6;"><td style="padding:5px 8px;font-size:11px;color:#9ca3af;">'+(i+1)+'</td>'+
+          '<td style="padding:5px 8px;font-weight:600;">'+esc(e[0])+'</td>'+
+          '<td style="padding:5px 8px;text-align:right;font-weight:700;color:#6c7ae0;">'+Number(e[1].cantidad).toLocaleString('es-AR')+'</td>'+
+          '<td style="padding:5px 8px;text-align:right;font-weight:700;color:#16a34a;">'+$p(e[1].subtotal)+'</td></tr>';
+      });
+    } else {
+      html+='<tr><td colspan="4" style="text-align:center;padding:18px;color:#9ca3af;font-size:12px;">Sin ítems detallados en este período</td></tr>';
+    }
+    html+='</tbody></table></div></div>';
+    html+='</div>';
+    // Evolución mensual del período
+    if(!anio){html+='';}else{
+      html+='<div class="panel" style="margin-bottom:16px;"><div class="panel-hdr"><h4>📅 Evolución mensual — '+periodoLabel+'</h4></div>'+
+        '<div style="overflow-x:auto;"><table style="width:100%;font-size:12px;border-collapse:collapse;">'+
+        '<thead><tr style="background:#f9fafb;"><th style="padding:6px 10px;color:#6b7280;font-weight:600;">Mes</th><th style="padding:6px 10px;text-align:right;color:#6b7280;font-weight:600;">Ventas</th><th style="padding:6px 10px;text-align:right;color:#6b7280;font-weight:600;">Total</th><th style="padding:6px 10px;color:#6b7280;font-weight:600;min-width:160px;">Progreso</th></tr></thead><tbody>';
+      mesesList.forEach(function(e){
+        var p=e[0].split('-');var label=(ML[parseInt(p[1])]||p[1])+' '+p[0];
+        var pct=Math.round(e[1].total/maxMes*100);
+        html+='<tr style="border-top:1px solid #f3f4f6;"><td style="padding:5px 10px;font-weight:600;">'+label+'</td>'+
+          '<td style="padding:5px 10px;text-align:right;color:#6b7280;">'+e[1].count+'</td>'+
+          '<td style="padding:5px 10px;text-align:right;font-weight:700;color:#6c7ae0;">'+$p(e[1].total)+'</td>'+
+          '<td style="padding:5px 10px;"><div style="background:#f3f4f6;border-radius:4px;height:7px;"><div style="background:#6c7ae0;border-radius:4px;height:7px;width:'+pct+'%;"></div></div></td></tr>';
+      });
+      html+='</tbody></table></div></div>';
+    }
+  } else {
+    html+='<div class="empty" style="margin-bottom:16px;"><p>No hay ventas para el período seleccionado.</p></div>';
+  }
+
+  // ══════════════════════════════════════════════
+  // CUADROS HISTÓRICOS (siempre, toda la historia)
+  // ══════════════════════════════════════════════
+  if(allYears.length){
+    var secStyle='margin-top:8px;padding-top:20px;border-top:2px dashed #e5e7eb;';
+    html+='<div style="'+secStyle+'">'+
+      '<div style="font-size:13px;font-weight:800;color:#374151;margin-bottom:14px;letter-spacing:-.2px;">📊 Cuadros históricos — Todo el período</div>';
+    html+='<div class="panel" style="margin-bottom:16px;">'+
+      '<div class="panel-hdr"><h4>💰 Facturación por año y mes</h4><span style="font-size:11px;color:#9ca3af;">▶ = año actual</span></div>'+
+      buildPivot(revPivot,allYears,function(v){return $p(v);},'#374151')+
+    '</div>';
+    html+='<div class="panel">'+
+      '<div class="panel-hdr"><h4>📦 Unidades vendidas por año y mes</h4><span style="font-size:11px;color:#9ca3af;">▶ = año actual</span></div>'+
+      buildPivot(undPivot,allYears,function(v){return v.toLocaleString('es-AR');},'#6c7ae0')+
+    '</div>';
+    html+='</div>';
+  }
+
   contenedor.innerHTML=html;
 }
 function actualizarDiffLocal(){
