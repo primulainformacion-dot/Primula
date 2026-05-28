@@ -3201,6 +3201,46 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Modal: Compensar NC -->
+<div class="modal-bg" id="m-compensar-nc">
+  <div class="modal" style="max-width:560px;">
+    <h3>⚡ Compensar Nota de Crédito</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">Acredita una NC contra una venta pendiente. No genera movimiento de caja.</p>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="field">
+        <label>Nota de Crédito a aplicar</label>
+        <select id="cnc-nc" onchange="cncOnChange()">
+          <option value="">— Seleccionar NC —</option>
+        </select>
+        <span id="cnc-nc-info" style="font-size:12px;color:#dc2626;margin-top:4px;display:block;"></span>
+      </div>
+      <div class="field">
+        <label>Venta a acreditar</label>
+        <select id="cnc-venta" onchange="cncOnChange()">
+          <option value="">— Seleccionar venta —</option>
+        </select>
+        <span id="cnc-venta-info" style="font-size:12px;color:#d97706;margin-top:4px;display:block;"></span>
+      </div>
+      <div class="field">
+        <label>Monto a compensar</label>
+        <input type="number" id="cnc-monto" min="0" step="0.01" oninput="cncValidar()"/>
+        <span id="cnc-monto-info" style="font-size:12px;color:#6b7280;margin-top:4px;display:block;"></span>
+      </div>
+      <div id="cnc-saldar-resto-wrap" style="display:none;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#92400e;">
+          <input type="checkbox" id="cnc-saldar-resto" style="width:16px;height:16px;"/>
+          🗂️ Saldar saldo restante históricamente
+        </label>
+        <span id="cnc-saldar-resto-info" style="font-size:12px;color:#78716c;margin-top:4px;display:block;margin-left:24px;">El saldo que quede después de la NC quedará como cobrado sin generar movimiento de caja.</span>
+      </div>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-gray" onclick="closeM('m-compensar-nc')">Cancelar</button>
+      <button class="btn btn-green" id="cnc-btn-aplicar" onclick="aplicarCompensacionNC()" disabled>⚡ Aplicar compensación</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Previsualizar recálculo de saldos -->
 <div class="modal-bg" id="m-recalc-saldos">
   <div class="modal" style="max-width:720px;">
@@ -6196,6 +6236,121 @@ function setCliTab(tab,el){
   if(tab==='cc')renderCCMayoristas();
 }
 
+var _cncClienteId=null;
+function abrirCompensarNC(clienteId){
+  _cncClienteId=clienteId;
+  var ventas=VENTAS.filter(function(v){return v.cliente_id===clienteId&&v.estado!=='cobrado';});
+  var ncs=ventas.filter(function(v){return Number(v.total)<0&&Number(v.saldo)<0;});
+  var pendientes=ventas.filter(function(v){return Number(v.total)>0&&Number(v.saldo)>0;});
+
+  var selNC=document.getElementById('cnc-nc');
+  selNC.innerHTML='<option value="">— Seleccionar NC —</option>'+
+    ncs.map(function(v){return '<option value="'+v.id+'">NC #'+v.id+' — '+fmtF(v.fecha)+' — '+$p(Math.abs(Number(v.saldo)))+' disponible</option>';}).join('');
+
+  var selV=document.getElementById('cnc-venta');
+  selV.innerHTML='<option value="">— Seleccionar venta —</option>'+
+    pendientes.map(function(v){return '<option value="'+v.id+'">#'+v.id+' — '+fmtF(v.fecha)+(v.nro_factura?' FAC '+v.nro_factura:'')+' — saldo '+$p(Number(v.saldo))+'</option>';}).join('');
+
+  document.getElementById('cnc-nc-info').textContent='';
+  document.getElementById('cnc-venta-info').textContent='';
+  document.getElementById('cnc-monto').value='';
+  document.getElementById('cnc-monto-info').textContent='';
+  document.getElementById('cnc-btn-aplicar').disabled=true;
+  openM('m-compensar-nc');
+}
+function cncOnChange(){
+  var ncId=Number(document.getElementById('cnc-nc').value);
+  var vId=Number(document.getElementById('cnc-venta').value);
+  var nc=ncId?VENTAS.find(function(v){return v.id===ncId;}):null;
+  var venta=vId?VENTAS.find(function(v){return v.id===vId;}):null;
+
+  document.getElementById('cnc-nc-info').textContent=nc?'Crédito disponible: '+$p(Math.abs(Number(nc.saldo))):'';
+  document.getElementById('cnc-venta-info').textContent=venta?'Saldo pendiente: '+$p(Number(venta.saldo)):'';
+
+  if(nc&&venta){
+    var maxMonto=Math.min(Math.abs(Number(nc.saldo)),Number(venta.saldo));
+    document.getElementById('cnc-monto').value=maxMonto.toFixed(2);
+    document.getElementById('cnc-monto-info').textContent='Máximo aplicable: '+$p(maxMonto);
+    cncValidar();
+  } else {
+    document.getElementById('cnc-monto').value='';
+    document.getElementById('cnc-monto-info').textContent='';
+    document.getElementById('cnc-btn-aplicar').disabled=true;
+  }
+}
+function cncValidar(){
+  var ncId=Number(document.getElementById('cnc-nc').value);
+  var vId=Number(document.getElementById('cnc-venta').value);
+  var monto=Number(document.getElementById('cnc-monto').value);
+  var nc=ncId?VENTAS.find(function(v){return v.id===ncId;}):null;
+  var venta=vId?VENTAS.find(function(v){return v.id===vId;}):null;
+  var ok=nc&&venta&&monto>0&&monto<=Math.abs(Number(nc.saldo))+0.01&&monto<=Number(venta.saldo)+0.01;
+  document.getElementById('cnc-btn-aplicar').disabled=!ok;
+  // Mostrar checkbox de saldar resto si queda saldo después de aplicar la NC
+  var restoWrap=document.getElementById('cnc-saldar-resto-wrap');
+  var restoInfo=document.getElementById('cnc-saldar-resto-info');
+  if(ok&&venta){
+    var restoSaldo=Number(venta.saldo)-monto;
+    if(restoSaldo>0.01){
+      restoWrap.style.display='block';
+      restoInfo.textContent='Saldo restante: '+$p(restoSaldo)+' — quedará como cobrado sin generar movimiento de caja.';
+    } else {
+      restoWrap.style.display='none';
+    }
+  } else {
+    restoWrap.style.display='none';
+  }
+}
+async function aplicarCompensacionNC(){
+  var ncId=Number(document.getElementById('cnc-nc').value);
+  var vId=Number(document.getElementById('cnc-venta').value);
+  var monto=Number(document.getElementById('cnc-monto').value);
+  var saldaResto=document.getElementById('cnc-saldar-resto').checked;
+  var nc=VENTAS.find(function(v){return v.id===ncId;});
+  var venta=VENTAS.find(function(v){return v.id===vId;});
+  if(!nc||!venta||!monto)return;
+
+  var btn=document.getElementById('cnc-btn-aplicar');
+  btn.disabled=true; btn.textContent='Aplicando...';
+
+  var fechaHoy=today();
+
+  // 1. Cobro por la NC en la venta (sin movimiento de caja)
+  await sb.from('cobros').insert({
+    venta_id:vId, cliente_id:_cncClienteId,
+    fecha:fechaHoy, monto:monto,
+    medio:'Nota de Crédito',
+    nota:'Compensación con NC #'+ncId
+  });
+
+  // 2. Si hay que saldar el resto históricamente
+  var restoSaldo=Number(venta.saldo)-monto;
+  if(saldaResto&&restoSaldo>0.01){
+    await sb.from('cobros').insert({
+      venta_id:vId, cliente_id:_cncClienteId,
+      fecha:fechaHoy, monto:restoSaldo,
+      medio:'Histórico',
+      nota:'Saldo anterior al sistema'
+    });
+    restoSaldo=0;
+  }
+
+  // 3. Actualizar saldo de la venta
+  var nuevoSaldoVenta=Math.max(0,restoSaldo);
+  var nuevoEstadoVenta=nuevoSaldoVenta<=0?'cobrado':'parcial';
+  await sb.from('ventas').update({saldo:nuevoSaldoVenta,estado:nuevoEstadoVenta}).eq('id',vId);
+
+  // 4. Actualizar saldo de la NC (negativo → menos negativo)
+  var nuevoSaldoNC=Number(nc.saldo)+monto;
+  var nuevoEstadoNC=nuevoSaldoNC>=-0.01?'cobrado':'pendiente';
+  await sb.from('ventas').update({saldo:nuevoSaldoNC,estado:nuevoEstadoNC}).eq('id',ncId);
+
+  closeM('m-compensar-nc');
+  toast('NC compensada'+(saldaResto&&restoSaldo===0?' + saldo histórico':'')+' ✔️');
+  await loadVentas();
+  renderCCMayoristas();
+}
+
 var _recalcPendientes=[];
 async function recalcularSaldosVentas(){
   // Excluye NCs (total < 0): funcionan distinto, no se recalculan
@@ -6266,10 +6421,11 @@ function renderCCMayoristas(){
   var cont=document.getElementById('cli-cc-cont');
   if(!statsEl||!cont)return;
 
-  var pendientes=VENTAS.filter(function(v){return v.tipo==='mayorista'&&v.estado!=='cobrado'&&Number(v.saldo)>0;});
-  var totalDeuda=pendientes.reduce(function(s,v){return s+Number(v.saldo);},0);
-  var clisConDeuda=new Set(pendientes.map(function(v){return v.cliente_id;})).size;
-  var ventasPend=pendientes.length;
+  // Incluye NCs (saldo negativo resta de la deuda → deuda neta)
+  var pendientes=VENTAS.filter(function(v){return v.tipo==='mayorista'&&v.estado!=='cobrado';});
+  var totalDeuda=Math.max(0,pendientes.reduce(function(s,v){return s+Number(v.saldo);},0));
+  var clisConDeuda=new Set(pendientes.filter(function(v){return Number(v.total)>0&&Number(v.saldo)>0;}).map(function(v){return v.cliente_id;})).size;
+  var ventasPend=pendientes.filter(function(v){return Number(v.total)>0;}).length;
 
   statsEl.innerHTML=
     '<div style="background:#fee2e2;border-radius:12px;padding:14px 20px;flex:1;min-width:140px;">'+
@@ -6300,10 +6456,11 @@ function renderCCMayoristas(){
 
   cont.innerHTML=mayClientes.map(function(c){
     var ventasCli=VENTAS.filter(function(v){return v.cliente_id===c.id;}).sort(function(a,b){return a.fecha<b.fecha?1:-1;});
-    var pendCli=ventasCli.filter(function(v){return v.estado!=='cobrado'&&Number(v.saldo)>0;});
-    var deudaCli=pendCli.reduce(function(s,v){return s+Number(v.saldo);},0);
+    var pendCli=ventasCli.filter(function(v){return v.estado!=='cobrado';});
+    var deudaCli=Math.max(0,pendCli.reduce(function(s,v){return s+Number(v.saldo);},0));
     var cobradoTotal=ventasCli.reduce(function(s,v){return s+Number(v.total)-Number(v.saldo);},0);
     var hayDeuda=deudaCli>0;
+    var tieneNCs=pendCli.some(function(v){return Number(v.total)<0&&Number(v.saldo)<0;});
 
     var ventasRows=ventasCli.slice(0,8).map(function(v){
       var estadoBadge=v.estado==='cobrado'?'b-green':v.estado==='parcial'?'b-blue':'b-yellow';
@@ -6329,8 +6486,9 @@ function renderCCMayoristas(){
           (hayDeuda?'<span style="margin-left:14px;font-size:13px;font-weight:800;color:#dc2626;">Debe: '+$p(deudaCli)+'</span>':
            '<span style="margin-left:14px;font-size:12px;color:#16a34a;font-weight:700;">✅ Sin deuda</span>')+
         '</div>'+
-        '<div style="display:flex;gap:8px;align-items:center;">'+
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'+
           '<span style="font-size:12px;color:#9ca3af;">Cobrado: '+$p(cobradoTotal)+'</span>'+
+          (tieneNCs?'<button class="btn btn-sm btn-outline" style="border-color:#7c3aed;color:#7c3aed;" onclick="abrirCompensarNC('+c.id+')">⚡ Compensar NC</button>':'')+
           '<button class="btn btn-sm btn-outline" onclick="verCuenta('+c.id+')">Cuenta completa →</button>'+
         '</div>'+
       '</div>'+
@@ -7903,8 +8061,12 @@ async function renderLocalResumen(){
   var filtradosSet=new Set(ventas.map(function(v){return v.id;}));
   var todosItems=[];
   if(todosIds.length>0){
-    var {data:itemsData}=await sb.from('items_venta').select('venta_id,descripcion,cantidad,subtotal').in('venta_id',todosIds);
-    todosItems=itemsData||[];
+    var _chunk=200;
+    for(var _ci=0;_ci<todosIds.length;_ci+=_chunk){
+      var _ids=todosIds.slice(_ci,_ci+_chunk);
+      var {data:_cd}=await sb.from('items_venta').select('venta_id,descripcion,cantidad,subtotal').in('venta_id',_ids);
+      if(_cd)todosItems=todosItems.concat(_cd);
+    }
   }
   // Separar items filtrados vs todos
   var itemsFiltrados=todosItems.filter(function(it){return filtradosSet.has(it.venta_id);});
