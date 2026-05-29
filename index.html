@@ -414,6 +414,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div id="cli-tab-cc" style="display:none;">
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-start;">
         <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1;" id="cli-cc-stats"></div>
+        <button class="btn btn-sm" style="background:#fff1f2;color:#be123c;border:1px solid #fecdd3;" onclick="openNuevaNC()" title="Registrar una Nota de Crédito a favor del cliente">📄 Nueva NC</button>
         <button class="btn btn-sm btn-gray" onclick="exportarCCMayoristas()" title="Exportar a Excel">📥 Excel</button>
         <button class="btn btn-sm btn-gray" onclick="recalcularSaldosVentas()" title="Recalcula saldo de todas las ventas con saldo incorrecto (negativo o mayor al total)">🔧 Recalcular saldos</button>
         <button class="btn btn-sm" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;" onclick="abrirSaldarHistoricoMasivo()" title="Saldar históricamente ventas antiguas en masa">🕰️ Saldar histórico</button>
@@ -3248,6 +3249,41 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <button class="btn btn-gray" onclick="closeM('m-saldo-masivo')">Cancelar</button>
         <button class="btn btn-green" onclick="ejecutarSaldoMasivo()">✓ Saldar seleccionadas</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nueva NC -->
+<div class="modal-bg" id="m-nueva-nc">
+  <div class="modal" style="max-width:480px;">
+    <h3>📄 Nueva Nota de Crédito</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">Genera un crédito a favor del cliente. Aparece en su CC como saldo negativo que puede compensarse contra ventas pendientes.</p>
+    <div class="grid2">
+      <div class="field full">
+        <label>Cliente *</label>
+        <select id="nc-cliente" style="width:100%;"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="field">
+        <label>Fecha *</label>
+        <input type="date" id="nc-fecha"/>
+      </div>
+      <div class="field">
+        <label>N° NC</label>
+        <input id="nc-nro" placeholder="Ej: NC-0001"/>
+      </div>
+      <div class="field">
+        <label>Monto $ *</label>
+        <input type="number" id="nc-monto" min="0.01" step="0.01" placeholder="0"/>
+      </div>
+      <div class="field full">
+        <label>Motivo / Nota</label>
+        <input id="nc-nota" placeholder="Ej: Devolución de mercadería, descuento acordado..."/>
+      </div>
+    </div>
+    <div id="nc-err" style="color:#dc2626;font-size:12px;margin-top:4px;display:none;"></div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-nueva-nc')">Cancelar</button>
+      <button class="btn" style="background:#be123c;border-color:#9f1239;" onclick="saveNuevaNC()">📄 Crear NC</button>
     </div>
   </div>
 </div>
@@ -6560,6 +6596,57 @@ function setCliTab(tab,el){
   document.querySelectorAll('#cli-tabs .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
   if(tab==='cc')renderCCMayoristas();
+}
+
+// ── NUEVA NC ──
+function openNuevaNC(){
+  // Poblar clientes mayoristas
+  var sel=document.getElementById('nc-cliente');
+  sel.innerHTML='<option value="">— Seleccioná —</option>';
+  CLIENTES.filter(function(c){return c.tipo==='mayorista'&&c.activo;})
+    .sort(function(a,b){return (a.nombre||'').localeCompare(b.nombre||'');})
+    .forEach(function(c){
+      var o=document.createElement('option');
+      o.value=c.id; o.textContent=c.nombre;
+      sel.appendChild(o);
+    });
+  document.getElementById('nc-fecha').value=today();
+  document.getElementById('nc-nro').value='';
+  document.getElementById('nc-monto').value='';
+  document.getElementById('nc-nota').value='';
+  document.getElementById('nc-err').style.display='none';
+  openM('m-nueva-nc');
+}
+async function saveNuevaNC(){
+  var cliId=parseInt(document.getElementById('nc-cliente').value)||0;
+  var fecha=document.getElementById('nc-fecha').value;
+  var monto=parseFloat(document.getElementById('nc-monto').value)||0;
+  var nroNC=document.getElementById('nc-nro').value.trim()||null;
+  var nota=document.getElementById('nc-nota').value.trim()||null;
+  var errEl=document.getElementById('nc-err');
+  if(!cliId){errEl.textContent='Seleccioná un cliente';errEl.style.display='block';return;}
+  if(!fecha){errEl.textContent='Ingresá la fecha';errEl.style.display='block';return;}
+  if(!monto||monto<=0){errEl.textContent='Ingresá un monto mayor a cero';errEl.style.display='block';return;}
+  errEl.style.display='none';
+  var cli=CLIENTES.find(function(c){return c.id===cliId;})||{};
+  // La NC es una venta con total negativo
+  var r=await sb.from('ventas').insert({
+    cliente_id:cliId,
+    cliente_nombre:cli.nombre||'',
+    tipo:'mayorista',
+    local:'mayorista',
+    fecha,
+    total:-monto,
+    saldo:-monto,
+    estado:'pendiente',
+    nro_factura:nroNC,
+    nota:nota
+  }).select('id').single();
+  if(r.error){errEl.textContent='Error: '+r.error.message;errEl.style.display='block';return;}
+  toast('NC #'+(nroNC||r.data.id)+' creada por '+$p(monto)+' a favor de '+cli.nombre+' ✔️');
+  closeM('m-nueva-nc');
+  await Promise.all([loadVentas(),loadCobros()]);
+  renderCCMayoristas();renderDash();
 }
 
 var _cncClienteId=null;
