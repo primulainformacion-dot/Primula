@@ -235,7 +235,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 /* ── 2 COL ── */
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
 
-@media(max-width:900px){.stats{grid-template-columns:1fr 1fr;}.two-col{grid-template-columns:1fr;}.grid2{grid-template-columns:1fr;}.grid2 .full{grid-column:1;}}
+@media(max-width:900px){.stats{grid-template-columns:1fr 1fr;}.two-col{grid-template-columns:1fr;}.grid2{grid-template-columns:1fr;}.grid2 .full{grid-column:1;}#cos-sim-grid{grid-template-columns:1fr;}}
 
 /* ── MOBILE NAV ── */
 #mob-menu-btn{display:none;background:none;border:none;font-size:22px;cursor:pointer;color:#1a1f36;padding:4px 8px;border-radius:8px;line-height:1;flex-shrink:0;}
@@ -357,7 +357,30 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <h1 id="pg-title">Inicio</h1>
       <div class="topbar-sub" id="pg-sub"></div>
     </div>
-    <div style="color:#9ca3af;font-size:13px;white-space:nowrap;" id="pg-date"></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button onclick="abrirBusquedaGlobal()" title="Búsqueda global (Ctrl+K)" style="background:#f3f4f6;border:1.5px solid #e5e7eb;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:#6b7280;display:flex;align-items:center;gap:6px;white-space:nowrap;">
+        🔍 <span style="font-size:12px;">Buscar</span>
+        <span style="font-size:10px;background:#e5e7eb;border-radius:4px;padding:1px 5px;color:#9ca3af;">Ctrl K</span>
+      </button>
+      <div style="color:#9ca3af;font-size:13px;white-space:nowrap;" id="pg-date"></div>
+    </div>
+  </div>
+
+  <!-- Overlay: Búsqueda Global -->
+  <div id="overlay-busqueda" onclick="cerrarBusquedaGlobal(event)" style="display:none;position:fixed;inset:0;background:rgba(15,20,50,.55);z-index:9000;align-items:flex-start;justify-content:center;padding-top:80px;">
+    <div onclick="event.stopPropagation()" style="background:#fff;border-radius:16px;width:min(680px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.22);overflow:hidden;">
+      <div style="padding:16px 18px;border-bottom:1.5px solid #f3f4f6;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:18px;color:#9ca3af;">🔍</span>
+        <input id="busq-input" type="text" placeholder="Buscar clientes, ventas, cheques, proveedores, facturas..."
+          oninput="busqOnInput(this.value)"
+          style="flex:1;border:none;outline:none;font-size:15px;color:#1a1f36;background:transparent;"
+          autocomplete="off"/>
+        <button onclick="cerrarBusquedaGlobal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#9ca3af;line-height:1;">✕</button>
+      </div>
+      <div id="busq-results" style="max-height:460px;overflow-y:auto;padding:8px 0;">
+        <div style="text-align:center;padding:32px 16px;color:#9ca3af;font-size:13px;">Escribí para buscar en todo el sistema</div>
+      </div>
+    </div>
   </div>
 
   <!-- ════════════ INICIO ════════════ -->
@@ -1044,6 +1067,8 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="tabs" id="pan-tabs">
       <div class="tab active" onclick="setPanTab('resumen',this)">📊 Resumen financiero</div>
       <div class="tab" onclick="setPanTab('semana',this)">📅 Control semanal</div>
+      <div class="tab" onclick="setPanTab('prevision',this)">💵 Previsión de caja</div>
+      <div class="tab" onclick="setPanTab('canal',this)">📈 Por canal</div>
       <div class="tab" onclick="setPanTab('objetivos',this)">🎯 Objetivos</div>
     </div>
 
@@ -1259,6 +1284,34 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
 
     </div><!-- /pan-tab-resumen -->
+
+    <!-- Tab: Previsión de caja -->
+    <div id="pan-tab-prevision" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+        <select id="prev-semanas" onchange="renderPrevisionCaja()" style="padding:7px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;">
+          <option value="8">Próximas 8 semanas (~60 días)</option>
+          <option value="4">Próximas 4 semanas (~30 días)</option>
+          <option value="12">Próximas 12 semanas (~90 días)</option>
+        </select>
+        <button class="btn btn-sm btn-gray" onclick="renderPrevisionCaja()">↻ Actualizar</button>
+        <span style="font-size:12px;color:#9ca3af;margin-left:4px;">Proyección basada en cheques, pagos comprometidos y moratorias</span>
+      </div>
+      <div id="prev-body"></div>
+    </div>
+
+    <!-- Tab: Por canal -->
+    <div id="pan-tab-canal" style="display:none;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+        <select id="canal-periodo" onchange="renderPorCanal()" style="padding:7px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;">
+          <option value="mes">Este mes</option>
+          <option value="trim">Últimos 3 meses</option>
+          <option value="anio">Este año</option>
+          <option value="todo">Todo el historial</option>
+        </select>
+        <button class="btn btn-sm btn-gray" onclick="renderPorCanal()">↻ Actualizar</button>
+      </div>
+      <div id="canal-body"></div>
+    </div>
 
     <!-- Tab: Objetivos -->
     <div id="pan-tab-objetivos" style="display:none;">
@@ -2217,6 +2270,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <button class="tab" onclick="setCosTab('avios',this)">🪢 Avíos</button>
       <button class="tab" onclick="setCosTab('analisis',this)">📈 Rentabilidad</button>
       <button class="tab" onclick="setCosTab('pedidos',this)">💰 Por pedido</button>
+      <button class="tab" onclick="setCosTab('simulador',this)">🎯 Simulador</button>
     </div>
     <!-- Tab Fichas -->
     <div id="cos-tab-fichas">
@@ -2278,6 +2332,90 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <span id="cos-ped-resumen" style="margin-left:auto;font-size:12px;color:#6b7280;font-weight:600;"></span>
       </div>
       <div id="cos-pedidos-lista"></div>
+    </div>
+    <!-- Tab Simulador -->
+    <div id="cos-tab-simulador" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="cos-sim-grid">
+        <!-- Panel izquierdo: selección y costo -->
+        <div>
+          <div class="panel" style="margin-bottom:14px;">
+            <div style="font-size:12px;font-weight:800;color:#6c7ae0;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Ficha base</div>
+            <div class="field" style="margin-bottom:10px;">
+              <label>Seleccioná un modelo</label>
+              <select id="sim-ficha-sel" onchange="simCambiarFicha()">
+                <option value="">— Elegir ficha —</option>
+              </select>
+            </div>
+            <div id="sim-costo-detalle" style="display:none;background:#f8f9fa;border-radius:8px;padding:12px;font-size:12px;">
+              <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Estructura de costo actual</div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>🧵 Telas</span><span id="sim-c-telas">—</span></div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>🪢 Avíos</span><span id="sim-c-avios">—</span></div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>✂️ Confección</span><span id="sim-c-conf">—</span></div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>🪡 Bordado</span><span id="sim-c-bord">—</span></div>
+              <div style="border-top:1px solid #e5e7eb;margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;font-weight:800;font-size:13px;"><span>Costo total</span><span id="sim-c-total" style="color:#dc2626;">—</span></div>
+            </div>
+          </div>
+          <!-- Análisis de sensibilidad -->
+          <div class="panel" id="sim-panel-sens" style="display:none;">
+            <div style="font-size:12px;font-weight:800;color:#6c7ae0;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Análisis de sensibilidad</div>
+            <div style="font-size:12px;color:#6b7280;margin-bottom:12px;">¿Qué pasa con el margen si suben los costos?</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+              <div class="field">
+                <label>Telas sube (%)</label>
+                <input type="number" id="sim-sens-telas" value="0" min="-50" max="200" step="5" oninput="simRecalc()"/>
+              </div>
+              <div class="field">
+                <label>Avíos sube (%)</label>
+                <input type="number" id="sim-sens-avios" value="0" min="-50" max="200" step="5" oninput="simRecalc()"/>
+              </div>
+              <div class="field">
+                <label>Confección sube (%)</label>
+                <input type="number" id="sim-sens-conf" value="0" min="-50" max="200" step="5" oninput="simRecalc()"/>
+              </div>
+              <div class="field">
+                <label>Bordado sube (%)</label>
+                <input type="number" id="sim-sens-bord" value="0" min="-50" max="200" step="5" oninput="simRecalc()"/>
+              </div>
+            </div>
+            <div id="sim-sens-result" style="background:#f0f2f5;border-radius:8px;padding:12px;font-size:12px;"></div>
+          </div>
+        </div>
+        <!-- Panel derecho: calculadora de precios -->
+        <div>
+          <div class="panel" id="sim-panel-calc" style="display:none;">
+            <div style="font-size:12px;font-weight:800;color:#6c7ae0;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Calculadora de precios</div>
+            <!-- Bloque 1: dado un margen objetivo -->
+            <div style="background:#f0f7ff;border-radius:8px;padding:14px;margin-bottom:12px;border-left:3px solid #6c7ae0;">
+              <div style="font-size:12px;font-weight:700;color:#1a1f36;margin-bottom:8px;">¿Qué precio necesito para un margen objetivo?</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <label style="font-size:12px;font-weight:600;white-space:nowrap;">Quiero ganar</label>
+                <input type="number" id="sim-margen-obj" value="40" min="1" max="90" step="1" oninput="simRecalc()" style="width:70px;"/>
+                <label style="font-size:12px;font-weight:600;">%</label>
+              </div>
+              <div id="sim-precio-necesario" style="font-size:13px;color:#374151;"></div>
+            </div>
+            <!-- Bloque 2: dado un precio → qué margen obtengo -->
+            <div style="background:#fff8f0;border-radius:8px;padding:14px;margin-bottom:12px;border-left:3px solid #f59e0b;">
+              <div style="font-size:12px;font-weight:700;color:#1a1f36;margin-bottom:8px;">¿Qué margen obtengo con un precio dado?</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div class="field"><label>Precio minorista $</label><input type="number" id="sim-p-min" min="0" step="10" oninput="simRecalc()" placeholder="0"/></div>
+                <div class="field"><label>Precio mayorista $</label><input type="number" id="sim-p-may" min="0" step="10" oninput="simRecalc()" placeholder="0"/></div>
+              </div>
+              <div id="sim-margen-result" style="font-size:13px;color:#374151;"></div>
+            </div>
+            <!-- Bloque 3: cantidad de prendas para cubrir un gasto -->
+            <div style="background:#f0fff4;border-radius:8px;padding:14px;border-left:3px solid #16a34a;">
+              <div style="font-size:12px;font-weight:700;color:#1a1f36;margin-bottom:8px;">¿Cuántas prendas para cubrir un gasto fijo?</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <label style="font-size:12px;font-weight:600;white-space:nowrap;">Gasto a cubrir $</label>
+                <input type="number" id="sim-gasto" value="0" min="0" step="100" oninput="simRecalc()" style="width:120px;"/>
+              </div>
+              <div id="sim-punto-eq" style="font-size:13px;color:#374151;"></div>
+            </div>
+          </div>
+          <div id="sim-empty" class="empty" style="margin-top:40px;"><p>Seleccioná una ficha para activar el simulador.</p></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -5886,6 +6024,113 @@ function renderEstrategiaProgress(){
   if(bar) bar.style.width=pct+'%';
   var txt=document.getElementById('estr-progress-txt');
   if(txt) txt.textContent=done.length+'/'+total+' acciones completadas ('+pct+'%)';
+}
+
+// ══════════════════════════════════════
+// BÚSQUEDA GLOBAL
+// ══════════════════════════════════════
+function abrirBusquedaGlobal(){
+  var ov=document.getElementById('overlay-busqueda');
+  ov.style.display='flex';
+  setTimeout(function(){document.getElementById('busq-input').focus();},60);
+}
+function cerrarBusquedaGlobal(e){
+  if(e&&e.target!==document.getElementById('overlay-busqueda'))return;
+  document.getElementById('overlay-busqueda').style.display='none';
+  document.getElementById('busq-input').value='';
+  document.getElementById('busq-results').innerHTML='<div style="text-align:center;padding:32px 16px;color:#9ca3af;font-size:13px;">Escribí para buscar en todo el sistema</div>';
+}
+// Ctrl+K
+document.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();abrirBusquedaGlobal();}
+  if(e.key==='Escape'){document.getElementById('overlay-busqueda').style.display='none';}
+});
+var _busqTimer=null;
+function busqOnInput(q){
+  clearTimeout(_busqTimer);
+  if(!q||q.trim().length<2){
+    document.getElementById('busq-results').innerHTML='<div style="text-align:center;padding:32px 16px;color:#9ca3af;font-size:13px;">Escribí al menos 2 caracteres</div>';
+    return;
+  }
+  _busqTimer=setTimeout(function(){busqEjecutar(q.trim().toLowerCase());},200);
+}
+function busqEjecutar(q){
+  var res=[];
+
+  // ── Clientes ──
+  CLIENTES.filter(function(c){
+    return (c.nombre||'').toLowerCase().includes(q)||(c.cuit||'').includes(q);
+  }).slice(0,5).forEach(function(c){
+    var deuda=VENTAS.filter(function(v){return v.cliente_id===c.id&&v.estado!=='cobrado';}).reduce(function(s,v){return s+Number(v.saldo);},0);
+    res.push({cat:'👥 Clientes',icon:'👤',titulo:c.nombre,sub:(c.cuit?'CUIT: '+c.cuit+' · ':'')+c.tipo+(deuda>0?' · Debe: '+$p(deuda):''),
+      action:function(cid,ctipo){return function(){cerrarBusquedaGlobal();if(ctipo==='mayorista'){nav('clientes');setTimeout(function(){var tabs=document.querySelectorAll('#cli-tabs .tab');if(tabs[1])tabs[1].click();setTimeout(function(){verCuenta(cid);},100);},100);}else{nav('clientes');}};}(c.id,c.tipo)});
+  });
+
+  // ── Ventas mayoristas ──
+  VENTAS.filter(function(v){
+    return v.tipo==='mayorista'&&((v.nro_factura||'').toLowerCase().includes(q)||(v.cliente_nombre||'').toLowerCase().includes(q));
+  }).slice(0,5).forEach(function(v){
+    var cli=CLIENTES.find(function(c){return c.id===v.cliente_id;})||{};
+    res.push({cat:'🧾 Ventas',icon:'🧾',titulo:'FAC '+(v.nro_factura||'#'+v.id)+' — '+(cli.nombre||v.cliente_nombre||'?'),
+      sub:fmtF(v.fecha)+' · '+$p(v.total)+' · '+v.estado,
+      action:function(vid){return function(){cerrarBusquedaGlobal();verVenta(vid,'cuenta');};}(v.id)});
+  });
+
+  // ── Cheques cartera ──
+  CHEQUES_CARTERA.filter(function(c){
+    return (c.emisor||'').toLowerCase().includes(q)||(c.numero||'').toLowerCase().includes(q)||(c.banco||'').toLowerCase().includes(q);
+  }).slice(0,5).forEach(function(c){
+    res.push({cat:'📋 Cheques',icon:c.tipo==='echeq'?'⚡':'📋',titulo:(c.tipo==='echeq'?'ECHEQ':'Cheque')+(c.numero?' N°'+c.numero:'')+' — '+(c.emisor||''),
+      sub:$p(c.monto)+(c.banco?' · '+c.banco:'')+' · vto '+fmtF(c.fecha_cobro)+' · '+c.estado,
+      action:function(){cerrarBusquedaGlobal();nav('finanzas');setTimeout(function(){var tabs=document.querySelectorAll('#fin-tabs .tab');tabs.forEach(function(t){if(t.textContent.includes('Cheques'))t.click();});},100);}});
+  });
+
+  // ── Proveedores ──
+  PROVEEDORES.filter(function(p){
+    return (p.nombre||'').toLowerCase().includes(q)||(p.cuit||'').includes(q);
+  }).slice(0,4).forEach(function(p){
+    res.push({cat:'🤝 Proveedores',icon:'🤝',titulo:p.nombre,
+      sub:(p.cuit?'CUIT: '+p.cuit+(p.rubro?' · '+p.rubro:''):p.rubro||''),
+      action:function(){cerrarBusquedaGlobal();nav('proveedores');}});
+  });
+
+  // ── Facturas de clientes ──
+  if(typeof FACTURAS_CLIENTES!=='undefined'){
+    FACTURAS_CLIENTES.filter(function(f){
+      return (f.nro_factura||'').toLowerCase().includes(q)||(f.cliente_nombre||'').toLowerCase().includes(q);
+    }).slice(0,4).forEach(function(f){
+      res.push({cat:'📄 Facturas',icon:'📄',titulo:'FAC '+(f.nro_factura||'S/N')+' — '+f.cliente_nombre,
+        sub:fmtF(f.fecha_emision)+' · '+$p(f.monto_total)+' · '+f.estado,
+        action:function(){cerrarBusquedaGlobal();nav('finanzas');setTimeout(function(){var tabs=document.querySelectorAll('#fin-tabs .tab');tabs.forEach(function(t){if(t.textContent.includes('Facturas'))t.click();});},100);}});
+    });
+  }
+
+  // ── Render ──
+  var el=document.getElementById('busq-results');
+  if(!res.length){
+    el.innerHTML='<div style="text-align:center;padding:32px 16px;color:#9ca3af;font-size:13px;">Sin resultados para "'+esc(q)+'"</div>';
+    return;
+  }
+  // Agrupar por categoría
+  var cats={};
+  res.forEach(function(r){if(!cats[r.cat])cats[r.cat]=[];cats[r.cat].push(r);});
+  var html='';
+  Object.keys(cats).forEach(function(cat){
+    html+='<div style="padding:6px 18px 2px;font-size:10px;font-weight:800;color:#9ca3af;letter-spacing:.8px;text-transform:uppercase;">'+cat+'</div>';
+    cats[cat].forEach(function(r,i){
+      html+='<div class="busq-item" onclick="_busqItems[\''+cat+i+'\'].action()" style="display:flex;align-items:center;gap:12px;padding:10px 18px;cursor:pointer;border-radius:0;transition:background .1s;" onmouseover="this.style.background=\'#f5f3ff\'" onmouseout="this.style.background=\'\'">'+
+        '<span style="font-size:18px;width:28px;text-align:center;flex-shrink:0;">'+r.icon+'</span>'+
+        '<div style="min-width:0;">'+
+          '<div style="font-weight:700;font-size:13px;color:#1a1f36;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(r.titulo)+'</div>'+
+          '<div style="font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(r.sub)+'</div>'+
+        '</div>'+
+        '<span style="margin-left:auto;color:#d1d5db;font-size:12px;flex-shrink:0;">→</span>'+
+      '</div>';
+      if(!window._busqItems)window._busqItems={};
+      window._busqItems[cat+i]=r;
+    });
+  });
+  el.innerHTML=html;
 }
 
 // ── MOBILE MENU ──
@@ -11099,14 +11344,290 @@ function renderFlujoCajas(anio,mes){
 
 // ── PANEL TABS ──
 function setPanTab(tab,el){
-  document.getElementById('pan-tab-semana').style.display=tab==='semana'?'block':'none';
-  document.getElementById('pan-tab-resumen').style.display=tab==='resumen'?'block':'none';
-  document.getElementById('pan-tab-objetivos').style.display=tab==='objetivos'?'block':'none';
+  ['semana','resumen','objetivos','prevision','canal'].forEach(function(t){
+    var el2=document.getElementById('pan-tab-'+t);
+    if(el2)el2.style.display=t===tab?'block':'none';
+  });
   document.querySelectorAll('#pan-tabs .tab').forEach(function(t){t.classList.remove('active');});
   if(el)el.classList.add('active');
   if(tab==='semana')renderSemana();
   if(tab==='objetivos')renderObjetivos();
   if(tab==='resumen')renderPanelGeneral();
+  if(tab==='prevision')renderPrevisionCaja();
+  if(tab==='canal')renderPorCanal();
+}
+
+// ══════════════════════════════════════
+// PREVISIÓN DE CAJA
+// ══════════════════════════════════════
+function renderPrevisionCaja(){
+  var cont=document.getElementById('prev-body');
+  if(!cont)return;
+  var nSem=parseInt(document.getElementById('prev-semanas').value)||8;
+  var hoy=today();
+  var hoyD=new Date(hoy+'T00:00:00');
+
+  // Saldo actual de todas las cajas (efectivo + bancos + MP, excluye cheques)
+  var cajasLiquid=['EFECTIVO ADMINISTRACIÓN','LOCAL LLAVALLOL','LOCAL MONTE GRANDE','BANCO SRL','BANCO POLY','MERCADO PAGO','CAJA USD'];
+  var saldoActual=cajasLiquid.reduce(function(s,c){return s+saldoCaja(c);},0);
+
+  // Construir semanas
+  var semanas=[];
+  for(var i=0;i<nSem;i++){
+    var ini=new Date(hoyD);ini.setDate(ini.getDate()+i*7);
+    var fin=new Date(hoyD);fin.setDate(fin.getDate()+(i+1)*7-1);
+    var iniS=ini.toISOString().slice(0,10);
+    var finS=fin.toISOString().slice(0,10);
+    semanas.push({ini:iniS,fin:finS,label:'Sem '+(i+1)+'\n'+fmtF(iniS).slice(0,5),
+      chqCobrar:0,chqPagar:0,moratorias:0,facProv:0});
+  }
+
+  function enSemana(fecha,sem){return fecha>=sem.ini&&fecha<=sem.fin;}
+
+  // + Cheques en cartera y al cobro → ingresos esperados
+  CHEQUES_CARTERA.forEach(function(c){
+    if((c.estado==='en_cartera'||c.estado==='al_cobro')&&c.fecha_cobro){
+      semanas.forEach(function(s){if(enSemana(c.fecha_cobro,s))s.chqCobrar+=Number(c.monto||0);});
+    }
+  });
+
+  // - Cheques propios pendientes → egresos comprometidos
+  CHEQUES_PROPIOS.forEach(function(c){
+    if(c.estado!=='debitado'&&c.fecha_pago){
+      semanas.forEach(function(s){if(enSemana(c.fecha_pago,s))s.chqPagar+=Number(c.monto||0);});
+    }
+  });
+
+  // - Moratorias → egresos
+  MORATORIAS.forEach(function(m){
+    if(m.estado!=='pagada'&&m.prox_vencimiento){
+      semanas.forEach(function(s){if(enSemana(m.prox_vencimiento,s))s.moratorias+=Number(m.cuota||0);});
+    }
+  });
+
+  // - Facturas de proveedores pendientes con vencimiento
+  PROV_FACTURAS.forEach(function(f){
+    if(f.estado==='pendiente'&&f.vencimiento){
+      semanas.forEach(function(s){if(enSemana(f.vencimiento,s))s.facProv+=Number(f.monto||0);});
+    }
+  });
+
+  // Calcular saldo proyectado acumulado
+  var saldoAcum=saldoActual;
+  semanas.forEach(function(s){
+    s.flujo=(s.chqCobrar)-(s.chqPagar+s.moratorias+s.facProv);
+    saldoAcum+=s.flujo;
+    s.saldoFin=saldoAcum;
+  });
+
+  var maxAbs=Math.max.apply(null,semanas.map(function(s){return Math.abs(s.chqCobrar)+Math.abs(s.chqPagar+s.moratorias+s.facProv);})||[1]);
+
+  var html='';
+
+  // Tarjetas resumen
+  var totalEntradas=semanas.reduce(function(s,w){return s+w.chqCobrar;},0);
+  var totalSalidas=semanas.reduce(function(s,w){return s+w.chqPagar+w.moratorias+w.facProv;},0);
+  var saldoFinal=semanas.length?semanas[semanas.length-1].saldoFin:saldoActual;
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;">';
+  html+='<div class="stat" style="border-top:3px solid #6c7ae0;"><div class="stat-icon" style="background:#ede9fe;">💳</div><h3 style="color:#6c7ae0;">'+$p(saldoActual)+'</h3><p>Saldo hoy</p><div style="font-size:11px;color:#9ca3af;">Cajas + bancos + MP</div></div>';
+  html+='<div class="stat" style="border-top:3px solid #16a34a;"><div class="stat-icon" style="background:#dcfce7;">📥</div><h3 style="color:#16a34a;">'+$p(totalEntradas)+'</h3><p>Entradas proyectadas</p><div style="font-size:11px;color:#9ca3af;">Cheques a acreditar</div></div>';
+  html+='<div class="stat" style="border-top:3px solid #dc2626;"><div class="stat-icon" style="background:#fee2e2;">📤</div><h3 style="color:#dc2626;">'+$p(totalSalidas)+'</h3><p>Salidas comprometidas</p><div style="font-size:11px;color:#9ca3af;">Cheques propios + morat. + prov.</div></div>';
+  html+='<div class="stat" style="border-top:3px solid '+(saldoFinal>=0?'#16a34a':'#dc2626')+';">'+'<div class="stat-icon" style="background:'+(saldoFinal>=0?'#dcfce7':'#fee2e2')+';font-size:20px;">'+(saldoFinal>=0?'✅':'⚠️')+'</div><h3 style="color:'+(saldoFinal>=0?'#16a34a':'#dc2626')+';">'+$p(saldoFinal)+'</h3><p>Saldo en '+nSem+' semanas</p></div>';
+  html+='</div>';
+
+  // Tabla semana a semana
+  html+='<div class="panel"><div class="panel-hdr"><h4>📆 Semana a semana</h4></div>';
+  html+='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">';
+  html+='<thead><tr style="background:#f9fafb;">';
+  html+='<th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:800;color:#6b7280;white-space:nowrap;">Concepto</th>';
+  semanas.forEach(function(s){
+    html+='<th style="padding:10px 8px;text-align:right;font-size:11px;font-weight:800;color:#6b7280;white-space:nowrap;">'+s.label.replace('\n','<br>')+'</th>';
+  });
+  html+='</tr></thead><tbody>';
+
+  function fila(label,color,key,signo){
+    var row='<tr><td style="padding:8px 12px;font-size:12px;color:#374151;white-space:nowrap;">'+label+'</td>';
+    semanas.forEach(function(s){
+      var v=typeof key==='function'?key(s):s[key];
+      row+='<td style="padding:8px;text-align:right;font-weight:600;color:'+(v>0?color:'#9ca3af')+';">'+(v>0?(signo||'')+$p(v):'—')+'</td>';
+    });
+    return row+'</tr>';
+  }
+  html+=fila('📥 Cheques a acreditar','#16a34a','chqCobrar','+');
+  html+=fila('📋 Cheques propios','#dc2626','chqPagar','-');
+  html+=fila('📅 Moratorias','#d97706','moratorias','-');
+  html+=fila('🧾 Facturas prov.','#7c3aed','facProv','-');
+
+  // Línea de flujo neto
+  html+='<tr style="border-top:2px solid #e5e7eb;background:#f9fafb;">';
+  html+='<td style="padding:8px 12px;font-size:12px;font-weight:800;color:#374151;">= Flujo neto</td>';
+  semanas.forEach(function(s){
+    html+='<td style="padding:8px;text-align:right;font-weight:800;color:'+(s.flujo>=0?'#16a34a':'#dc2626')+';">'+(s.flujo>=0?'+':'')+$p(s.flujo)+'</td>';
+  });
+  html+='</tr>';
+
+  // Línea saldo proyectado
+  html+='<tr style="background:#f0fdf4;">';
+  html+='<td style="padding:10px 12px;font-size:12px;font-weight:800;color:#065f46;">💰 Saldo proyectado</td>';
+  semanas.forEach(function(s){
+    html+='<td style="padding:10px 8px;text-align:right;font-weight:900;font-size:14px;color:'+(s.saldoFin>=0?'#16a34a':'#dc2626')+';">'+$p(s.saldoFin)+'</td>';
+  });
+  html+='</tr>';
+
+  html+='</tbody></table></div></div>';
+
+  // Detalle por tipo
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;">';
+
+  // Cheques a cobrar próximos
+  var chqProx=CHEQUES_CARTERA.filter(function(c){
+    if(c.estado!=='en_cartera'&&c.estado!=='al_cobro')return false;
+    if(!c.fecha_cobro)return false;
+    var fin=new Date(hoyD);fin.setDate(fin.getDate()+nSem*7);
+    return c.fecha_cobro>=hoy&&c.fecha_cobro<=fin.toISOString().slice(0,10);
+  }).sort(function(a,b){return a.fecha_cobro<b.fecha_cobro?-1:1;}).slice(0,8);
+
+  html+='<div class="panel"><div class="panel-hdr"><h4>📥 Cheques a acreditar (detalle)</h4></div>';
+  if(chqProx.length){
+    html+='<div class="tbl"><table><thead><tr><th>Fecha cobro</th><th>Emisor</th><th>Banco</th><th style="text-align:right">Monto</th></tr></thead><tbody>';
+    chqProx.forEach(function(c){
+      html+='<tr><td>'+fmtF(c.fecha_cobro)+'</td><td style="font-size:12px;">'+esc(c.emisor||'—')+'</td><td style="font-size:12px;color:#9ca3af;">'+esc(c.banco||'—')+'</td><td style="text-align:right;font-weight:700;color:#16a34a;">'+$p(c.monto)+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }else{html+='<p style="color:#9ca3af;text-align:center;padding:12px;font-size:13px;">Sin cheques a cobrar en el período</p>';}
+  html+='</div>';
+
+  // Cheques propios próximos
+  var chqPropProx=CHEQUES_PROPIOS.filter(function(c){
+    if(c.estado==='debitado')return false;
+    if(!c.fecha_pago)return false;
+    var fin=new Date(hoyD);fin.setDate(fin.getDate()+nSem*7);
+    return c.fecha_pago>=hoy&&c.fecha_pago<=fin.toISOString().slice(0,10);
+  }).sort(function(a,b){return a.fecha_pago<b.fecha_pago?-1:1;}).slice(0,8);
+
+  html+='<div class="panel"><div class="panel-hdr"><h4>📤 Cheques propios a pagar (detalle)</h4></div>';
+  if(chqPropProx.length){
+    html+='<div class="tbl"><table><thead><tr><th>Fecha pago</th><th>Destinatario</th><th>N°</th><th style="text-align:right">Monto</th></tr></thead><tbody>';
+    chqPropProx.forEach(function(c){
+      html+='<tr><td>'+fmtF(c.fecha_pago)+'</td><td style="font-size:12px;">'+esc(c.destinatario||'—')+'</td><td style="font-size:12px;color:#9ca3af;">'+(c.numero||'—')+'</td><td style="text-align:right;font-weight:700;color:#dc2626;">'+$p(c.monto)+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }else{html+='<p style="color:#9ca3af;text-align:center;padding:12px;font-size:13px;">Sin cheques propios a pagar en el período</p>';}
+  html+='</div>';
+
+  html+='</div>';
+  cont.innerHTML=html;
+}
+
+// ══════════════════════════════════════
+// RENTABILIDAD POR CANAL
+// ══════════════════════════════════════
+function renderPorCanal(){
+  var cont=document.getElementById('canal-body');
+  if(!cont)return;
+  var periodo=document.getElementById('canal-periodo').value;
+  var hoy=today();
+  var desdeD=new Date(hoy+'T00:00:00');
+  if(periodo==='mes'){desdeD=new Date(hoy.slice(0,7)+'-01T00:00:00');}
+  else if(periodo==='trim'){desdeD=new Date(desdeD);desdeD.setMonth(desdeD.getMonth()-3);}
+  else if(periodo==='anio'){desdeD=new Date(hoy.slice(0,4)+'-01-01T00:00:00');}
+  else{desdeD=new Date('2000-01-01T00:00:00');}
+  var desde=desdeD.toISOString().slice(0,10);
+
+  var canales=[
+    {key:'mayorista',label:'Mayorista',icon:'🏭',color:'#6c7ae0',bg:'#ede9fe'},
+    {key:'llavallol',label:'Llavallol',icon:'🏪',color:'#16a34a',bg:'#dcfce7'},
+    {key:'montegrande',label:'Monte Grande',icon:'🏬',color:'#0ea5e9',bg:'#e0f2fe'}
+  ];
+
+  var ventasFilt=VENTAS.filter(function(v){
+    return v.fecha>=desde&&Number(v.total)>0&&v.estado!=='anulada';
+  });
+
+  var html='';
+
+  // Tarjetas por canal
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px;">';
+  canales.forEach(function(ch){
+    var vs=ventasFilt.filter(function(v){return v.local===ch.key||v.tipo===ch.key;});
+    var facturado=vs.reduce(function(s,v){return s+Number(v.total);},0);
+    var cobrado=vs.reduce(function(s,v){return s+Number(v.total)-Number(v.saldo);},0);
+    var pendiente=vs.reduce(function(s,v){return s+Number(v.saldo);},0);
+    var cant=vs.length;
+    var ticket=cant>0?facturado/cant:0;
+    var pctCob=facturado>0?Math.round(cobrado/facturado*100):0;
+    html+='<div style="background:#fff;border:2px solid '+ch.color+'44;border-top:4px solid '+ch.color+';border-radius:14px;padding:18px 20px;">';
+    html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">';
+    html+='<span style="font-size:24px;">'+ch.icon+'</span>';
+    html+='<div><div style="font-weight:800;font-size:15px;color:#1a1f36;">'+ch.label+'</div><div style="font-size:12px;color:#9ca3af;">'+cant+' venta'+(cant!==1?'s':'')+' en el período</div></div></div>';
+
+    html+='<div style="margin-bottom:10px;">';
+    html+='<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;font-weight:700;color:#6b7280;">FACTURADO</span><span style="font-weight:800;font-size:15px;color:#1a1f36;">'+$p(facturado)+'</span></div>';
+    html+='<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:11px;font-weight:700;color:#16a34a;">COBRADO</span><span style="font-weight:700;color:#16a34a;">'+$p(cobrado)+'</span></div>';
+    html+='<div style="display:flex;justify-content:space-between;"><span style="font-size:11px;font-weight:700;color:#dc2626;">PENDIENTE</span><span style="font-weight:700;color:#dc2626;">'+$p(pendiente)+'</span></div>';
+    html+='</div>';
+
+    // Barra de cobranza
+    html+='<div style="margin-bottom:10px;">';
+    html+='<div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:10px;color:#9ca3af;">Cobranza</span><span style="font-size:11px;font-weight:800;color:'+ch.color+';">'+pctCob+'%</span></div>';
+    html+='<div style="height:7px;background:#f3f4f6;border-radius:4px;"><div style="height:7px;background:'+ch.color+';border-radius:4px;width:'+pctCob+'%;"></div></div>';
+    html+='</div>';
+
+    html+='<div style="background:'+ch.bg+';border-radius:8px;padding:8px 12px;text-align:center;">';
+    html+='<div style="font-size:10px;font-weight:800;color:'+ch.color+';letter-spacing:.5px;">TICKET PROMEDIO</div>';
+    html+='<div style="font-size:18px;font-weight:900;color:'+ch.color+';">'+$p(ticket)+'</div>';
+    html+='</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+
+  // Comparativa total
+  var totalFact=canales.reduce(function(s,ch){
+    return s+ventasFilt.filter(function(v){return v.local===ch.key||v.tipo===ch.key;}).reduce(function(ss,v){return ss+Number(v.total);},0);
+  },0);
+
+  html+='<div class="panel" style="margin-bottom:18px;">';
+  html+='<div class="panel-hdr"><h4>📊 Participación por canal</h4></div>';
+  html+='<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:4px 0;">';
+  canales.forEach(function(ch){
+    var vs=ventasFilt.filter(function(v){return v.local===ch.key||v.tipo===ch.key;});
+    var fact=vs.reduce(function(s,v){return s+Number(v.total);},0);
+    var pct=totalFact>0?Math.round(fact/totalFact*100):0;
+    html+='<div style="flex:1;min-width:120px;">';
+    html+='<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;font-weight:700;color:'+ch.color+';">'+ch.icon+' '+ch.label+'</span><span style="font-size:12px;font-weight:800;">'+pct+'%</span></div>';
+    html+='<div style="height:10px;background:#f3f4f6;border-radius:5px;"><div style="height:10px;background:'+ch.color+';border-radius:5px;width:'+pct+'%;transition:width .4s;"></div></div>';
+    html+='<div style="font-size:11px;color:#9ca3af;margin-top:2px;">'+$p(fact)+'</div>';
+    html+='</div>';
+  });
+  html+='</div></div>';
+
+  // Evolución mensual (últimos 6 meses)
+  html+='<div class="panel">';
+  html+='<div class="panel-hdr"><h4>📅 Evolución mensual por canal</h4><span style="font-size:12px;color:#9ca3af;">últimos 6 meses</span></div>';
+  var meses6=[];
+  for(var mi=5;mi>=0;mi--){
+    var d=new Date(hoy.slice(0,7)+'-01T00:00:00');
+    d.setMonth(d.getMonth()-mi);
+    meses6.push({key:d.toISOString().slice(0,7),label:MN[d.getMonth()].slice(0,3)+' '+String(d.getFullYear()).slice(2)});
+  }
+  html+='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">';
+  html+='<thead><tr style="background:#f9fafb;"><th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:800;color:#6b7280;">Mes</th>';
+  canales.forEach(function(ch){html+='<th style="padding:10px 8px;text-align:right;font-size:11px;font-weight:800;color:'+ch.color+';">'+ch.icon+' '+ch.label+'</th>';});
+  html+='<th style="padding:10px 8px;text-align:right;font-size:11px;font-weight:800;color:#374151;">TOTAL</th></tr></thead><tbody>';
+  meses6.forEach(function(m){
+    html+='<tr><td style="padding:9px 12px;font-weight:700;color:#374151;">'+m.label+'</td>';
+    var rowTotal=0;
+    canales.forEach(function(ch){
+      var v=VENTAS.filter(function(v){return (v.local===ch.key||v.tipo===ch.key)&&(v.fecha||'').startsWith(m.key)&&Number(v.total)>0&&v.estado!=='anulada';}).reduce(function(s,v){return s+Number(v.total);},0);
+      rowTotal+=v;
+      html+='<td style="padding:9px 8px;text-align:right;color:'+(v>0?ch.color:'#d1d5db')+';">'+(v>0?$p(v):'—')+'</td>';
+    });
+    html+='<td style="padding:9px 8px;text-align:right;font-weight:800;color:#1a1f36;">'+(rowTotal>0?$p(rowTotal):'—')+'</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div></div>';
+
+  cont.innerHTML=html;
 }
 
 // ── VENTAS POR CANAL ──
@@ -12287,12 +12808,12 @@ function renderChqResumen(){
   var hoyDate=new Date();
   var MN=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-  // Buckets: 0-15 / 15-30 / 30-45 / +45
+  // Buckets: 0-7 / 7-15 / 15-30 / 30-45 / +45
   function diasHasta(f){return Math.ceil((new Date(f+'T12:00:00')-new Date(hoy+'T00:00:00'))/86400000);}
-  function bkt(f){var d=diasHasta(f);return d<=15?0:d<=30?1:d<=45?2:3;}
-  var BK_LBL=['Próx. 15 días','15 a 30 días','30 a 45 días','+45 días'];
-  var BK_COL=['#16a34a','#0ea5e9','#f59e0b','#9ca3af'];
-  var BK_BG =['#f0fdf4','#e0f2fe','#fef3c7','#f3f4f6'];
+  function bkt(f){var d=diasHasta(f);return d<=7?0:d<=15?1:d<=30?2:d<=45?3:4;}
+  var BK_LBL=['Próx. 7 días','7 a 15 días','15 a 30 días','30 a 45 días','+45 días'];
+  var BK_COL=['#dc2626','#f59e0b','#0ea5e9','#8b5cf6','#9ca3af'];
+  var BK_BG =['#fff5f5','#fffbeb','#e0f2fe','#f5f3ff','#f3f4f6'];
 
   // ── Cheques en cartera disponibles ──
   var enCarteraDisp=CHEQUES_CARTERA.filter(function(c){return c.estado==='en_cartera'&&c.fecha_cobro;});
@@ -12300,12 +12821,12 @@ function renderChqResumen(){
 
   // ── Cupo: vendidos sin liberar agrupados por tiempo ──
   var cupoOcupado=CHEQUES_CARTERA.filter(function(c){return c.estado==='vendido'&&!c.cupo_liberado&&c.fecha_cobro;});
-  var cupoBk=[{c:0,t:0},{c:0,t:0},{c:0,t:0},{c:0,t:0}];
+  var cupoBk=[{c:0,t:0},{c:0,t:0},{c:0,t:0},{c:0,t:0},{c:0,t:0}];
   cupoOcupado.forEach(function(c){var b=bkt(c.fecha_cobro);cupoBk[b].c++;cupoBk[b].t+=Number(c.monto);});
   var totalCupoOcupado=cupoOcupado.reduce(function(s,c){return s+Number(c.monto);},0);
 
-  // ── Disponibles por período (4 buckets) ──
-  var dispBk=[{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0}];
+  // ── Disponibles por período (5 buckets) ──
+  var dispBk=[{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0}];
   enCarteraDisp.forEach(function(c){
     var b=bkt(c.fecha_cobro);var sal=saldoCheque(c.id);
     dispBk[b].c++;dispBk[b].t+=sal;
@@ -12379,7 +12900,7 @@ function renderChqResumen(){
   // ── Vista por PERÍODO (4 buckets · 2 filas: cartera + cupo) ──
   html+='<div class="panel" style="margin-bottom:18px;">';
   html+='<div class="panel-hdr"><h4>📆 Disponibles por período</h4><span style="font-size:12px;color:#9ca3af;">agrupado por fecha de cobro</span></div>';
-  html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">';
+  html+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">';
   // Encabezados de columna
   BK_LBL.forEach(function(lbl,i){
     html+='<div style="text-align:center;font-size:10px;font-weight:800;color:'+BK_COL[i]+';letter-spacing:.5px;padding:6px 0 2px;">'+lbl.toUpperCase()+'</div>';
@@ -20565,7 +21086,7 @@ function renderCostos(){
 
 // ── Tab toggle ──
 function setCosTab(tab,btn){
-  ['fichas','avios','analisis','pedidos'].forEach(function(t){
+  ['fichas','avios','analisis','pedidos','simulador'].forEach(function(t){
     document.getElementById('cos-tab-'+t).style.display=t===tab?'':'none';
   });
   document.querySelectorAll('#cos-tabs .tab').forEach(function(b){b.classList.remove('active');});
@@ -20573,6 +21094,7 @@ function setCosTab(tab,btn){
   if(tab==='avios')renderCostosAvios();
   if(tab==='analisis')renderCostosAnalisis();
   if(tab==='pedidos')renderCostosPedido();
+  if(tab==='simulador')initSimulador();
 }
 
 // ─────────────────────────────────────────────────────
@@ -20773,6 +21295,8 @@ function renderCostosFichas(){
           (f.descripcion?'<div style="font-size:12px;color:#9ca3af;margin-top:2px;">'+f.descripcion+'</div>':'')+
         '</div>'+
         '<div class="actions">'+
+          '<button class="btn btn-sm btn-gray btn-icon" title="Simular precios" onclick="abrirSimuladorConFicha('+f.id+')">🎯</button>'+
+          '<button class="btn btn-sm btn-gray btn-icon" title="Duplicar ficha" onclick="duplicarFicha('+f.id+')">📋</button>'+
           '<button class="btn btn-sm btn-gray btn-icon" onclick="openFichaModal('+f.id+')">✏️</button>'+
           '<button class="btn btn-sm btn-red btn-icon" onclick="deleteFicha('+f.id+')">🗑️</button>'+
         '</div>'+
@@ -20817,7 +21341,40 @@ function renderCostosAnalisis(){
   if(!fichas.length){cont.innerHTML='<div class="empty"><p>Cargá fichas de costo para ver el análisis de rentabilidad.</p></div>';return;}
   var filas=fichas.map(function(f){return{f:f,mMin:fichaMargenes(f,'min'),mMay:fichaMargenes(f,'may')};})
     .sort(function(a,b){return b.mMin.pct-a.mMin.pct;});
-  var html='<div class="panel">'+
+  // Gráfico de barras horizontales
+  var chartHtml='<div class="panel" style="margin-bottom:14px;">'+
+    '<div style="font-size:14px;font-weight:800;color:#1a1f36;margin-bottom:4px;">Mapa de márgenes</div>'+
+    '<div style="font-size:12px;color:#9ca3af;margin-bottom:14px;">Margen minorista (barra azul) y mayorista (barra violeta) por modelo</div>'+
+    filas.map(function(row){
+      var mMinPct=Math.max(0,row.mMin.pct); var mMayPct=Math.max(0,row.mMay.pct);
+      var wMin=Math.min(mMinPct,100); var wMay=Math.min(mMayPct,100);
+      return '<div style="margin-bottom:12px;">'+
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;">'+
+          '<span style="font-size:13px;font-weight:700;color:#1a1f36;">'+esc(row.f.nombre_modelo)+'</span>'+
+          '<span style="font-size:11px;color:#6b7280;">Costo: '+$p(fichaCalcCosto(row.f).total)+'</span>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'+
+          '<span style="font-size:10px;color:#6b7280;width:22px;text-align:right;">min</span>'+
+          '<div style="flex:1;background:#f3f4f6;border-radius:4px;height:16px;overflow:hidden;">'+
+            '<div style="width:'+wMin+'%;height:100%;background:'+cosMargenColor(mMinPct)+';border-radius:4px;transition:width .3s;display:flex;align-items:center;padding-left:6px;">'+
+              (wMin>10?'<span style="font-size:10px;color:#fff;font-weight:700;">'+mMinPct+'%</span>':'')+
+            '</div></div>'+
+          (wMin<=10?'<span style="font-size:10px;font-weight:700;color:'+cosMargenColor(mMinPct)+';">'+mMinPct+'%</span>':'')+
+          '<span style="font-size:11px;color:#9ca3af;width:70px;text-align:right;">'+$p(row.mMin.precio)+'</span>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;gap:6px;">'+
+          '<span style="font-size:10px;color:#6b7280;width:22px;text-align:right;">may</span>'+
+          '<div style="flex:1;background:#f3f4f6;border-radius:4px;height:16px;overflow:hidden;">'+
+            '<div style="width:'+wMay+'%;height:100%;background:#6c7ae0;border-radius:4px;transition:width .3s;opacity:.8;display:flex;align-items:center;padding-left:6px;">'+
+              (wMay>10?'<span style="font-size:10px;color:#fff;font-weight:700;">'+mMayPct+'%</span>':'')+
+            '</div></div>'+
+          (wMay<=10?'<span style="font-size:10px;font-weight:700;color:#6c7ae0;">'+mMayPct+'%</span>':'')+
+          '<span style="font-size:11px;color:#9ca3af;width:70px;text-align:right;">'+$p(row.mMay.precio)+'</span>'+
+        '</div>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+  var html=chartHtml+'<div class="panel">'+
     '<div style="font-size:14px;font-weight:800;color:#1a1f36;margin-bottom:4px;">Ranking de rentabilidad</div>'+
     '<div style="font-size:12px;color:#9ca3af;margin-bottom:16px;">Ordenado de mayor a menor margen minorista. 🟢 ≥40% · 🟡 20-39% · 🔴 &lt;20%</div>'+
     '<div class="tbl"><table>'+
@@ -21099,6 +21656,243 @@ async function deleteFicha(id){
   toast('Ficha eliminada','info');
   await Promise.all([loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios()]);
   renderCostos();renderCostosFichas();
+}
+
+// ─────────────────────────────────────────────────────
+//  FICHAS — Duplicar
+// ─────────────────────────────────────────────────────
+async function duplicarFicha(id){
+  var f=FICHAS_COSTO.find(function(x){return x.id===id;});
+  if(!f)return;
+  var nuevoNombre='Copia de '+f.nombre_modelo;
+  var rF=await sb.from('fichas_costo').insert({
+    nombre_modelo:nuevoNombre,
+    descripcion:f.descripcion||null,
+    precio_venta_min:f.precio_venta_min||0,
+    precio_venta_may:f.precio_venta_may||0,
+    costo_confeccion:f.costo_confeccion||0,
+    costo_bordado:f.costo_bordado||0,
+    activo:true,updated_at:new Date().toISOString()
+  }).select('id').single();
+  if(rF.error){toast('Error al duplicar: '+rF.error.message,'err');return;}
+  var newId=rF.data.id;
+  // Copiar telas
+  var telas=FICHAS_COSTO_TELAS.filter(function(t){return t.ficha_id===id;});
+  if(telas.length){
+    await sb.from('fichas_costo_telas').insert(telas.map(function(t){
+      return{ficha_id:newId,nombre_tela:t.nombre_tela,unidad:t.unidad,cantidad:t.cantidad,costo_unit:t.costo_unit};
+    }));
+  }
+  // Copiar avíos
+  var avios=FICHAS_COSTO_AVIOS.filter(function(a){return a.ficha_id===id;});
+  if(avios.length){
+    await sb.from('fichas_costo_avios').insert(avios.map(function(a){
+      return{ficha_id:newId,avio_id:a.avio_id,cantidad:a.cantidad};
+    }));
+  }
+  toast('Ficha duplicada como "'+nuevoNombre+'" ✓');
+  await Promise.all([loadFichasCosto(),loadFichasCostoTelas(),loadFichasCostoAvios()]);
+  renderCostos();renderCostosFichas();
+  // Abrir el modal de la nueva ficha para que el usuario la edite
+  openFichaModal(newId);
+}
+
+// ─────────────────────────────────────────────────────
+//  SIMULADOR DE PRECIOS
+// ─────────────────────────────────────────────────────
+var simFichaActual=null;
+
+function abrirSimuladorConFicha(fichaId){
+  // Ir al tab simulador y preseleccionar la ficha
+  var tabBtn=document.querySelector('#cos-tabs .tab:nth-child(5)');
+  setCosTab('simulador',tabBtn);
+  setTimeout(function(){
+    var sel=document.getElementById('sim-ficha-sel');
+    if(sel){sel.value=fichaId;simCambiarFicha();}
+  },50);
+}
+
+function initSimulador(){
+  // Poblar dropdown de fichas
+  var sel=document.getElementById('sim-ficha-sel');
+  if(!sel)return;
+  var fichasActivas=FICHAS_COSTO.filter(function(f){return f.activo;});
+  sel.innerHTML='<option value="">— Elegir ficha —</option>'+
+    fichasActivas.map(function(f){return'<option value="'+f.id+'">'+esc(f.nombre_modelo)+'</option>';}).join('');
+  simFichaActual=null;
+  simCambiarFicha();
+}
+
+function simCambiarFicha(){
+  var sel=document.getElementById('sim-ficha-sel');
+  if(!sel)return;
+  var id=parseInt(sel.value)||null;
+  simFichaActual=id?FICHAS_COSTO.find(function(f){return f.id===id;})||null:null;
+
+  var panCalc=document.getElementById('sim-panel-calc');
+  var panSens=document.getElementById('sim-panel-sens');
+  var det=document.getElementById('sim-costo-detalle');
+  var empty=document.getElementById('sim-empty');
+
+  if(!simFichaActual){
+    if(det)det.style.display='none';
+    if(panCalc)panCalc.style.display='none';
+    if(panSens)panSens.style.display='none';
+    if(empty)empty.style.display='';
+    return;
+  }
+  if(empty)empty.style.display='none';
+  if(det)det.style.display='';
+  if(panCalc)panCalc.style.display='';
+  if(panSens)panSens.style.display='';
+
+  // Pre-llenar precios con los de la ficha
+  var pMinEl=document.getElementById('sim-p-min');
+  var pMayEl=document.getElementById('sim-p-may');
+  if(pMinEl&&!pMinEl.value)pMinEl.value=simFichaActual.precio_venta_min||'';
+  if(pMayEl&&!pMayEl.value)pMayEl.value=simFichaActual.precio_venta_may||'';
+
+  // Resetear sensibilidad
+  ['sim-sens-telas','sim-sens-avios','sim-sens-conf','sim-sens-bord'].forEach(function(eid){
+    var el=document.getElementById(eid);if(el)el.value=0;
+  });
+
+  simRecalc();
+}
+
+function simRecalc(){
+  if(!simFichaActual)return;
+  var f=simFichaActual;
+  var c=fichaCalcCosto(f);
+
+  // Actualizar detalle de costo
+  document.getElementById('sim-c-telas').textContent=$p(c.telas);
+  document.getElementById('sim-c-avios').textContent=$p(c.avios);
+  document.getElementById('sim-c-conf').textContent=$p(c.conf);
+  document.getElementById('sim-c-bord').textContent=$p(c.bord);
+  document.getElementById('sim-c-total').textContent=$p(c.total);
+
+  // ── Sensibilidad ──
+  var pctTelas=parseFloat(document.getElementById('sim-sens-telas').value)||0;
+  var pctAvios=parseFloat(document.getElementById('sim-sens-avios').value)||0;
+  var pctConf=parseFloat(document.getElementById('sim-sens-conf').value)||0;
+  var pctBord=parseFloat(document.getElementById('sim-sens-bord').value)||0;
+
+  var nuevoTelas=c.telas*(1+pctTelas/100);
+  var nuevoAvios=c.avios*(1+pctAvios/100);
+  var nuevoConf=c.conf*(1+pctConf/100);
+  var nuevoBord=c.bord*(1+pctBord/100);
+  var nuevoCosto=nuevoTelas+nuevoAvios+nuevoConf+nuevoBord;
+  var deltaCosto=nuevoCosto-c.total;
+
+  var pMin=Number(f.precio_venta_min)||0;
+  var pMay=Number(f.precio_venta_may)||0;
+  var mMinOrig=pMin>0?Math.round((pMin-c.total)/pMin*100):null;
+  var mMayOrig=pMay>0?Math.round((pMay-c.total)/pMay*100):null;
+  var mMinNuevo=pMin>0?Math.round((pMin-nuevoCosto)/pMin*100):null;
+  var mMayNuevo=pMay>0?Math.round((pMay-nuevoCosto)/pMay*100):null;
+
+  var anyChange=(pctTelas||pctAvios||pctConf||pctBord);
+  var sensHtml='';
+  if(anyChange){
+    function flechaMarg(orig,nuevo){
+      if(orig===null||nuevo===null)return'—';
+      var dif=nuevo-orig;
+      var flecha=dif>0?'<span style="color:#16a34a;">↑ +'+dif+'pp</span>':dif<0?'<span style="color:#dc2626;">↓ '+dif+'pp</span>':'sin cambio';
+      return '<strong style="color:'+cosMargenColor(nuevo)+';">'+nuevo+'%</strong> (era '+orig+'%) '+flecha;
+    }
+    sensHtml='<div style="display:flex;flex-wrap:wrap;gap:8px;">'
+      +'<div style="flex:1;min-width:180px;">'
+        +'<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:4px;">Nuevo costo total</div>'
+        +'<div style="font-size:16px;font-weight:900;color:#dc2626;">'+$p(nuevoCosto)+'</div>'
+        +'<div style="font-size:11px;color:'+(deltaCosto>0?'#dc2626':deltaCosto<0?'#16a34a':'#9ca3af')+';">'+(deltaCosto>0?'▲ +'+$p(deltaCosto):deltaCosto<0?'▼ '+$p(deltaCosto):'Sin cambio')+'</div>'
+      +'</div>'
+      +(pMin>0?'<div style="flex:1;min-width:160px;">'
+        +'<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:4px;">Margen minorista</div>'
+        +'<div style="font-size:13px;">'+flechaMarg(mMinOrig,mMinNuevo)+'</div>'
+        +'<div style="font-size:11px;color:#9ca3af;">con precio '+$p(pMin)+'</div>'
+      +'</div>':'')
+      +(pMay>0?'<div style="flex:1;min-width:160px;">'
+        +'<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:4px;">Margen mayorista</div>'
+        +'<div style="font-size:13px;">'+flechaMarg(mMayOrig,mMayNuevo)+'</div>'
+        +'<div style="font-size:11px;color:#9ca3af;">con precio '+$p(pMay)+'</div>'
+      +'</div>':'')
+    +'</div>';
+  } else {
+    sensHtml='<div style="font-size:12px;color:#9ca3af;">Ajustá los porcentajes de arriba para simular el impacto en tus márgenes.</div>';
+  }
+  var sensEl=document.getElementById('sim-sens-result');
+  if(sensEl)sensEl.innerHTML=sensHtml;
+
+  // ── Precio necesario para margen objetivo ──
+  var margenObj=parseFloat(document.getElementById('sim-margen-obj').value)||40;
+  // precio = costo / (1 - margen/100)
+  var precioNecMin=margenObj<100?(c.total/(1-margenObj/100)):null;
+  var precioNecMay=margenObj<100?(c.total/(1-margenObj/100)):null;
+  var pnEl=document.getElementById('sim-precio-necesario');
+  if(pnEl){
+    if(precioNecMin!==null){
+      var diffMin=pMin>0?Math.round(precioNecMin-pMin):null;
+      var diffMay=pMay>0?Math.round(precioNecMin-pMay):null;
+      pnEl.innerHTML=
+        '<div style="display:flex;gap:16px;flex-wrap:wrap;">'
+        +'<div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;">Precio necesario</div>'
+          +'<div style="font-size:22px;font-weight:900;color:#6c7ae0;">'+$p(Math.round(precioNecMin))+'</div>'
+          +'<div style="font-size:11px;color:#9ca3af;">para cualquier canal</div></div>'
+        +(diffMin!==null?'<div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;">vs precio min. actual</div>'
+          +'<div style="font-size:16px;font-weight:700;color:'+(diffMin>0?'#dc2626':diffMin<0?'#16a34a':'#9ca3af')+';">'+(diffMin>0?'+':'')+''+$p(diffMin)+'</div>'
+          +'<div style="font-size:11px;color:#9ca3af;">actual: '+$p(pMin)+'</div></div>':'')
+        +(diffMay!==null&&pMay!==pMin?'<div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;">vs precio may. actual</div>'
+          +'<div style="font-size:16px;font-weight:700;color:'+(diffMay>0?'#dc2626':diffMay<0?'#16a34a':'#9ca3af')+';">'+(diffMay>0?'+':'')+''+$p(diffMay)+'</div>'
+          +'<div style="font-size:11px;color:#9ca3af;">actual: '+$p(pMay)+'</div></div>':'')
+        +'</div>';
+    } else {
+      pnEl.textContent='Ingresá un porcentaje menor a 100%.';
+    }
+  }
+
+  // ── Margen resultante dado un precio ──
+  var simPMin=parseFloat(document.getElementById('sim-p-min').value)||0;
+  var simPMay=parseFloat(document.getElementById('sim-p-may').value)||0;
+  var mrEl=document.getElementById('sim-margen-result');
+  if(mrEl){
+    var partes=[];
+    if(simPMin>0){
+      var mR=Math.round((simPMin-c.total)/simPMin*100);
+      partes.push('<div style="flex:1;min-width:140px;">'
+        +'<div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;">Margen minorista</div>'
+        +'<div style="font-size:22px;font-weight:900;color:'+cosMargenColor(mR)+';">'+mR+'%</div>'
+        +'<div style="font-size:11px;color:#9ca3af;">'+$p(simPMin-c.total)+' / prenda</div>'
+      +'</div>');
+    }
+    if(simPMay>0){
+      var mR2=Math.round((simPMay-c.total)/simPMay*100);
+      partes.push('<div style="flex:1;min-width:140px;">'
+        +'<div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;">Margen mayorista</div>'
+        +'<div style="font-size:22px;font-weight:900;color:'+cosMargenColor(mR2)+';">'+mR2+'%</div>'
+        +'<div style="font-size:11px;color:#9ca3af;">'+$p(simPMay-c.total)+' / prenda</div>'
+      +'</div>');
+    }
+    mrEl.innerHTML=partes.length?'<div style="display:flex;gap:16px;flex-wrap:wrap;">'+partes.join('')+'</div>':'<div style="font-size:12px;color:#9ca3af;">Ingresá un precio para ver el margen.</div>';
+  }
+
+  // ── Punto de equilibrio (break-even) ──
+  var gasto=parseFloat(document.getElementById('sim-gasto').value)||0;
+  var peEl=document.getElementById('sim-punto-eq');
+  if(peEl){
+    if(gasto>0&&(simPMin>0||simPMay>0)){
+      var ganMin=simPMin>0?(simPMin-c.total):0;
+      var ganMay=simPMay>0?(simPMay-c.total):0;
+      var peMin=ganMin>0?Math.ceil(gasto/ganMin):null;
+      var peMay=ganMay>0?Math.ceil(gasto/ganMay):null;
+      var rows=[];
+      if(peMin!==null)rows.push('<div><span style="font-weight:700;color:#1a1f36;">'+peMin+'</span> prendas al precio minorista ('+$p(simPMin)+')</div>');
+      if(peMay!==null)rows.push('<div><span style="font-weight:700;color:#1a1f36;">'+peMay+'</span> prendas al precio mayorista ('+$p(simPMay)+')</div>');
+      peEl.innerHTML=rows.length?rows.join(''):'<span style="color:#9ca3af;font-size:12px;">El precio no cubre el costo — margen negativo.</span>';
+    } else {
+      peEl.innerHTML='<span style="font-size:12px;color:#9ca3af;">Ingresá un gasto a cubrir y al menos un precio de venta.</span>';
+    }
+  }
 }
 
 // ── MOVIMIENTOS STOCK ────────────────────────────────────────────────────────
