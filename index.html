@@ -4021,6 +4021,22 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Stock rápido desde tarjeta -->
+<div class="modal-bg" id="m-stock-rapido">
+  <div class="modal" style="max-width:400px;">
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Ajuste de stock</div>
+      <div style="font-size:16px;font-weight:800;color:#1a1f36;" id="msr-titulo"></div>
+      <div style="font-size:12px;color:#6b7280;margin-top:2px;" id="msr-subtitulo"></div>
+    </div>
+    <div id="msr-locales" style="display:flex;flex-direction:column;gap:10px;"></div>
+    <div class="modal-foot" style="margin-top:20px;">
+      <button class="btn btn-gray" onclick="closeM('m-stock-rapido')">Cancelar</button>
+      <button class="btn" onclick="saveStockRapido()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Stock -->
 <div class="modal-bg" id="m-stock">
   <div class="modal">
@@ -5546,7 +5562,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <h3 id="m-prod-title">Nuevo producto</h3>
     <div class="grid2">
       <div class="field full"><label>Colegio</label>
-        <select id="mprod-colegio">
+        <select id="mprod-colegio" onchange="mprodActualizarPrecios()">
           <option value="">— Sin colegio —</option>
           <option>San Marcos</option>
           <option>Instituto Vicente Pallotti</option>
@@ -5567,9 +5583,9 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
       <div class="field full"><label>Nombre *</label><input id="mprod-nombre" placeholder="Nombre del producto"/></div>
       <div class="field full"><label>Descripción</label><input id="mprod-desc" placeholder="Descripción adicional (opcional)"/></div>
-      <div class="field"><label>Precio mayorista $ (XS–XL)</label><input type="number" id="mprod-pmay" min="0" placeholder="0"/></div>
-      <div class="field"><label>Precio mayorista $ (XXL+)</label><input type="number" id="mprod-pmay-grande" min="0" placeholder="0 = igual que XS–XL"/></div>
-      <div class="field"><label>Precio minorista $</label><input type="number" id="mprod-pmin" min="0" placeholder="0"/></div>
+      <div class="field" id="mprod-fld-pmay"><label>Precio XS–XL $</label><input type="number" id="mprod-pmay" min="0" placeholder="0"/></div>
+      <div class="field" id="mprod-fld-pmay-grande"><label>Precio XXL+ $</label><input type="number" id="mprod-pmay-grande" min="0" placeholder="0 = igual que XS–XL"/></div>
+      <div class="field" id="mprod-fld-pmin" style="display:none;"><label>Precio $</label><input type="number" id="mprod-pmin" min="0" placeholder="0"/></div>
       <div class="field"><label>Costo $</label><input type="number" id="mprod-costo" min="0" placeholder="0"/></div>
       <div class="field"><label>Stock ideal</label><input type="number" id="mprod-stock-ideal" min="0" placeholder="0"/></div>
       <div class="field"><label>Nivel</label>
@@ -5623,7 +5639,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="grid2">
       <div class="field"><label>Familia / Nombre del modelo *</label><input id="mmod-familia" placeholder="Ej: CHOMBA HOMBRE"/></div>
       <div class="field"><label>Colegio</label>
-        <select id="mmod-colegio">
+        <select id="mmod-colegio" onchange="mmodActualizarPrecios()">
           <option value="">— Sin colegio —</option>
           <option>San Marcos</option><option>Instituto Vicente Pallotti</option><option>Instituto Apostolado Católico</option>
           <option>Santa Inés</option><option>San Francisco</option><option>La Milagrosa</option>
@@ -5637,9 +5653,9 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option value="Compra">Compra</option><option value="Produccion">Producción</option><option value="Mixto">Mixto</option>
         </select>
       </div>
-      <div class="field"><label>Precio mayorista $</label><input type="number" id="mmod-pmay" min="0" placeholder="0"/></div>
-      <div class="field"><label>Precio may. grande (XXL+) $</label><input type="number" id="mmod-pmay-grande" min="0" placeholder="0 = igual que base"/></div>
-      <div class="field"><label>Precio minorista $</label><input type="number" id="mmod-pmin" min="0" placeholder="0"/></div>
+      <div class="field" id="mmod-fld-pmay"><label>Precio XS–XL $</label><input type="number" id="mmod-pmay" min="0" placeholder="0"/></div>
+      <div class="field" id="mmod-fld-pmay-grande"><label>Precio XXL+ $</label><input type="number" id="mmod-pmay-grande" min="0" placeholder="0 = igual que base"/></div>
+      <div class="field" id="mmod-fld-pmin" style="display:none;"><label>Precio $</label><input type="number" id="mmod-pmin" min="0" placeholder="0"/></div>
       <div class="field"><label>Costo $</label><input type="number" id="mmod-costo" min="0" placeholder="0"/></div>
       <div class="field"><label>Stock ideal por talle</label><input type="number" id="mmod-stock-ideal" min="0" placeholder="0"/></div>
       <div class="field"><label>Nivel</label>
@@ -10998,6 +11014,7 @@ function openProdModal(id,famDefault,colDefault){
   document.getElementById('mprod-btn-del').style.display=id?'':'none';
   poblarSelectCategorias();
   if(id)document.getElementById('mprod-cat').value=p.categoria_id||'';
+  mprodActualizarPrecios();
   openM('m-prod');
 }
 
@@ -11122,7 +11139,7 @@ function renderProductosCards(){
       var bg=ok?'#f0fdf4':parcial?'#fffbeb':'#fff5f5';
       var col=ok?'#16a34a':parcial?'#d97706':'#dc2626';
       var bord=ok?'#bbf7d0':parcial?'#fde68a':'#fca5a5';
-      return '<span onclick="openProdModal('+p.id+')" title="'+esc(p.nombre)+' — clic para editar" style="display:inline-flex;flex-direction:column;align-items:center;background:'+bg+';border:1.5px solid '+bord+';border-radius:7px;padding:4px 10px;cursor:pointer;min-width:44px;">'+
+      return '<span onclick="openStockRapido('+p.id+')" title="Ajustar stock — '+esc(p.nombre)+'" style="display:inline-flex;flex-direction:column;align-items:center;background:'+bg+';border:1.5px solid '+bord+';border-radius:7px;padding:4px 10px;cursor:pointer;min-width:44px;">'+
         '<span style="font-size:10px;font-weight:700;color:#374151;">'+(p.talle||'—')+'</span>'+
         '<span style="font-size:14px;font-weight:800;color:'+col+';">'+st+'</span>'+
         '</span>';
@@ -11160,6 +11177,64 @@ var TALLES_GRUPOS=[
   {label:'ESPECIAL',talles:['Único']},
 ];
 
+// ── STOCK RÁPIDO DESDE TARJETA ──
+var msrProdId=null;
+
+function openStockRapido(prodId){
+  msrProdId=prodId;
+  var p=PRODUCTOS.find(function(x){return x.id===prodId;})||{};
+  document.getElementById('msr-titulo').textContent=(p.familia||p.nombre||'—')+(p.talle?' — talle '+p.talle:'');
+  document.getElementById('msr-subtitulo').textContent=p.nombre||'';
+  var locs=p.locales_disponibles||['llavallol','montegrande','mayorista'];
+  var LOC_LABEL={llavallol:'Llavallol',montegrande:'Monte Grande',mayorista:'Mayorista'};
+  document.getElementById('msr-locales').innerHTML=locs.map(function(loc){
+    var stReg=STOCK.find(function(s){return s.producto_id===prodId&&s.local===loc&&(s.talle||'')===(p.talle||'')&&(s.color||'')==='';});
+    var qty=stReg?stReg.cantidad:0;
+    return '<div style="display:flex;align-items:center;justify-content:space-between;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;padding:10px 14px;">'+
+      '<span style="font-size:13px;font-weight:600;color:#374151;">'+LOC_LABEL[loc]+'</span>'+
+      '<div style="display:flex;align-items:center;gap:8px;">'+
+        '<span style="font-size:11px;color:#9ca3af;">actual: '+qty+'</span>'+
+        '<input type="number" id="msr-qty-'+loc+'" value="'+qty+'" min="0" style="width:80px;padding:6px 10px;border:2px solid #6c7ae0;border-radius:7px;font-size:15px;font-weight:700;text-align:center;"/>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  openM('m-stock-rapido');
+}
+
+async function saveStockRapido(){
+  if(!msrProdId)return;
+  var p=PRODUCTOS.find(function(x){return x.id===msrProdId;})||{};
+  var locs=p.locales_disponibles||['llavallol','montegrande','mayorista'];
+  var ops=locs.map(function(loc){
+    var inp=document.getElementById('msr-qty-'+loc);
+    var qty=inp?parseInt(inp.value)||0:0;
+    return sb.from('stock').upsert(
+      {producto_id:msrProdId,local:loc,talle:p.talle||'',color:'',cantidad:qty},
+      {onConflict:'producto_id,local,talle,color'}
+    );
+  });
+  var results=await Promise.all(ops);
+  var err=results.find(function(r){return r.error;});
+  if(err){toast('Error: '+err.error.message,'err');return;}
+  toast('✅ Stock actualizado');
+  closeM('m-stock-rapido');
+  await loadStock();
+  renderProductos();
+}
+
+function mmodActualizarPrecios(){
+  var esColegio=!!document.getElementById('mmod-colegio').value;
+  document.getElementById('mmod-fld-pmay').style.display=esColegio?'none':'';
+  document.getElementById('mmod-fld-pmay-grande').style.display=esColegio?'none':'';
+  document.getElementById('mmod-fld-pmin').style.display=esColegio?'':'none';
+}
+function mprodActualizarPrecios(){
+  var esColegio=!!document.getElementById('mprod-colegio').value;
+  document.getElementById('mprod-fld-pmay').style.display=esColegio?'none':'';
+  document.getElementById('mprod-fld-pmay-grande').style.display=esColegio?'none':'';
+  document.getElementById('mprod-fld-pmin').style.display=esColegio?'':'none';
+}
+
 function openModeloModal(){
   ['mmod-familia','mmod-pmay','mmod-pmay-grande','mmod-pmin','mmod-costo','mmod-stock-ideal','mmod-talle-custom'].forEach(function(id){document.getElementById(id).value='';});
   ['mmod-colegio','mmod-cat','mmod-tipo2','mmod-nivel'].forEach(function(id){document.getElementById(id).value='';});
@@ -11180,6 +11255,7 @@ function openModeloModal(){
       '</div></div>';
   }).join('');
   poblarSelectCategorias();
+  mmodActualizarPrecios();
   openM('m-modelo');
 }
 
