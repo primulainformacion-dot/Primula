@@ -299,7 +299,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="nav-group">
     <div class="nav-label">General</div>
     <div class="nav-item active" onclick="nav('inicio',this)"><span class="ni">🏠</span> Inicio</div>
-    <div class="nav-item" onclick="nav('estrategia',this)"><span class="ni">🎯</span> Estrategia</div>
   </div>
 
   <div class="nav-group">
@@ -1074,6 +1073,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="tab" onclick="setPanTab('prevision',this)">💵 Previsión de caja</div>
       <div class="tab" onclick="setPanTab('canal',this)">📈 Por canal</div>
       <div class="tab" onclick="setPanTab('objetivos',this)">🎯 Objetivos</div>
+      <div class="tab" onclick="setPanTab('estrategia',this)">🏆 Estrategia</div>
     </div>
 
     <!-- Tab: Control semanal -->
@@ -1467,13 +1467,9 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div id="lt-stock" style="display:none">
       <div class="panel">
         <div class="panel-hdr">
-          <input id="ls-q" placeholder="Buscar producto..." oninput="renderLocalStock()" style="max-width:280px"/>
-          <button class="btn" onclick="openStockModal()">+ Ajuste de stock</button>
+          <input id="ls-q" placeholder="Buscar familia o producto..." oninput="renderLocalStock()" style="max-width:280px"/>
         </div>
-        <div class="tbl"><table>
-          <thead><tr><th>Producto</th><th>Talle</th><th>Color</th><th>Cantidad</th><th></th></tr></thead>
-          <tbody id="ls-tbody"></tbody>
-        </table></div>
+        <div id="ls-cards"></div>
       </div>
     </div>
 
@@ -2423,6 +2419,305 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </div>
       </div>
     </div>
+
+    <!-- Tab: Estrategia -->
+    <div id="pan-tab-estrategia" style="display:none;">
+
+    <!-- Stats meta global -->
+    <div class="stats" style="grid-template-columns:repeat(4,1fr);">
+      <div class="stat" style="border-top:3px solid #6c7ae0;">
+        <div class="stat-icon" style="background:#ede9fe;">🎯</div>
+        <h3>USD 60.000</h3>
+        <p>Meta anual de ganancia</p>
+      </div>
+      <div class="stat" style="border-top:3px solid #16a34a;">
+        <div class="stat-icon" style="background:#dcfce7;">💵</div>
+        <h3>USD 5.000/mes</h3>
+        <p>Meta mensual de ganancia</p>
+      </div>
+      <div class="stat" style="border-top:3px solid #f59e0b;">
+        <div class="stat-icon" style="background:#fef3c7;">📈</div>
+        <h3>35%</h3>
+        <p>Margen neto objetivo</p>
+      </div>
+      <div class="stat" style="border-top:3px solid #3b82f6;">
+        <div class="stat-icon" style="background:#dbeafe;">💹</div>
+        <h3>USD 14.300/mes</h3>
+        <p>Facturación necesaria</p>
+      </div>
+    </div>
+
+    <!-- Barra de progreso del roadmap -->
+    <div class="panel" style="padding:14px 20px;margin-bottom:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:700;color:#1a1f36;">Progreso del Roadmap</span>
+        <span id="estr-progress-txt" style="font-size:12px;color:#6b7280;">0/20 acciones completadas (0%)</span>
+      </div>
+      <div style="background:#f3f4f6;border-radius:20px;height:10px;overflow:hidden;">
+        <div id="estr-progress-bar" style="background:linear-gradient(90deg,#6c7ae0,#10b981);height:100%;border-radius:20px;width:0%;transition:width .4s;"></div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="estr-tabs">
+      <div class="tab active" onclick="setEstrTab('organigrama',this)">🏢 Organigrama</div>
+      <div class="tab" onclick="setEstrTab('kpis',this)">📊 KPIs por área</div>
+      <div class="tab" onclick="setEstrTab('roadmap',this)">🗺️ Roadmap</div>
+      <div class="tab" onclick="setEstrTab('semaforo',this)">🚦 Rentabilidad</div>
+      <div class="tab" onclick="setEstrTab('margen',this);renderMargenReal();">💰 Margen real</div>
+    </div>
+
+    <!-- ── TAB: ORGANIGRAMA ── -->
+    <div id="estr-organigrama">
+      <div style="display:flex;justify-content:center;margin-bottom:8px;">
+        <div class="panel" style="max-width:440px;width:100%;border-top:4px solid #6c7ae0;margin-bottom:0;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+            <div style="width:44px;height:44px;background:#ede9fe;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">👑</div>
+            <div>
+              <div style="font-weight:800;font-size:14px;color:#1a1f36;">Dirección General</div>
+              <div style="font-size:12px;color:#6c7ae0;font-weight:600;">Dueño/a</div>
+            </div>
+          </div>
+          <ul style="font-size:12px;color:#6b7280;line-height:1.9;padding-left:18px;columns:2;gap:16px;">
+            <li>Definir colecciones y precios</li>
+            <li>Aprobar pedidos de producción</li>
+            <li>Supervisar KPIs mensuales</li>
+            <li>Tomar decisiones de inversión</li>
+          </ul>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center;"><div style="width:2px;height:16px;background:#e5e7eb;"></div></div>
+      <div style="display:flex;justify-content:center;margin-bottom:4px;"><div style="width:55%;height:2px;background:#e5e7eb;"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div class="panel" style="border-top:4px solid #f59e0b;margin-bottom:0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:40px;height:40px;background:#fef3c7;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">🏪</div>
+            <div><div style="font-weight:800;font-size:13px;color:#1a1f36;">Comercial</div><div style="font-size:11px;color:#d97706;font-weight:600;">Encargadas + Dirección</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;">
+            <div style="background:#fef9c3;border-radius:7px;padding:5px 10px;font-size:11px;color:#92400e;font-weight:700;">🏭 Canal Mayorista</div>
+            <div style="background:#fef3c7;border-radius:7px;padding:5px 10px;font-size:11px;color:#b45309;font-weight:700;">🏪 Local Llavallol</div>
+            <div style="background:#d1fae5;border-radius:7px;padding:5px 10px;font-size:11px;color:#065f46;font-weight:700;">🏪 Local Monte Grande</div>
+          </div>
+          <ul style="font-size:12px;color:#6b7280;line-height:1.8;padding-left:16px;">
+            <li>Atención al cliente y cobros</li><li>Caja diaria en ERP</li>
+            <li>Captación de nuevos mayoristas</li><li>Seguimiento de deuda CC</li><li>Reportar faltantes de stock</li>
+          </ul>
+        </div>
+        <div class="panel" style="border-top:4px solid #8b5cf6;margin-bottom:0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:40px;height:40px;background:#ede9fe;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">🧵</div>
+            <div><div style="font-weight:800;font-size:13px;color:#1a1f36;">Producción</div><div style="font-size:11px;color:#7c3aed;font-weight:600;">Responsable de producción</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;">
+            <div style="background:#ede9fe;border-radius:7px;padding:5px 10px;font-size:11px;color:#5b21b6;font-weight:700;">✂️ Planeamiento & Tizada</div>
+            <div style="background:#ede9fe;border-radius:7px;padding:5px 10px;font-size:11px;color:#5b21b6;font-weight:700;">🪡 Costura (Talleristas)</div>
+            <div style="background:#ede9fe;border-radius:7px;padding:5px 10px;font-size:11px;color:#5b21b6;font-weight:700;">📦 Control & Entregas</div>
+          </div>
+          <ul style="font-size:12px;color:#6b7280;line-height:1.8;padding-left:16px;">
+            <li>Cargar pedidos al ERP</li><li>Asignar tizada y talleristas</li>
+            <li>Controlar plazos y calidad</li><li>Registrar recepciones</li>
+          </ul>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="panel" style="border-top:4px solid #3b82f6;margin-bottom:0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:40px;height:40px;background:#dbeafe;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">💼</div>
+            <div><div style="font-weight:800;font-size:13px;color:#1a1f36;">Administración & Finanzas</div><div style="font-size:11px;color:#2563eb;font-weight:600;">Administrativa</div></div>
+          </div>
+          <ul style="font-size:12px;color:#6b7280;line-height:1.8;padding-left:16px;">
+            <li>CC clientes y proveedores</li><li>Cobros y pagos con cheque/trans.</li>
+            <li>Liquidaciones a talleristas</li><li>Conciliación bancaria</li><li>Archivo de facturas</li>
+          </ul>
+        </div>
+        <div class="panel" style="border-top:4px solid #16a34a;margin-bottom:0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:40px;height:40px;background:#dcfce7;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">📦</div>
+            <div><div style="font-weight:800;font-size:13px;color:#1a1f36;">Compras & Stock</div><div style="font-size:11px;color:#16a34a;font-weight:600;">Dirección / Administrativa</div></div>
+          </div>
+          <ul style="font-size:12px;color:#6b7280;line-height:1.8;padding-left:16px;">
+            <li>Órdenes de compra de telas</li><li>Control de stock mínimo</li>
+            <li>Actualizar fichas de costo</li><li>Control de depósito</li><li>Negociación con proveedores</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: KPIs ── -->
+    <div id="estr-kpis" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="panel" style="border-left:4px solid #6c7ae0;margin-bottom:0;">
+          <div style="font-weight:800;font-size:13px;color:#1a1f36;margin-bottom:12px;">👑 Dirección General</div>
+          <table style="font-size:12px;width:100%;border-collapse:collapse;">
+            <tr style="background:#f8f9ff;"><td style="padding:6px 8px;font-weight:700;color:#374151;border-radius:6px 0 0 6px;">Facturación total mensual</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#6c7ae0;">≥ USD 14.300</td></tr>
+            <tr><td style="padding:6px 8px;color:#6b7280;">Ganancia neta mensual</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#16a34a;">≥ USD 5.000</td></tr>
+            <tr style="background:#f8f9ff;"><td style="padding:6px 8px;color:#374151;">Margen bruto por prenda</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#6c7ae0;">≥ 55%</td></tr>
+            <tr><td style="padding:6px 8px;color:#6b7280;">Nuevos modelos por colección</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#6c7ae0;">≥ 2</td></tr>
+          </table>
+        </div>
+        <div class="panel" style="border-left:4px solid #f59e0b;margin-bottom:0;">
+          <div style="font-weight:800;font-size:13px;color:#1a1f36;margin-bottom:12px;">🏭 Canal Mayorista</div>
+          <table style="font-size:12px;width:100%;border-collapse:collapse;">
+            <tr style="background:#fffbeb;"><td style="padding:6px 8px;font-weight:700;color:#374151;">Ventas mayoristas/mes</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#d97706;">≥ USD 9.300</td></tr>
+            <tr><td style="padding:6px 8px;color:#6b7280;">Clientes mayoristas activos</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#d97706;">≥ 15</td></tr>
+            <tr style="background:#fffbeb;"><td style="padding:6px 8px;color:#374151;">Deuda vencida en CC</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#dc2626;">≤ 10%</td></tr>
+            <tr><td style="padding:6px 8px;color:#6b7280;">Pedidos nuevos captados</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#d97706;">≥ 3</td></tr>
+          </table>
+        </div>
+        <div class="panel" style="border-left:4px solid #10b981;margin-bottom:0;">
+          <div style="font-weight:800;font-size:13px;color:#1a1f36;margin-bottom:12px;">🏪 Locales Minoristas</div>
+          <table style="font-size:12px;width:100%;border-collapse:collapse;">
+            <tr style="background:#f0fdf4;"><td style="padding:6px 8px;font-weight:700;color:#374151;">Ventas Llavallol/mes</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#16a34a;">≥ USD 2.500</td></tr>
+            <tr><td style="padding:6px 8px;color:#6b7280;">Ventas Monte Grande/mes</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#16a34a;">≥ USD 2.500</td></tr>
+            <tr style="background:#f0fdf4;"><td style="padding:6px 8px;color:#374151;">Ticket promedio</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#16a34a;">≥ USD 35</td></tr>
+            <tr><td style="padding:6px 8px;color:#6b7280;">Clientes nuevos por local</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#16a34a;">≥ 10/mes</td></tr>
+          </table>
+        </div>
+        <div class="panel" style="border-left:4px solid #8b5cf6;margin-bottom:0;">
+          <div style="font-weight:800;font-size:13px;color:#1a1f36;margin-bottom:12px;">🧵 Producción</div>
+          <table style="font-size:12px;width:100%;border-collapse:collapse;">
+            <tr style="background:#faf5ff;"><td style="padding:6px 8px;font-weight:700;color:#374151;">Pedidos entregados en fecha</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#7c3aed;">≥ 90%</td></tr>
+            <tr><td style="padding:6px 8px;color:#6b7280;">Costo real vs ficha (variación)</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#7c3aed;">≤ 5%</td></tr>
+            <tr style="background:#faf5ff;"><td style="padding:6px 8px;color:#374151;">Deuda pendiente talleristas</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#dc2626;">&lt; 30 días</td></tr>
+            <tr><td style="padding:6px 8px;color:#6b7280;">Rechazos / reprocesos</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#7c3aed;">&lt; 3%</td></tr>
+          </table>
+        </div>
+        <div class="panel" style="border-left:4px solid #3b82f6;margin-bottom:0;">
+          <div style="font-weight:800;font-size:13px;color:#1a1f36;margin-bottom:12px;">💼 Administración & Finanzas</div>
+          <table style="font-size:12px;width:100%;border-collapse:collapse;">
+            <tr style="background:#eff6ff;"><td style="padding:6px 8px;font-weight:700;color:#374151;">Cheques vencidos sin depositar</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#dc2626;">0</td></tr>
+            <tr><td style="padding:6px 8px;color:#6b7280;">Cobranza de deuda CC mes</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#2563eb;">≥ 85%</td></tr>
+            <tr style="background:#eff6ff;"><td style="padding:6px 8px;color:#374151;">Facturas proveedores en término</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#2563eb;">≥ 90%</td></tr>
+            <tr><td style="padding:6px 8px;color:#6b7280;">Días de caja negativa</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#dc2626;">0</td></tr>
+          </table>
+        </div>
+        <div class="panel" style="border-left:4px solid #16a34a;margin-bottom:0;">
+          <div style="font-weight:800;font-size:13px;color:#1a1f36;margin-bottom:12px;">📦 Compras & Stock</div>
+          <table style="font-size:12px;width:100%;border-collapse:collapse;">
+            <tr style="background:#f0fdf4;"><td style="padding:6px 8px;font-weight:700;color:#374151;">Productos bajo stock mínimo</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#dc2626;">0</td></tr>
+            <tr><td style="padding:6px 8px;color:#6b7280;">OC con precio actualizado en ficha</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#16a34a;">100%</td></tr>
+            <tr style="background:#f0fdf4;"><td style="padding:6px 8px;color:#374151;">Rotación stock terminado</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#16a34a;">&lt; 60 días</td></tr>
+            <tr><td style="padding:6px 8px;color:#6b7280;">Merma / diferencias inventario</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:#16a34a;">&lt; 2%</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: ROADMAP ── -->
+    <div id="estr-roadmap" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="panel" style="border-top:4px solid #6c7ae0;margin-bottom:0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div style="background:#ede9fe;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:800;color:#5b21b6;">FASE 1</div>
+            <div><div style="font-weight:800;font-size:13px;color:#1a1f36;">Base sólida</div><div style="font-size:11px;color:#9ca3af;">Meses 1 – 3 · Números claros, sin fugas</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <label class="rd-item" data-id="rd-01" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-01')" style="width:16px;height:16px;margin-top:1px;accent-color:#6c7ae0;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Completar fichas de costo</div><div style="font-size:11px;color:#9ca3af;">Costos · Saber el margen real de cada prenda</div></div></label>
+            <label class="rd-item" data-id="rd-02" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-02')" style="width:16px;height:16px;margin-top:1px;accent-color:#6c7ae0;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Precio mínimo mayorista por categoría</div><div style="font-size:11px;color:#9ca3af;">Comercial · Eliminar ventas bajo margen mínimo</div></div></label>
+            <label class="rd-item" data-id="rd-03" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-03')" style="width:16px;height:16px;margin-top:1px;accent-color:#6c7ae0;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Stock mínimo por local + alertas</div><div style="font-size:11px;color:#9ca3af;">Stock · Cero quiebres de venta por falta de stock</div></div></label>
+            <label class="rd-item" data-id="rd-04" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-04')" style="width:16px;height:16px;margin-top:1px;accent-color:#6c7ae0;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Depurar CC clientes vencidos &gt; 60 días</div><div style="font-size:11px;color:#9ca3af;">Finanzas · Recuperar efectivo inmovilizado</div></div></label>
+            <label class="rd-item" data-id="rd-05" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-05')" style="width:16px;height:16px;margin-top:1px;accent-color:#6c7ae0;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Cerrar caja diaria en ERP (ambos locales)</div><div style="font-size:11px;color:#9ca3af;">Locales · Visibilidad real de facturación minorista</div></div></label>
+            <label class="rd-item" data-id="rd-06" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-06')" style="width:16px;height:16px;margin-top:1px;accent-color:#6c7ae0;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Correr patches SQL 52 y 53 en Supabase</div><div style="font-size:11px;color:#9ca3af;">IT · Activar cheque tipo + vínculo factura↔venta</div></div></label>
+          </div>
+        </div>
+        <div class="panel" style="border-top:4px solid #3b82f6;margin-bottom:0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div style="background:#dbeafe;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:800;color:#1d4ed8;">FASE 2</div>
+            <div><div style="font-weight:800;font-size:13px;color:#1a1f36;">Crecimiento comercial</div><div style="font-size:11px;color:#9ca3af;">Meses 3 – 6 · Más facturación mayorista</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <label class="rd-item" data-id="rd-07" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-07')" style="width:16px;height:16px;margin-top:1px;accent-color:#3b82f6;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Catálogo digital por temporada</div><div style="font-size:11px;color:#9ca3af;">Comercial · Facilitar ventas a distancia</div></div></label>
+            <label class="rd-item" data-id="rd-08" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-08')" style="width:16px;height:16px;margin-top:1px;accent-color:#3b82f6;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Reactivar mayoristas sin pedido en 60 días</div><div style="font-size:11px;color:#9ca3af;">Comercial · +3 a 5 clientes reactivados</div></div></label>
+            <label class="rd-item" data-id="rd-09" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-09')" style="width:16px;height:16px;margin-top:1px;accent-color:#3b82f6;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Límite de crédito por cliente</div><div style="font-size:11px;color:#9ca3af;">Finanzas · Reducir exposición a deuda incobrable</div></div></label>
+            <label class="rd-item" data-id="rd-10" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-10')" style="width:16px;height:16px;margin-top:1px;accent-color:#3b82f6;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Calendario de producción (90 días adelante)</div><div style="font-size:11px;color:#9ca3af;">Producción · Reducir urgencias y horas extra</div></div></label>
+            <label class="rd-item" data-id="rd-11" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-11')" style="width:16px;height:16px;margin-top:1px;accent-color:#3b82f6;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Negociar precio por volumen con proveedores</div><div style="font-size:11px;color:#9ca3af;">Compras · Bajar costo de materia prima 3–5%</div></div></label>
+          </div>
+        </div>
+        <div class="panel" style="border-top:4px solid #f59e0b;margin-bottom:0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div style="background:#fef3c7;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:800;color:#92400e;">FASE 3</div>
+            <div><div style="font-weight:800;font-size:13px;color:#1a1f36;">Eficiencia y margen</div><div style="font-size:11px;color:#9ca3af;">Meses 6 – 9 · Margen operativo 35–40%</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <label class="rd-item" data-id="rd-12" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-12')" style="width:16px;height:16px;margin-top:1px;accent-color:#f59e0b;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Costo real vs estimado por pedido</div><div style="font-size:11px;color:#9ca3af;">Producción · Detectar talleristas no rentables</div></div></label>
+            <label class="rd-item" data-id="rd-13" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-13')" style="width:16px;height:16px;margin-top:1px;accent-color:#f59e0b;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Revisar modelos con margen &lt; 40%</div><div style="font-size:11px;color:#9ca3af;">Dirección · Ajustar precio o discontinuar</div></div></label>
+            <label class="rd-item" data-id="rd-14" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-14')" style="width:16px;height:16px;margin-top:1px;accent-color:#f59e0b;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Reunión mensual de KPIs con el equipo</div><div style="font-size:11px;color:#9ca3af;">Dirección · Cultura de seguimiento de resultados</div></div></label>
+            <label class="rd-item" data-id="rd-15" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-15')" style="width:16px;height:16px;margin-top:1px;accent-color:#f59e0b;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Canal online / Instagram para minorista</div><div style="font-size:11px;color:#9ca3af;">Comercial · +10–15% ventas sin costo de local</div></div></label>
+            <label class="rd-item" data-id="rd-16" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-16')" style="width:16px;height:16px;margin-top:1px;accent-color:#f59e0b;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Liquidaciones talleristas en fecha fija</div><div style="font-size:11px;color:#9ca3af;">Finanzas · Reducir tensión operativa y errores</div></div></label>
+          </div>
+        </div>
+        <div class="panel" style="border-top:4px solid #16a34a;margin-bottom:0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div style="background:#dcfce7;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:800;color:#14532d;">FASE 4</div>
+            <div><div style="font-weight:800;font-size:13px;color:#1a1f36;">Escala</div><div style="font-size:11px;color:#9ca3af;">Meses 9 – 12 · Superar USD 60.000 anual</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <label class="rd-item" data-id="rd-17" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-17')" style="width:16px;height:16px;margin-top:1px;accent-color:#16a34a;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Evaluar tercer punto de venta / distribuidor</div><div style="font-size:11px;color:#9ca3af;">Comercial · +USD 2.000–3.000/mes</div></div></label>
+            <label class="rd-item" data-id="rd-18" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-18')" style="width:16px;height:16px;margin-top:1px;accent-color:#16a34a;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Exportar reportes mensuales al contador</div><div style="font-size:11px;color:#9ca3af;">Finanzas · Cierre contable prolijo en término</div></div></label>
+            <label class="rd-item" data-id="rd-19" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-19')" style="width:16px;height:16px;margin-top:1px;accent-color:#16a34a;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Dashboard inicio con KPIs en tiempo real</div><div style="font-size:11px;color:#9ca3af;">IT · Visibilidad sin armar informes manuales</div></div></label>
+            <label class="rd-item" data-id="rd-20" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:8px;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''"><input type="checkbox" class="rd-check" onchange="estrRoadmapToggle('rd-20')" style="width:16px;height:16px;margin-top:1px;accent-color:#16a34a;flex-shrink:0;"><div><div style="font-size:12px;font-weight:700;color:#374151;">Revisar estructura salarial del equipo</div><div style="font-size:11px;color:#9ca3af;">Dirección · Retener personal clave, escalar equipo</div></div></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: SEMÁFORO ── -->
+    <div id="estr-semaforo" style="display:none;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;">
+        <div class="panel" style="border-top:4px solid #dc2626;text-align:center;margin-bottom:0;">
+          <div style="font-size:28px;margin-bottom:8px;">🔴</div>
+          <div style="font-weight:800;font-size:14px;color:#dc2626;margin-bottom:4px;">Mínimo viable</div>
+          <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;">Punto de equilibrio del negocio</div>
+          <div style="background:#fff5f5;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-size:11px;color:#9ca3af;">Facturación mensual</div><div style="font-size:20px;font-weight:800;color:#1a1f36;">USD 10.000</div></div>
+          <div style="background:#fff5f5;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-size:11px;color:#9ca3af;">Margen neto</div><div style="font-size:20px;font-weight:800;color:#dc2626;">30%</div></div>
+          <div style="background:#fff5f5;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-size:11px;color:#9ca3af;">Ganancia mensual</div><div style="font-size:20px;font-weight:800;color:#1a1f36;">USD 3.000</div></div>
+          <div style="background:#fef2f2;border-radius:10px;padding:10px;"><div style="font-size:11px;color:#9ca3af;">Ganancia anual</div><div style="font-size:22px;font-weight:800;color:#dc2626;">USD 36.000</div></div>
+        </div>
+        <div class="panel" style="border-top:4px solid #6c7ae0;text-align:center;margin-bottom:0;box-shadow:0 4px 20px rgba(108,122,224,.15);">
+          <div style="font-size:28px;margin-bottom:8px;">🎯</div>
+          <div style="font-weight:800;font-size:14px;color:#6c7ae0;margin-bottom:4px;">Meta objetivo</div>
+          <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;">El norte de este roadmap</div>
+          <div style="background:#f5f6ff;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-size:11px;color:#9ca3af;">Facturación mensual</div><div style="font-size:20px;font-weight:800;color:#1a1f36;">USD 14.300</div></div>
+          <div style="background:#f5f6ff;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-size:11px;color:#9ca3af;">Margen neto</div><div style="font-size:20px;font-weight:800;color:#6c7ae0;">35%</div></div>
+          <div style="background:#f5f6ff;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-size:11px;color:#9ca3af;">Ganancia mensual</div><div style="font-size:20px;font-weight:800;color:#1a1f36;">USD 5.000</div></div>
+          <div style="background:#ede9fe;border-radius:10px;padding:10px;"><div style="font-size:11px;color:#9ca3af;">Ganancia anual</div><div style="font-size:22px;font-weight:800;color:#6c7ae0;">USD 60.000</div></div>
+        </div>
+        <div class="panel" style="border-top:4px solid #16a34a;text-align:center;margin-bottom:0;">
+          <div style="font-size:28px;margin-bottom:8px;">🚀</div>
+          <div style="font-weight:800;font-size:14px;color:#16a34a;margin-bottom:4px;">Meta ambiciosa</div>
+          <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;">Con escala y canal online activo</div>
+          <div style="background:#f0fdf4;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-size:11px;color:#9ca3af;">Facturación mensual</div><div style="font-size:20px;font-weight:800;color:#1a1f36;">USD 18.000</div></div>
+          <div style="background:#f0fdf4;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-size:11px;color:#9ca3af;">Margen neto</div><div style="font-size:20px;font-weight:800;color:#16a34a;">40%</div></div>
+          <div style="background:#f0fdf4;border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-size:11px;color:#9ca3af;">Ganancia mensual</div><div style="font-size:20px;font-weight:800;color:#1a1f36;">USD 7.200</div></div>
+          <div style="background:#dcfce7;border-radius:10px;padding:10px;"><div style="font-size:11px;color:#9ca3af;">Ganancia anual</div><div style="font-size:22px;font-weight:800;color:#16a34a;">USD 86.400</div></div>
+        </div>
+      </div>
+      <div class="panel" style="background:linear-gradient(135deg,#1a1f36 0%,#2d3355 100%);color:#fff;">
+        <div style="font-weight:800;font-size:14px;margin-bottom:14px;">📌 Las tres palancas clave</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+          <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;"><div style="font-size:20px;margin-bottom:6px;">1️⃣</div><div style="font-weight:700;font-size:13px;margin-bottom:6px;">Facturación mayorista</div><div style="font-size:12px;color:#9ca3af;line-height:1.6;">Es el canal de mayor volumen. Cada cliente mayorista nuevo suma USD 500–1.500/mes. Foco en captación y reactivación.</div></div>
+          <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;"><div style="font-size:20px;margin-bottom:6px;">2️⃣</div><div style="font-weight:700;font-size:13px;margin-bottom:6px;">Control del margen</div><div style="font-size:12px;color:#9ca3af;line-height:1.6;">Cada punto de margen ganado en producción o compras equivale a USD 143/mes directos a ganancia. Las fichas de costo son la herramienta clave.</div></div>
+          <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;"><div style="font-size:20px;margin-bottom:6px;">3️⃣</div><div style="font-weight:700;font-size:13px;margin-bottom:6px;">Cobranza en tiempo</div><div style="font-size:12px;color:#9ca3af;line-height:1.6;">La deuda vencida inmoviliza capital. Mantener CC al día y cheques bien gestionados es condición para que el efectivo fluya.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: MARGEN REAL ── -->
+    <div id="estr-margen" style="display:none;">
+      <div class="panel" style="margin-bottom:14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="field" style="width:auto;"><label>Mes</label><select id="mg-mes" onchange="renderMargenReal()" style="width:160px;"><option>ENERO</option><option>FEBRERO</option><option>MARZO</option><option>ABRIL</option><option>MAYO</option><option>JUNIO</option><option>JULIO</option><option>AGOSTO</option><option>SEPTIEMBRE</option><option>OCTUBRE</option><option>NOVIEMBRE</option><option>DICIEMBRE</option></select></div>
+          <div class="field" style="width:auto;"><label>Año</label><select id="mg-anio" onchange="renderMargenReal()" style="width:100px;"></select></div>
+          <div class="field" style="width:auto;"><label>% Costo mercadería <span style="font-size:10px;color:#9ca3af;">(tela + talleristas)</span></label><input type="number" id="mg-pct-costo" value="45" min="0" max="100" step="0.5" oninput="renderMargenReal()" style="width:110px;"/></div>
+          <div class="field" style="width:auto;"><label>Otros costos variables <span style="font-size:10px;color:#9ca3af;">(no en gastos fijos)</span></label><input type="number" id="mg-otros" value="0" min="0" step="1000" oninput="renderMargenReal()" style="width:160px;"/></div>
+          <div class="field" style="width:auto;"><label>Tipo de cambio <span style="font-size:10px;color:#9ca3af;">$/USD (opcional)</span></label><input type="number" id="mg-tc" value="" min="0" step="50" placeholder="ej: 1200" oninput="renderMargenReal()" style="width:140px;"/></div>
+        </div>
+      </div>
+      <div id="mg-resultado"></div>
+    </div>
+
+    </div><!-- /pan-tab-estrategia -->
   </div>
 
   <!-- ════════════ FINANZAS ════════════ -->
@@ -2664,8 +2959,8 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
   </div>
 
-  <!-- ════════════ ESTRATEGIA ════════════ -->
-  <div class="section" id="sec-estrategia">
+  <!-- ESTRATEGIA movida a pan-tab-estrategia dentro de sec-panel -->
+  <div class="section" id="sec-estrategia" style="display:none!important;">
 
     <!-- Stats meta global -->
     <div class="stats" style="grid-template-columns:repeat(4,1fr);">
@@ -9411,18 +9706,74 @@ function renderLocalCobros(){
 }
 function renderLocalStock(){
   var q=(document.getElementById('ls-q').value||'').toLowerCase();
-  var list=STOCK.filter(function(s){return s.local===currentLocal&&(!q||s.productos&&s.productos.nombre.toLowerCase().includes(q));});
-  var tb=document.getElementById('ls-tbody');
-  if(!list.length){tb.innerHTML='<tr><td colspan="5"><div class="empty"><div class="ei">🗃️</div><p>Sin stock cargado</p></div></td></tr>';return;}
-  tb.innerHTML=list.map(function(s){
-    var qty=s.cantidad;
-    var col=qty<3?'#dc2626':qty<10?'#ca8a04':'#16a34a';
-    return '<tr>'+
-      '<td><strong>'+(s.productos?s.productos.nombre:'—')+'</strong>'+(s.productos&&s.productos.codigo?' <span class="badge b-gray">'+s.productos.codigo+'</span>':'')+'</td>'+
-      '<td>'+(s.talle||'—')+'</td><td>'+(s.color||'—')+'</td>'+
-      '<td><strong style="font-size:16px;color:'+col+'">'+qty+'</strong></td>'+
-      '<td><button class="btn btn-sm btn-gray btn-icon" onclick="openStockModal('+s.id+')">✏️</button></td></tr>';
-  }).join('');
+  var local=currentLocal;
+  // Productos disponibles para este local con al menos 1 entrada de stock (incluso cantidad 0)
+  var prods=PRODUCTOS.filter(function(p){
+    if(!p.activo)return false;
+    var locs=p.locales_disponibles||['llavallol','montegrande','mayorista'];
+    if(locs.indexOf(local)<0)return false;
+    if(q&&!p.nombre.toLowerCase().includes(q)&&!(p.familia||'').toLowerCase().includes(q)&&!(p.colegio||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+  var cont=document.getElementById('ls-cards');
+  if(!cont)return;
+  if(!prods.length){cont.innerHTML='<div class="empty"><div class="ei">🗃️</div><p>Sin productos para este local</p></div>';return;}
+  // Agrupar por familia + colegio
+  var famMap={};
+  prods.forEach(function(p){
+    var key=(p.familia||p.nombre)+'|'+(p.colegio||'');
+    if(!famMap[key])famMap[key]={familia:p.familia||p.nombre,colegio:p.colegio||'',cat:p.categorias?p.categorias.nombre:'',prods:[]};
+    famMap[key].prods.push(p);
+  });
+  Object.values(famMap).forEach(function(fam){
+    fam.prods.sort(function(a,b){
+      var ia=TALLE_ORDER.indexOf(a.talle||'');var ib=TALLE_ORDER.indexOf(b.talle||'');
+      if(ia<0)ia=999;if(ib<0)ib=999;return ia-ib;
+    });
+  });
+  var familias=Object.values(famMap).sort(function(a,b){return a.familia>b.familia?1:-1;});
+  var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;padding:4px 0;">';
+  familias.forEach(function(fam){
+    var totalSt=fam.prods.reduce(function(s,p){
+      var r=STOCK.find(function(st){return st.producto_id===p.id&&st.local===local&&(st.talle||'')===(p.talle||'')&&(st.color||'')==='';});
+      return s+(r?r.cantidad:0);
+    },0);
+    var hasFaltante=fam.prods.some(function(p){
+      var r=STOCK.find(function(st){return st.producto_id===p.id&&st.local===local&&(st.talle||'')===(p.talle||'')&&(st.color||'')==='';});
+      var st=r?r.cantidad:0;
+      var ideal=Number(p.stock_ideal||0);return ideal>0?st<ideal:st===0;
+    });
+    var tallesBadges=fam.prods.map(function(p){
+      var r=STOCK.find(function(st){return st.producto_id===p.id&&st.local===local&&(st.talle||'')===(p.talle||'')&&(st.color||'')==='';});
+      var st=r?r.cantidad:0;
+      var ideal=Number(p.stock_ideal||0);
+      var ok=ideal>0?st>=ideal:st>0;var parcial=!ok&&st>0;
+      var bg=ok?'#f0fdf4':parcial?'#fffbeb':'#fff5f5';
+      var col=ok?'#16a34a':parcial?'#d97706':'#dc2626';
+      var bord=ok?'#bbf7d0':parcial?'#fde68a':'#fca5a5';
+      return '<span style="display:inline-flex;flex-direction:column;align-items:center;background:'+bg+';border:1.5px solid '+bord+';border-radius:7px;overflow:hidden;min-width:44px;">'+
+        '<span onclick="openProdModal('+p.id+')" title="Editar producto" style="font-size:10px;font-weight:700;color:#374151;padding:4px 10px 2px;cursor:pointer;width:100%;text-align:center;">'+(p.talle||'—')+'</span>'+
+        '<span onclick="openStockRapido('+p.id+')" title="Ajustar stock" style="font-size:14px;font-weight:800;color:'+col+';padding:2px 10px 4px;cursor:pointer;width:100%;text-align:center;">'+st+'</span>'+
+        '</span>';
+    }).join('');
+    var catBadge=fam.cat&&fam.cat!=='—'?'<span class="badge b-gray" style="font-size:10px;">'+esc(fam.cat)+'</span> ':'';
+    var colBadge=fam.colegio?'<span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:10px;">'+esc(fam.colegio)+'</span>':'';
+    html+='<div style="background:#fff;border:1.5px solid '+(hasFaltante?'#fca5a5':'#e5e7eb')+';border-radius:12px;padding:14px 16px;">'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px;">'+
+        '<div style="flex:1;min-width:0;">'+
+          '<div style="font-size:13px;font-weight:800;color:#1a1f36;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(fam.familia)+'</div>'+
+          '<div>'+catBadge+colBadge+'</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0;">'+
+          '<div style="font-size:20px;font-weight:800;color:'+(totalSt===0?'#dc2626':'#374151')+';">'+totalSt+'</div>'+
+          '<div style="font-size:10px;color:#9ca3af;">unidades</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:5px;">'+tallesBadges+'</div>'+
+    '</div>';
+  });
+  html+='</div>';
+  cont.innerHTML=html;
 }
 async function renderLocalFact(){
   var desde=document.getElementById('lf-desde').value;
@@ -11669,7 +12020,7 @@ function renderFlujoCajas(anio,mes){
 
 // ── PANEL TABS ──
 function setPanTab(tab,el){
-  ['semana','resumen','objetivos','prevision','canal'].forEach(function(t){
+  ['semana','resumen','objetivos','prevision','canal','estrategia'].forEach(function(t){
     var el2=document.getElementById('pan-tab-'+t);
     if(el2)el2.style.display=t===tab?'block':'none';
   });
@@ -11680,6 +12031,7 @@ function setPanTab(tab,el){
   if(tab==='resumen')renderPanelGeneral();
   if(tab==='prevision')renderPrevisionCaja();
   if(tab==='canal')renderPorCanal();
+  if(tab==='estrategia')renderEstrategiaProgress();
 }
 
 // ══════════════════════════════════════
