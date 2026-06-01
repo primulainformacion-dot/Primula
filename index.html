@@ -617,9 +617,12 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <option value="STOCK">Con stock OK</option>
           </select>
         </div>
-        <button class="btn" onclick="openProdModal()">+ Nuevo producto</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-gray" id="btn-prod-vista" onclick="toggleProdVista()" style="font-size:12px;">📋 Ver tabla</button>
+          <button class="btn" onclick="openModeloModal()">+ Nuevo modelo</button>
+        </div>
       </div>
-      <div style="overflow-x:auto;">
+      <div id="pr-tabla-wrap" style="display:none;overflow-x:auto;">
         <table class="tbl" style="font-size:12px;min-width:1400px;">
           <thead><tr>
             <th style="white-space:nowrap;">SKU</th>
@@ -644,6 +647,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <tbody id="pr-tbody"></tbody>
         </table>
       </div>
+      <div id="pr-cards"></div>
     </div>
     </div><!-- /prod-tab-lista -->
 
@@ -5612,6 +5616,64 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Modal: Nuevo modelo (crea todos los talles de una vez) -->
+<div class="modal-bg" id="m-modelo">
+  <div class="modal" style="max-width:660px;">
+    <h3>👔 Nuevo modelo</h3>
+    <div class="grid2">
+      <div class="field"><label>Familia / Nombre del modelo *</label><input id="mmod-familia" placeholder="Ej: CHOMBA HOMBRE"/></div>
+      <div class="field"><label>Colegio</label>
+        <select id="mmod-colegio">
+          <option value="">— Sin colegio —</option>
+          <option>San Marcos</option><option>Instituto Vicente Pallotti</option><option>Instituto Apostolado Católico</option>
+          <option>Santa Inés</option><option>San Francisco</option><option>La Milagrosa</option>
+          <option>Casita del Sol</option><option>Ángeles y Soles</option><option>Euskal Echea</option>
+        </select>
+      </div>
+      <div class="field"><label>Categoría</label><select id="mmod-cat"><option value="">— Sin categoría —</option></select></div>
+      <div class="field"><label>Tipo</label>
+        <select id="mmod-tipo2">
+          <option value="">— Sin tipo —</option>
+          <option value="Compra">Compra</option><option value="Produccion">Producción</option><option value="Mixto">Mixto</option>
+        </select>
+      </div>
+      <div class="field"><label>Precio mayorista $</label><input type="number" id="mmod-pmay" min="0" placeholder="0"/></div>
+      <div class="field"><label>Precio may. grande (XXL+) $</label><input type="number" id="mmod-pmay-grande" min="0" placeholder="0 = igual que base"/></div>
+      <div class="field"><label>Precio minorista $</label><input type="number" id="mmod-pmin" min="0" placeholder="0"/></div>
+      <div class="field"><label>Costo $</label><input type="number" id="mmod-costo" min="0" placeholder="0"/></div>
+      <div class="field"><label>Stock ideal por talle</label><input type="number" id="mmod-stock-ideal" min="0" placeholder="0"/></div>
+      <div class="field"><label>Nivel</label>
+        <select id="mmod-nivel">
+          <option value="">— Sin nivel —</option>
+          <option value="PRIMARIA / SECUNDARIA">PRIMARIA / SECUNDARIA</option><option value="JARDIN">JARDIN</option>
+          <option value="PRIMARIA">PRIMARIA</option><option value="SECUNDARIA">SECUNDARIA</option>
+          <option value="ADULTOS">ADULTOS</option><option value="BEBÉ">BEBÉ</option><option value="OTRO">OTRO</option>
+        </select>
+      </div>
+      <div class="field full"><label>Locales disponibles</label>
+        <div style="display:flex;gap:20px;padding:8px 0;">
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" id="mmod-loc-llavallol" checked> Llavallol</label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" id="mmod-loc-montegrande" checked> Monte Grande</label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" id="mmod-loc-mayorista" checked> Mayorista</label>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:16px;border-top:1px solid #f3f4f6;padding-top:14px;">
+      <div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:10px;letter-spacing:.3px;">SELECCIONÁ LOS TALLES</div>
+      <div id="mmod-talles-grid"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+        <span style="font-size:12px;color:#6b7280;">Talle personalizado:</span>
+        <input id="mmod-talle-custom" placeholder="Ej: 2XS, 18N..." style="width:130px;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:12px;"/>
+      </div>
+    </div>
+    <div id="mmod-error" style="display:none;color:#dc2626;font-size:12px;margin-top:8px;padding:6px 10px;background:#fff5f5;border-radius:6px;"></div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-modelo')">Cancelar</button>
+      <button class="btn" onclick="saveModelo()">Crear modelo</button>
+    </div>
+  </div>
+</div>
+
 <!-- Importar movimientos CSV -->
 <div class="modal-bg" id="m-import">
   <div class="modal" style="max-width:720px;">
@@ -10334,11 +10396,11 @@ function poblarSelectProveedoresChq(){
 }
 
 function poblarSelectCategorias(){
-  var selectores=['mprod-cat','pr-cat'];
+  var selectores=['mprod-cat','mmod-cat','pr-cat'];
   selectores.forEach(function(id){
     var s=document.getElementById(id);if(!s)return;
     var v=s.value;
-    s.innerHTML=id==='mprod-cat'?'<option value="">— Sin categoría —</option>':'<option value="">Todas las categorías</option>';
+    s.innerHTML=(id==='mprod-cat'||id==='mmod-cat')?'<option value="">— Sin categoría —</option>':'<option value="">Todas las categorías</option>';
     CATEGORIAS.forEach(function(c){
       var o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;s.appendChild(o);
     });
@@ -12818,6 +12880,10 @@ function renderChqResumen(){
   var enCarteraDisp=CHEQUES_CARTERA.filter(function(c){return c.estado==='en_cartera'&&c.fecha_cobro;});
   var totalDisp=enCarteraDisp.reduce(function(s,c){return s+saldoChequeUso(c.id);},0);
 
+  // ── Cheques al cobro (depositados en banco, pendientes de acreditar) ──
+  var alCobroList=CHEQUES_CARTERA.filter(function(c){return c.estado==='al_cobro';});
+  var totalAlCobro=alCobroList.reduce(function(s,c){return s+Number(c.monto);},0);
+
   // ── Cupo: vendidos sin liberar agrupados por tiempo ──
   var cupoOcupado=CHEQUES_CARTERA.filter(function(c){return c.estado==='vendido'&&!c.cupo_liberado&&c.fecha_cobro;});
   var cupoBk=[{c:0,t:0},{c:0,t:0},{c:0,t:0},{c:0,t:0},{c:0,t:0}];
@@ -12852,12 +12918,18 @@ function renderChqResumen(){
   var CUPO_TOTAL=40000000;
   var cupoLibre=CUPO_TOTAL-totalCupoOcupado;
   var cupoLibrePos=cupoLibre>=0;
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:20px;">';
   html+='<div class="stat" style="border-top:3px solid #7c3aed;">'+
     '<div class="stat-icon" style="background:#ede9fe;">🧾</div>'+
     '<h3 style="color:#7c3aed;">'+$p(totalDisp)+'</h3>'+
     '<p>Disponible en cartera</p>'+
     '<div style="font-size:11px;color:#8b5cf6;">'+enCarteraDisp.length+' cheque'+(enCarteraDisp.length!==1?'s':'')+'</div>'+
+  '</div>';
+  html+='<div class="stat" style="border-top:3px solid #f59e0b;">'+
+    '<div class="stat-icon" style="background:#fef3c7;">🏧</div>'+
+    '<h3 style="color:#d97706;">'+$p(totalAlCobro)+'</h3>'+
+    '<p>Al cobro</p>'+
+    '<div style="font-size:11px;color:#b45309;">'+alCobroList.length+' cheque'+(alCobroList.length!==1?'s':'')+' en banco, sin acreditar</div>'+
   '</div>';
   html+='<div class="stat" style="border-top:3px solid #0ea5e9;background:#e0f2fe;">'+
     '<div class="stat-icon" style="background:#bae6fd;">🏦</div>'+
