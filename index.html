@@ -11235,8 +11235,8 @@ function renderPanelGeneral(){
   var uLL=calcStockUnidades('llavallol');
   var uMG=calcStockUnidades('montegrande');
   // Cheques en cartera: valor real desde CHEQUES_CARTERA, no desde movimientos
-  var chqCartDisp=CHEQUES_CARTERA.filter(function(c){return c.estado==='en_cartera'&&saldoCheque(c.id)>0;});
-  var chqCartTotal=chqCartDisp.reduce(function(s,c){return s+saldoCheque(c.id);},0);
+  var chqCartDisp=CHEQUES_CARTERA.filter(function(c){return c.estado==='en_cartera'&&saldoChequeUso(c.id)>0;});
+  var chqCartTotal=chqCartDisp.reduce(function(s,c){return s+saldoChequeUso(c.id);},0);
   var echeqPasivo=0;
   // Total usa stock a precio minorista (valor de realización retail)
   var stockTotal=stockMay+stockLL+stockMG; // mayorista a precio mayorista, locales a precio minorista
@@ -12621,17 +12621,16 @@ function renderChqCartera(){
   });
   // Stats
   var totalMonto=cheques.reduce(function(s,c){return s+Number(c.monto);},0);
-  // Egresado: cheques no en_cartera (full monto ya salió) + usos/imputaciones de en_cartera
+  // Egresado: cheques no en_cartera (full monto ya salió) + usos físicos de en_cartera (las imputaciones son asientos contables, no egreso físico)
   var totalEgresado=cheques.reduce(function(s,c){
     if(c.estado!=='en_cartera') return s+Number(c.monto);
     var usos=CHEQUE_USOS.filter(function(u){return u.cheque_id===c.id;}).reduce(function(ss,u){return ss+Number(u.monto);},0);
-    var imps=CHEQUE_IMPUTACIONES.filter(function(i){return i.cheque_id===c.id;}).reduce(function(ss,i){return ss+Number(i.monto);},0);
-    return s+usos+imps;
+    return s+usos;
   },0);
   var chqEnCartera=cheques.filter(function(c){return c.estado==='en_cartera';});
   var enCarteraCnt=chqEnCartera.length;
-  // Saldo real en cartera = monto - usos - imputaciones por cada cheque en_cartera
-  var saldoEnCartera=chqEnCartera.reduce(function(s,c){return s+saldoCheque(c.id);},0);
+  // Saldo físicamente disponible = monto - usos (endosos/ventas). Las imputaciones no reducen disponibilidad física.
+  var saldoEnCartera=chqEnCartera.reduce(function(s,c){return s+saldoChequeUso(c.id);},0);
   var chqAlCobro=cheques.filter(function(c){return c.estado==='al_cobro';});
   var alCobroCnt=chqAlCobro.length;
   var saldoAlCobro=chqAlCobro.reduce(function(s,c){return s+saldoChequeUso(c.id);},0);
@@ -12817,7 +12816,7 @@ function renderChqResumen(){
 
   // ── Cheques en cartera disponibles ──
   var enCarteraDisp=CHEQUES_CARTERA.filter(function(c){return c.estado==='en_cartera'&&c.fecha_cobro;});
-  var totalDisp=enCarteraDisp.reduce(function(s,c){return s+saldoCheque(c.id);},0);
+  var totalDisp=enCarteraDisp.reduce(function(s,c){return s+saldoChequeUso(c.id);},0);
 
   // ── Cupo: vendidos sin liberar agrupados por tiempo ──
   var cupoOcupado=CHEQUES_CARTERA.filter(function(c){return c.estado==='vendido'&&!c.cupo_liberado&&c.fecha_cobro;});
@@ -12828,7 +12827,7 @@ function renderChqResumen(){
   // ── Disponibles por período (5 buckets) ──
   var dispBk=[{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0},{c:0,t:0,ech:0,fis:0}];
   enCarteraDisp.forEach(function(c){
-    var b=bkt(c.fecha_cobro);var sal=saldoCheque(c.id);
+    var b=bkt(c.fecha_cobro);var sal=saldoChequeUso(c.id);
     dispBk[b].c++;dispBk[b].t+=sal;
     if((c.tipo||'cheque')==='echeq')dispBk[b].ech++;else dispBk[b].fis++;
   });
@@ -12839,7 +12838,7 @@ function renderChqResumen(){
     var d=new Date(c.fecha_cobro+'T12:00:00');
     var key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
     if(!porMes[key])porMes[key]={label:MN[d.getMonth()]+' '+d.getFullYear(),count:0,total:0,echeq:0,cheque:0};
-    var sal=saldoCheque(c.id);
+    var sal=saldoChequeUso(c.id);
     porMes[key].count++;porMes[key].total+=sal;
     if((c.tipo||'cheque')==='echeq')porMes[key].echeq++;else porMes[key].cheque++;
   });
@@ -13814,7 +13813,7 @@ function _updateChqSelBar(){
 }
 function chqSortVal(c,col){
   if(col==='monto')return Number(c.monto)||0;
-  if(col==='saldo')return saldoCheque(c.id);
+  if(col==='saldo')return saldoChequeUso(c.id);
   if(col==='usado'){
     var u=CHEQUE_USOS.filter(function(x){return x.cheque_id===c.id;}).reduce(function(s,x){return s+Number(x.monto);},0);
     var i=CHEQUE_IMPUTACIONES.filter(function(x){return x.cheque_id===c.id;}).reduce(function(s,x){return s+Number(x.monto);},0);
