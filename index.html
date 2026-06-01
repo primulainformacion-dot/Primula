@@ -6227,7 +6227,7 @@ function nav(sec, el){
   if(sec==='finanzas'){renderFinCajas();renderFin();var fab=document.getElementById('btn-fab-mov');if(fab)fab.style.display='flex';}
   if(sec!=='finanzas'){var fab=document.getElementById('btn-fab-mov');if(fab)fab.style.display='none';}
   if(sec==='cheques'){renderChqResumen();renderChqCartera();renderChqPropios();}
-  if(sec==='productos'){renderResumenColegios();}
+  if(sec==='productos'){renderProductos();renderResumenColegios();}
   if(sec==='materiales'){renderMateriales();}
   if(sec==='pedidos'){setPedTab('flujo',document.querySelector('#ped-tabs .tab'));}
   if(sec==='tizada'){setTizTab('activas',document.querySelector('#tiz-tabs .tab'));}
@@ -10568,8 +10568,9 @@ function renderProductos(){
   });
 
   var tb=document.getElementById('pr-tbody');
-  if(!html){tb.innerHTML='<tr><td colspan="18"><div class="empty"><div class="ei">👔</div><p>Sin productos</p></div></td></tr>';return;}
-  tb.innerHTML=html;
+  if(!html){tb.innerHTML='<tr><td colspan="18"><div class="empty"><div class="ei">👔</div><p>Sin productos</p></div></td></tr>';}
+  else{tb.innerHTML=html;}
+  renderProductosCards();
 }
 
 // ════════════════════════════════════
@@ -11042,6 +11043,190 @@ async function saveProd(){
   if(r.error){toast('Error: '+r.error.message,'err');return;}
   toast(editProdId?'Producto actualizado':'Producto creado');
   closeM('m-prod');
+  await loadProductos();
+  renderProductos();poblarSelectProductos();
+}
+
+// ════════════════════════════════════
+// PRODUCTOS — VISTA TARJETAS
+// ════════════════════════════════════
+var prodVista='tarjetas';
+var TALLE_ORDER=['2N','4N','6N','8N','10N','12N','14N','16N','36','38','40','42','44','46','XS','S','M','L','XL','XXL','XXXL','Único'];
+
+function toggleProdVista(){
+  prodVista=prodVista==='tarjetas'?'tabla':'tarjetas';
+  var btn=document.getElementById('btn-prod-vista');
+  if(btn)btn.textContent=prodVista==='tarjetas'?'📋 Ver tabla':'🗂 Ver tarjetas';
+  var tw=document.getElementById('pr-tabla-wrap');
+  var cv=document.getElementById('pr-cards');
+  if(tw)tw.style.display=prodVista==='tabla'?'':'none';
+  if(cv)cv.style.display=prodVista==='tarjetas'?'':'none';
+}
+
+function renderProductosCards(){
+  var q=(document.getElementById('pr-q').value||'').toLowerCase();
+  var catFil=document.getElementById('pr-cat').value;
+  var localFil=document.getElementById('pr-local').value;
+  var colegioFil=(document.getElementById('pr-colegio')||{}).value||'';
+  var estadoFil=(document.getElementById('pr-estado-stock')||{}).value||'';
+  var prods=PRODUCTOS.filter(function(p){
+    if(!p.activo)return false;
+    if(q&&!p.nombre.toLowerCase().includes(q)&&!(p.codigo||'').toLowerCase().includes(q)&&!(p.familia||'').toLowerCase().includes(q)&&!(p.colegio||'').toLowerCase().includes(q))return false;
+    if(catFil&&String(p.categoria_id)!==catFil)return false;
+    if(colegioFil&&(p.colegio||'')!==colegioFil)return false;
+    if(localFil){var locs=p.locales_disponibles||['llavallol','montegrande','mayorista'];if(locs.indexOf(localFil)<0)return false;}
+    return true;
+  });
+  // Agrupar por familia + colegio
+  var famMap={};
+  prods.forEach(function(p){
+    var key=(p.familia||p.nombre)+'|'+(p.colegio||'');
+    if(!famMap[key])famMap[key]={familia:p.familia||p.nombre,colegio:p.colegio||'',cat:p.categorias?p.categorias.nombre:'',prods:[]};
+    famMap[key].prods.push(p);
+  });
+  // Ordenar talles dentro de cada familia
+  Object.values(famMap).forEach(function(fam){
+    fam.prods.sort(function(a,b){
+      var ia=TALLE_ORDER.indexOf(a.talle||'');var ib=TALLE_ORDER.indexOf(b.talle||'');
+      if(ia<0)ia=999;if(ib<0)ib=999;return ia-ib;
+    });
+  });
+  var familias=Object.values(famMap);
+  // Filtro por estado
+  if(estadoFil){
+    familias=familias.filter(function(fam){
+      return fam.prods.some(function(p){
+        var st=STOCK.filter(function(s){return s.producto_id===p.id;}).reduce(function(s,x){return s+x.cantidad;},0);
+        var ideal=Number(p.stock_ideal||0);
+        return ((ideal>0?st<ideal:st===0)?'FALTANTE':'STOCK')===estadoFil;
+      });
+    });
+  }
+  var cont=document.getElementById('pr-cards');
+  if(!cont)return;
+  if(!familias.length){cont.innerHTML='<div class="empty"><div class="ei">👔</div><p>Sin productos</p></div>';return;}
+  familias.sort(function(a,b){return a.familia>b.familia?1:-1;});
+  var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;padding:4px 0;">';
+  familias.forEach(function(fam){
+    var totalSt=fam.prods.reduce(function(s,p){
+      return s+STOCK.filter(function(st){return st.producto_id===p.id;}).reduce(function(ss,x){return ss+x.cantidad;},0);
+    },0);
+    var hasFaltante=fam.prods.some(function(p){
+      var st=STOCK.filter(function(s){return s.producto_id===p.id;}).reduce(function(ss,x){return ss+x.cantidad;},0);
+      var ideal=Number(p.stock_ideal||0);return ideal>0?st<ideal:st===0;
+    });
+    var tallesBadges=fam.prods.map(function(p){
+      var st=STOCK.filter(function(s){return s.producto_id===p.id;}).reduce(function(ss,x){return ss+x.cantidad;},0);
+      var ideal=Number(p.stock_ideal||0);
+      var ok=ideal>0?st>=ideal:st>0;var parcial=!ok&&st>0;
+      var bg=ok?'#f0fdf4':parcial?'#fffbeb':'#fff5f5';
+      var col=ok?'#16a34a':parcial?'#d97706':'#dc2626';
+      var bord=ok?'#bbf7d0':parcial?'#fde68a':'#fca5a5';
+      return '<span onclick="openProdModal('+p.id+')" title="'+esc(p.nombre)+' — clic para editar" style="display:inline-flex;flex-direction:column;align-items:center;background:'+bg+';border:1.5px solid '+bord+';border-radius:7px;padding:4px 10px;cursor:pointer;min-width:44px;">'+
+        '<span style="font-size:10px;font-weight:700;color:#374151;">'+(p.talle||'—')+'</span>'+
+        '<span style="font-size:14px;font-weight:800;color:'+col+';">'+st+'</span>'+
+        '</span>';
+    }).join('');
+    var catBadge=fam.cat&&fam.cat!=='—'?'<span class="badge b-gray" style="font-size:10px;">'+esc(fam.cat)+'</span> ':'';
+    var colBadge=fam.colegio?'<span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:10px;">'+esc(fam.colegio)+'</span>':'';
+    var famEsc=fam.familia.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    var colEsc=fam.colegio.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    html+='<div style="background:#fff;border:1.5px solid '+(hasFaltante?'#fca5a5':'#e5e7eb')+';border-radius:12px;padding:14px 16px;">'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px;">'+
+        '<div style="flex:1;min-width:0;">'+
+          '<div style="font-size:13px;font-weight:800;color:#1a1f36;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(fam.familia)+'">'+esc(fam.familia)+'</div>'+
+          '<div>'+catBadge+colBadge+'</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0;">'+
+          '<div style="font-size:20px;font-weight:800;color:'+(totalSt===0?'#dc2626':'#374151')+';">'+totalSt+'</div>'+
+          '<div style="font-size:10px;color:#9ca3af;">unidades</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">'+tallesBadges+'</div>'+
+      '<div style="border-top:1px solid #f3f4f6;padding-top:8px;display:flex;justify-content:flex-end;">'+
+        '<button class="btn btn-sm btn-gray" style="font-size:11px;" onclick="openProdModal(null,\''+famEsc+'\',\''+colEsc+'\')">+ Talle</button>'+
+      '</div>'+
+    '</div>';
+  });
+  html+='</div>';
+  cont.innerHTML=html;
+}
+
+// ── NUEVO MODELO ──
+var TALLES_GRUPOS=[
+  {label:'NIÑO',talles:['2N','4N','6N','8N','10N','12N','14N','16N']},
+  {label:'ADULTO',talles:['XS','S','M','L','XL','XXL','XXXL']},
+  {label:'NUMÉRICO',talles:['36','38','40','42','44','46']},
+  {label:'ESPECIAL',talles:['Único']},
+];
+
+function openModeloModal(){
+  ['mmod-familia','mmod-pmay','mmod-pmay-grande','mmod-pmin','mmod-costo','mmod-stock-ideal','mmod-talle-custom'].forEach(function(id){document.getElementById(id).value='';});
+  ['mmod-colegio','mmod-cat','mmod-tipo2','mmod-nivel'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('mmod-loc-llavallol').checked=true;
+  document.getElementById('mmod-loc-montegrande').checked=true;
+  document.getElementById('mmod-loc-mayorista').checked=true;
+  document.getElementById('mmod-error').style.display='none';
+  // Generar grilla de talles
+  document.getElementById('mmod-talles-grid').innerHTML=TALLES_GRUPOS.map(function(g){
+    return '<div style="margin-bottom:10px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">'+g.label+'</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">'+
+        g.talles.map(function(t){
+          var id='mmod-t-'+t.replace(/\s/g,'_');
+          return '<label id="mmod-lbl-'+id+'" style="display:flex;align-items:center;justify-content:center;background:#f3f4f6;border:1.5px solid #e5e7eb;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600;user-select:none;min-width:44px;">'+
+            '<input type="checkbox" id="'+id+'" onchange="mmodToggleTalle(this,\''+id+'\')" style="display:none;"/>'+t+'</label>';
+        }).join('')+
+      '</div></div>';
+  }).join('');
+  poblarSelectCategorias();
+  openM('m-modelo');
+}
+
+function mmodToggleTalle(cb,id){
+  var lbl=document.getElementById('mmod-lbl-'+id);if(!lbl)return;
+  if(cb.checked){lbl.style.background='#ede9fe';lbl.style.borderColor='#7c3aed';lbl.style.color='#6d28d9';}
+  else{lbl.style.background='#f3f4f6';lbl.style.borderColor='#e5e7eb';lbl.style.color='';}
+}
+
+async function saveModelo(){
+  var familia=(document.getElementById('mmod-familia').value||'').trim();
+  var err=document.getElementById('mmod-error');
+  if(!familia){err.textContent='El nombre del modelo es obligatorio';err.style.display='block';return;}
+  var talles=[];
+  TALLES_GRUPOS.forEach(function(g){
+    g.talles.forEach(function(t){
+      var cb=document.getElementById('mmod-t-'+t.replace(/\s/g,'_'));
+      if(cb&&cb.checked)talles.push(t);
+    });
+  });
+  var custom=(document.getElementById('mmod-talle-custom').value||'').trim();
+  if(custom)talles.push(custom);
+  if(!talles.length){err.textContent='Seleccioná al menos un talle';err.style.display='block';return;}
+  var locs=[];
+  if(document.getElementById('mmod-loc-llavallol').checked)locs.push('llavallol');
+  if(document.getElementById('mmod-loc-montegrande').checked)locs.push('montegrande');
+  if(document.getElementById('mmod-loc-mayorista').checked)locs.push('mayorista');
+  var base={
+    familia:familia,
+    colegio:document.getElementById('mmod-colegio').value||null,
+    categoria_id:document.getElementById('mmod-cat').value||null,
+    tipo_2:document.getElementById('mmod-tipo2').value||null,
+    precio_mayorista:parseFloat(document.getElementById('mmod-pmay').value)||0,
+    precio_mayorista_grande:parseFloat(document.getElementById('mmod-pmay-grande').value)||0,
+    precio_minorista:parseFloat(document.getElementById('mmod-pmin').value)||0,
+    costo:parseFloat(document.getElementById('mmod-costo').value)||0,
+    stock_ideal:parseInt(document.getElementById('mmod-stock-ideal').value)||0,
+    nivel:document.getElementById('mmod-nivel').value||null,
+    locales_disponibles:locs.length?locs:['llavallol','montegrande','mayorista'],
+    activo:true,
+    updated_at:new Date().toISOString()
+  };
+  var rows=talles.map(function(t){return Object.assign({},base,{talle:t,nombre:familia+' '+t});});
+  var r=await sb.from('productos').insert(rows);
+  if(r.error){err.textContent='Error: '+r.error.message;err.style.display='block';return;}
+  toast('✅ '+talles.length+' talle'+(talles.length!==1?'s':'')+' creado'+(talles.length!==1?'s':'')+' — '+familia);
+  closeM('m-modelo');
   await loadProductos();
   renderProductos();poblarSelectProductos();
 }
