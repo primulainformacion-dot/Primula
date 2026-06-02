@@ -3663,6 +3663,26 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Modal: Editar comprobante local -->
+<div class="modal-bg" id="m-edit-venta-local">
+  <div class="modal" style="max-width:400px;">
+    <h3>✏️ Editar comprobante</h3>
+    <input type="hidden" id="evl-id"/>
+    <div class="form-group">
+      <label>Fecha</label>
+      <input type="date" id="evl-fecha" style="width:100%;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;"/>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label>Total $</label>
+      <input type="number" id="evl-total" min="0" step="0.01" style="width:100%;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;"/>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-edit-venta-local')">Cancelar</button>
+      <button class="btn" onclick="guardarEditVentaLocal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Saldar históricamente en lote -->
 <div class="modal-bg" id="m-saldo-masivo">
   <div class="modal" style="max-width:720px;">
@@ -9710,8 +9730,57 @@ function renderLocalVentas(){
         (v.estado!=='cobrado'?'<button class="btn btn-sm btn-green" onclick="openCobro('+v.id+','+(v.cliente_id||'null')+','+v.saldo+')">Cobrar</button>':'')+
         '<button class="btn btn-sm btn-outline" onclick="verVenta('+v.id+',\'local\')">Ver</button>'+
         '<button class="btn btn-sm btn-red" title="Registrar devolución" onclick="openDevolucion('+v.id+')">↩️</button>'+
+        '<button class="btn btn-sm btn-outline" title="Editar fecha/total" onclick="openEditVentaLocal('+v.id+')">✏️</button>'+
+        '<button class="btn btn-sm btn-red" title="Eliminar comprobante" onclick="eliminarVentaLocal('+v.id+')">🗑️</button>'+
       '</div></td></tr>';
   }).join('');
+}
+async function eliminarVentaLocal(id){
+  var v=VENTAS.find(function(x){return x.id===id;});
+  if(!v)return;
+  var msg='¿Eliminar el comprobante #'+id;
+  if(v.cliente_nombre&&v.cliente_nombre!=='Mostrador')msg+=' ('+v.cliente_nombre+')';
+  msg+=' por '+$p(v.total)+'?';
+  var cobrosV=COBROS.filter(function(c){return c.venta_id===id;});
+  if(cobrosV.length)msg+='\n\nTiene '+cobrosV.length+' cobro(s) registrado(s) que también se eliminarán.';
+  msg+='\n\nEsta acción no se puede deshacer.';
+  if(!confirm(msg))return;
+  // 1. Cobros
+  await sb.from('cobros').delete().eq('venta_id',id);
+  // 2. Devoluciones
+  await sb.from('devoluciones').delete().eq('venta_id',id);
+  // 3. Ítems de venta
+  await sb.from('items_venta').delete().eq('venta_id',id);
+  // 4. Venta
+  var r=await sb.from('ventas').delete().eq('id',id);
+  if(r.error){toast('Error al eliminar: '+r.error.message,'err');return;}
+  toast('Comprobante #'+id+' eliminado','info');
+  await Promise.all([loadVentas(),loadCobros()]);
+  renderLocalVentas();
+  renderLocalCobros();
+  renderPanelGeneral();
+}
+function openEditVentaLocal(id){
+  var v=VENTAS.find(function(x){return x.id===id;});
+  if(!v)return;
+  document.getElementById('evl-id').value=id;
+  document.getElementById('evl-fecha').value=v.fecha||'';
+  document.getElementById('evl-total').value=v.total||0;
+  openM('m-edit-venta-local');
+}
+async function guardarEditVentaLocal(){
+  var id=parseInt(document.getElementById('evl-id').value);
+  var fecha=document.getElementById('evl-fecha').value;
+  var total=parseFloat(document.getElementById('evl-total').value)||0;
+  if(!fecha){toast('Ingresá una fecha','err');return;}
+  if(total<=0){toast('El total debe ser mayor a 0','err');return;}
+  var r=await sb.from('ventas').update({fecha,total,updated_at:new Date().toISOString()}).eq('id',id);
+  if(r.error){toast('Error al guardar: '+r.error.message,'err');return;}
+  toast('Comprobante actualizado');
+  closeM('m-edit-venta-local');
+  await loadVentas();
+  renderLocalVentas();
+  renderPanelGeneral();
 }
 function renderLocalCobros(){
   var hoy=today(); var mesH=hoy.slice(0,7);
