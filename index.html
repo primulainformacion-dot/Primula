@@ -11667,26 +11667,36 @@ async function ejecutarImportProd(){
   var errEl=document.getElementById('improd-error');errEl.style.display='none';
   var errores=[];var insertados=0;
 
-  for(var i=0;i<importProdData.length;i+=50){
-    var batch=importProdData.slice(i,i+50);
-    btn.textContent='Importando... '+(i+batch.length)+'/'+importProdData.length;
-    var rows=batch.map(function(p){return{
-      codigo:p.codigo,nombre:p.nombre,familia:p.familia,talle:p.talle,
-      precio_minorista:p.precio_minorista,precio_mayorista:p.precio_mayorista,
-      precio_mayorista_grande:p.precio_mayorista_grande,costo:p.costo,
-      stock_ideal:p.stock_ideal,tipo_2:p.tipo_2,colegio:p.colegio,
-      locales_disponibles:p.locales_disponibles,activo:p.activo,updated_at:p.updated_at
-    };});
-    var r=await sb.from('productos').insert(rows).select('id');
-    if(r.error){errores.push('Lote '+(Math.floor(i/50)+1)+': '+r.error.message);continue;}
-    // Stock
-    var stockRows=[];
-    r.data.forEach(function(prod,idx){
-      var orig=batch[idx];
-      if(orig&&orig._stock>0){
-        stockRows.push({producto_id:prod.id,local:local,talle:orig.talle||'',color:'',cantidad:orig._stock});
-      }
-    });
+  // Deduplicar por codigo (quedan los de mayor índice)
+  var seen={};var dedupData=[];
+  for(var k=importProdData.length-1;k>=0;k--){
+    var key=importProdData[k].codigo||('__null__'+k);
+    if(!seen[key]){seen[key]=true;dedupData.unshift(importProdData[k]);}
+  }
+
+  for(var i=0;i<dedupData.length;i+=50){
+    var batch=dedupData.slice(i,i+50);
+    btn.textContent='Importando... '+(i+batch.length)+'/'+dedupData.length;
+    // Separar con y sin codigo
+    var conCod=batch.filter(function(p){return p.codigo;});
+    var sinCod=batch.filter(function(p){return !p.codigo;});
+    var inserted=[];
+
+    if(conCod.length){
+      var rows=conCod.map(function(p){return{codigo:p.codigo,nombre:p.nombre,familia:p.familia,talle:p.talle,precio_minorista:p.precio_minorista,precio_mayorista:p.precio_mayorista,precio_mayorista_grande:p.precio_mayorista_grande,costo:p.costo,stock_ideal:p.stock_ideal,tipo_2:p.tipo_2,colegio:p.colegio,locales_disponibles:p.locales_disponibles,activo:p.activo,updated_at:p.updated_at};});
+      var r=await sb.from('productos').upsert(rows,{onConflict:'codigo'}).select('id,codigo');
+      if(r.error){errores.push('Lote '+(Math.floor(i/50)+1)+': '+r.error.message);}
+      else{r.data.forEach(function(prod){var orig=conCod.find(function(p){return p.codigo===prod.codigo;})||{};inserted.push({id:prod.id,_stock:orig._stock||0,talle:orig.talle||'',_orig:orig});});}
+    }
+    if(sinCod.length){
+      var rows2=sinCod.map(function(p){return{nombre:p.nombre,familia:p.familia,talle:p.talle,precio_minorista:p.precio_minorista,precio_mayorista:p.precio_mayorista,precio_mayorista_grande:p.precio_mayorista_grande,costo:p.costo,stock_ideal:p.stock_ideal,tipo_2:p.tipo_2,colegio:p.colegio,locales_disponibles:p.locales_disponibles,activo:p.activo,updated_at:p.updated_at};});
+      var r2=await sb.from('productos').insert(rows2).select('id');
+      if(r2.error){errores.push('Lote sin-SKU '+(Math.floor(i/50)+1)+': '+r2.error.message);}
+      else{r2.data.forEach(function(prod,idx){inserted.push({id:prod.id,_stock:sinCod[idx]._stock||0,talle:sinCod[idx].talle||''});});}
+    }
+
+    // Stock de todos los insertados/actualizados
+    var stockRows=inserted.filter(function(x){return x._stock>0;}).map(function(x){return{producto_id:x.id,local:local,talle:x.talle,color:'',cantidad:x._stock};});
     if(stockRows.length){
       var rs=await sb.from('stock').upsert(stockRows,{onConflict:'producto_id,local,talle,color'});
       if(rs.error)errores.push('Stock lote '+(Math.floor(i/50)+1)+': '+rs.error.message);
