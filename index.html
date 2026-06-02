@@ -16207,6 +16207,7 @@ function posQ(v){return "'"+String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+
 var posItems=[];
 var posClienteId=null, posClienteNombre='';
 var posView='root', posL2Type='', posL2Value='', posL2Label='';
+var posL3Familia='', posL3FamLabel='';
 var posMetodo='';
 
 var POS_BTN_STYLE='padding:14px 10px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-size:13px;font-weight:600;color:#374151;text-align:center;line-height:1.3;transition:border-color .15s;width:100%;';
@@ -16225,6 +16226,7 @@ function renderPOS(){
 
 function posGoRoot(){
   posView='root'; posL2Type=''; posL2Value=''; posL2Label='';
+  posL3Familia=''; posL3FamLabel='';
   var bc=document.getElementById('pos-breadcrumb');
   var grid=document.getElementById('pos-grid');
   var sw=document.getElementById('pos-search-wrap');
@@ -16284,7 +16286,12 @@ function posGoRoot(){
       if(hasStock){colCount[col]=(colCount[col]||0)+1;}
     });
     var btnStL=posNavBtnStyle();
-    var cols=COLEGIOS_LISTA.map(function(nombre){return {value:nombre,label:nombre,count:colCount[nombre]||0};});
+    function sinAc(s){return(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+    var cols=COLEGIOS_LISTA.map(function(nombre){
+      var cnt=0;
+      Object.keys(colCount).forEach(function(k){if(sinAc(k)===sinAc(nombre))cnt+=colCount[k];});
+      return {value:nombre,label:nombre,count:cnt};
+    });
     // Agregar "Sin colegio" si hay productos sin colegio con stock
     if(colCount['__gen__'])cols.push({value:'__gen__',label:'🏷️ Sin colegio',count:colCount['__gen__']});
     // Contar todos los productos con stock en LL
@@ -16306,6 +16313,7 @@ function posGoRoot(){
 
 function posGoLevel2(type, value, label){
   posView='level2'; posL2Type=type; posL2Value=value; posL2Label=label;
+  posL3Familia=''; posL3FamLabel='';
   var bc=document.getElementById('pos-breadcrumb');
   var grid=document.getElementById('pos-grid');
   var sw=document.getElementById('pos-search-wrap');
@@ -16332,16 +16340,46 @@ function posRenderLevel2Grid(type, value, q){
   var local=currentLocal;
   var qn=(q||'').toLowerCase().trim();
 
+  function sinAcento(s){return(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
   var prods=PRODUCTOS.filter(function(p){
     if(!p.activo)return false;
     if(type==='all') return true;
     if(type==='cat') return String(p.categoria_id)===String(value);
     if(value==='__gen__') return !p.colegio;
-    return (p.colegio||'')===value;
+    return sinAcento(p.colegio||'')===sinAcento(value);
   });
 
+  // Para tipo colegio sin búsqueda: mostrar familias como paso intermedio
+  if(type==='colegio' && !qn && !posL3Familia){
+    var famMap={};
+    prods.forEach(function(p){
+      var hasStock=STOCK.some(function(s){return s.producto_id===p.id&&s.local===local&&s.cantidad>0;});
+      var fam=p.familia||p.nombre;
+      if(!famMap[fam])famMap[fam]={familia:fam,count:0,precio:Number(p.precio_minorista||0)};
+      if(hasStock)famMap[fam].count++;
+    });
+    var fams=Object.values(famMap).sort(function(a,b){return a.familia>b.familia?1:-1;});
+    var btnSt=posNavBtnStyle();
+    var html=fams.map(function(f){
+      var sinStock=f.count===0;
+      var st=sinStock?btnSt+'opacity:.4;cursor:default;':btnSt;
+      var click=sinStock?'':'onclick="posGoFamilia('+posQ(f.familia)+','+posQ(value)+','+posQ(posL2Label)+')"';
+      return '<button '+click+' style="'+st+'">'+
+        esc(f.familia)+
+        '<div style="font-size:11px;opacity:.8;margin-top:4px;">'+(sinStock?'Sin stock':f.count+' talle'+(f.count!==1?'s':''))+'</div>'+
+      '</button>';
+    }).join('');
+    if(!html)html='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;">Sin stock disponible</div>';
+    grid.innerHTML=html;
+    return;
+  }
+
+  // Vista de productos con talles (nivel familia o búsqueda directa)
+  if(posL3Familia&&!qn){
+    prods=prods.filter(function(p){return (p.familia||p.nombre)===posL3Familia;});
+  }
   if(qn){
-    prods=prods.filter(function(p){ return (p.nombre||'').toLowerCase().includes(qn); });
+    prods=prods.filter(function(p){ return (p.nombre||'').toLowerCase().includes(qn)||(p.familia||'').toLowerCase().includes(qn); });
   }
 
   var html='';
@@ -16349,11 +16387,15 @@ function posRenderLevel2Grid(type, value, q){
     var talles=STOCK.filter(function(s){return s.producto_id===p.id&&s.local===local&&s.cantidad>0;});
     if(!talles.length)return;
     var precio=Number(p.precio_minorista||0);
+    var talleOrd=talles.slice().sort(function(a,b){
+      var ia=TALLE_ORDER.indexOf(a.talle||''),ib=TALLE_ORDER.indexOf(b.talle||'');
+      if(ia<0)ia=999;if(ib<0)ib=999;return ia-ib;
+    });
     html+='<div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;">'+
-      '<div style="font-size:13px;font-weight:700;color:#374151;">'+p.nombre+'</div>'+
+      '<div style="font-size:13px;font-weight:700;color:#374151;">'+esc(p.familia||p.nombre)+'</div>'+
       '<div style="font-size:13px;color:#16a34a;font-weight:700;">'+$p(precio)+'</div>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
-    talles.sort(function(a,b){return(a.talle||'')>(b.talle||'')?1:-1;}).forEach(function(s){
+    talleOrd.forEach(function(s){
       var talleLabel=(s.talle||'Único')+(s.color&&s.color!==s.talle?' '+s.color:'');
       html+='<button onclick="posAddItem('+p.id+','+posQ(p.nombre)+','+posQ(s.talle||'')+','+posQ(s.color||'')+','+precio+','+s.cantidad+')" '+
         'style="padding:8px 12px;background:#f9fafb;border:2px solid #e5e7eb;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151;" '+
@@ -16371,8 +16413,24 @@ function posRenderLevel2Grid(type, value, q){
   grid.innerHTML=html;
 }
 
+function posGoFamilia(familia, colegioVal, colegioLabel){
+  posL3Familia=familia; posL3FamLabel=familia;
+  var bc=document.getElementById('pos-breadcrumb');
+  var sw=document.getElementById('pos-search-wrap');
+  if(sw)sw.style.display='flex';
+  if(bc)bc.innerHTML=
+    '<button onclick="posGoRoot()" style="background:#f3f4f6;border:none;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:13px;color:#374151;">← Colegios</button>'+
+    '<span style="color:#9ca3af;">›</span>'+
+    '<button onclick="posGoLevel2(\'colegio\','+posQ(colegioVal)+','+posQ(colegioLabel)+')" style="background:#f3f4f6;border:none;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:13px;color:#374151;">'+esc(colegioLabel)+'</button>'+
+    '<span style="color:#9ca3af;">›</span>'+
+    '<span style="font-weight:700;color:#374151;">'+esc(familia)+'</span>';
+  document.getElementById('pos-search-input').value='';
+  posRenderLevel2Grid('colegio', colegioVal, '');
+}
+
 function posFilterSearch(q){
-  posRenderLevel2Grid(posL2Type, posL2Value, q);
+  if(posL3Familia)posRenderLevel2Grid(posL2Type,posL2Value,q);
+  else posRenderLevel2Grid(posL2Type, posL2Value, q);
 }
 
 function posAddItem(prodId,nombre,talle,color,precio,stockDisp){
