@@ -11575,6 +11575,8 @@ function analizarImportProd(){
   function normColegio(c){
     if(!c)return'';c=c.trim();
     if(c==='Santa Ines')return'Santa Inés';
+    if(c==='Instituto Apostolado Catalico'||c==='Instituto Apostolado Católico')return'Instituto Apostolado Católico';
+    if(c==='Angeles y Soles'||c==='Ángeles y Soles')return'Ángeles y Soles';
     if(c.startsWith('Generico'))return'Generico';
     return c;
   }
