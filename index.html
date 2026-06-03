@@ -6581,7 +6581,6 @@ function closeMobMenu(){
 
 // ── NAV ──
 function nav(sec, el){
-  window.scrollTo(0,0);
   closeMobMenu();
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
   var s=document.getElementById('sec-'+sec); if(s) s.classList.add('active');
@@ -6593,7 +6592,7 @@ function nav(sec, el){
   if(sec==='panel'){renderPanelGeneral();}
   if(sec==='finanzas'){renderFinCajas();renderFin();var fab=document.getElementById('btn-fab-mov');if(fab)fab.style.display='flex';}
   if(sec!=='finanzas'){var fab=document.getElementById('btn-fab-mov');if(fab)fab.style.display='none';}
-  if(sec==='cheques'){renderChqResumen();renderChqCartera();renderChqPropios();}
+  if(sec==='cheques'){setChqTab('resumen',document.querySelector('#chq-tabs .tab'));}
   if(sec==='productos'){renderProductos();renderResumenColegios();}
   if(sec==='materiales'){renderMateriales();}
   if(sec==='pedidos'){setPedTab('flujo',document.querySelector('#ped-tabs .tab'));}
@@ -6603,6 +6602,7 @@ function nav(sec, el){
   if(sec==='costos'){renderCostos();}
   if(sec==='compras'){renderCompras();}
   if(sec==='estrategia'){renderEstrategiaProgress();}
+  requestAnimationFrame(function(){ window.scrollTo(0,0); });
 }
 
 function navLocal(local, tab, el){
