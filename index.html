@@ -235,7 +235,8 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 /* ── 2 COL ── */
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
 
-@media(max-width:900px){.stats{grid-template-columns:1fr 1fr;}.two-col{grid-template-columns:1fr;}.grid2{grid-template-columns:1fr;}.grid2 .full{grid-column:1;}#cos-sim-grid{grid-template-columns:1fr;}}
+@media(max-width:1125px){.stats{grid-template-columns:1fr 1fr;}.two-col{grid-template-columns:1fr;}.grid2{grid-template-columns:1fr;}.grid2 .full{grid-column:1;}#cos-sim-grid{grid-template-columns:1fr;}}
+@media(max-width:900px){.stats{grid-template-columns:1fr 1fr;}}
 
 /* ── MOBILE NAV ── */
 #mob-menu-btn{display:none;background:none;border:none;font-size:22px;cursor:pointer;color:#1a1f36;padding:4px 8px;border-radius:8px;line-height:1;flex-shrink:0;}
@@ -1799,7 +1800,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
   <!-- ════════════ MORATORIAS ════════════ -->
   <div class="section" id="sec-moratorias">
-    <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
+    <div class="stats" style="margin-bottom:18px;">
       <div class="stat"><div class="stat-icon" style="background:#ffedd5;">📋</div><h3 id="mor-s-activas">0</h3><p>Moratorias activas</p></div>
       <div class="stat"><div class="stat-icon" style="background:#fee2e2;">⚠️</div><h3 id="mor-s-mora">0</h3><p>En mora</p></div>
       <div class="stat"><div class="stat-icon" style="background:#fef3c7;">💳</div><h3 id="mor-s-cuotas">0</h3><p>Cuotas pendientes</p></div>
@@ -2728,7 +2729,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="section" id="sec-finanzas">
 
     <!-- Saldos por caja -->
-    <div id="pan-cajas-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;"></div>
+    <div id="pan-cajas-grid" class="stats" style="margin-bottom:18px;"></div>
 
     <!-- Período compartido -->
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
@@ -13802,7 +13803,7 @@ function renderChqResumen(){
   var CUPO_TOTAL=40000000;
   var cupoLibre=CUPO_TOTAL-totalCupoOcupado;
   var cupoLibrePos=cupoLibre>=0;
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:20px;">';
+  html+='<div class="stats">';
   html+='<div class="stat" style="border-top:3px solid #7c3aed;">'+
     '<div class="stat-icon" style="background:#ede9fe;">🧾</div>'+
     '<h3 style="color:#7c3aed;">'+$p(totalDisp)+'</h3>'+
