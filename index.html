@@ -23060,7 +23060,7 @@ async function saveMovStock(){
 // ── LIQUIDACIONES TALLERISTAS ─────────────────────────────────────────────────
 async function loadTalRecepciones(){var {data}=await sb.from('tal_recepciones').select('*').order('fecha',{ascending:false});TAL_RECEPCIONES=data||[];}
 async function loadTalRecepcionesItems(){var {data}=await sb.from('tal_recepciones_items').select('*').limit(10000);TAL_RECEPCIONES_ITEMS=data||[];}
-async function loadTalPagos(){var {data}=await sb.from('tal_pagos').select('*').order('fecha',{ascending:false});TAL_PAGOS=data||[];}
+async function loadTalPagos(){try{var {data}=await sb.from('tal_pagos').select('*').order('fecha',{ascending:false});TAL_PAGOS=data||[];}catch(e){TAL_PAGOS=[];}}
 async function loadLotesBordStock(){var {data}=await sb.from('lotes_bordado_stock').select('*').order('fecha_envio',{ascending:false});LOTES_BORD_STOCK=data||[];}
 async function loadLotesBordStockItems(){var {data}=await sb.from('lotes_bordado_stock_items').select('*');LOTES_BORD_STOCK_ITEMS=data||[];}
 
