@@ -6581,6 +6581,7 @@ function closeMobMenu(){
 
 // ── NAV ──
 function nav(sec, el){
+  window.scrollTo(0,0);
   closeMobMenu();
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
   var s=document.getElementById('sec-'+sec); if(s) s.classList.add('active');
