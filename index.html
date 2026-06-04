@@ -18184,7 +18184,7 @@ async function saveMov(){
 
   closeM('m-mov');
   await Promise.all([loadMovs(),loadMoratorias()]);
-  renderFin();renderMoratorias();
+  renderFin();renderFinCajas();renderMoratorias();
 }
 
 async function deleteMov(id){
@@ -18195,7 +18195,7 @@ async function deleteMov(id){
   var r=await sb.from('movimientos').delete().eq('id',id);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
   toast('Movimiento eliminado','info');
-  await loadMovs();renderFin();
+  await loadMovs();renderFin();renderFinCajas();
 }
 
 // ── TRANSFERENCIAS ENTRE CAJAS ──
