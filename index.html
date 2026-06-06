@@ -101,6 +101,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 .b-purple{background:#ede9fe;color:#7c3aed;}
 .b-gray{background:#f3f4f6;color:#6b7280;}
 .b-amber{background:#fef3c7;color:#d97706;}
+.b-orange{background:#ffedd5;color:#ea580c;}
 .b-ll{background:#fef3c7;color:#b45309;}   /* Llavallol */
 .b-mg{background:#d1fae5;color:#065f46;}   /* Monte Grande */
 
@@ -1740,7 +1741,8 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option value="depositado">Depositado</option>
           <option value="vendido">Vendido</option>
           <option value="endosado">Endosado</option>
-          <option value="rechazado">Rechazado</option>
+          <option value="rechazado">⚠️ En espera</option>
+          <option value="devuelto_cliente">↩ Dev. cliente</option>
         </select>
         <select id="chq-tipo-filter" onchange="renderChqCartera()" style="width:130px;">
           <option value="">Cheque + ECHEQ</option>
@@ -5568,6 +5570,39 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-chq-devuelto')">Cancelar</button>
       <button class="btn" style="background:#dc2626;border-color:#dc2626;color:#fff;" onclick="confirmarChqDevuelto()">↩ Confirmar devolución</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: marcar cheque rechazado por banco (en espera) -->
+<div class="modal-bg" id="m-chq-rechazar">
+  <div class="modal" style="max-width:460px;">
+    <h3>⚠️ Cheque rechazado por el banco</h3>
+    <div id="chqrec-info" style="background:#ffedd5;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#374151;"></div>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">El banco rechazó este cheque. Podés dejarlo <strong>en espera</strong> (queda en cartera, naranja, bloqueado para vender) o devolverlo directamente al cliente.</p>
+    <div class="field"><label>Motivo / Nota (opcional)</label>
+      <input id="chqrec-nota" placeholder="Ej: sin fondos, fecha incorrecta, firma no coincide…"/>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-chq-rechazar')">Cancelar</button>
+      <button class="btn" style="background:#ea580c;border-color:#ea580c;color:#fff;" onclick="confirmarEnEspera()">📋 Dejar en espera</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: devolver cheque rechazado al cliente -->
+<div class="modal-bg" id="m-chq-devolver-cliente">
+  <div class="modal" style="max-width:500px;">
+    <h3>↩ Devolver cheque al cliente</h3>
+    <div id="chqdevol-info" style="background:#fee2e2;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#374151;"></div>
+    <div id="chqdevol-cobros" style="margin-bottom:12px;"></div>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Se registra un egreso en <strong>CHEQUES/ECHEQ</strong> y se restauran las deudas vinculadas en CC Mayoristas.</p>
+    <div class="field"><label>Motivo / Nota (opcional)</label>
+      <input id="chqdevol-nota" placeholder="Ej: cheque rechazado, devuelto al cliente…"/>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-chq-devolver-cliente')">Cancelar</button>
+      <button class="btn" style="background:#dc2626;border-color:#dc2626;color:#fff;" onclick="confirmarDevolverCliente()">↩ Confirmar devolución al cliente</button>
     </div>
   </div>
 </div>
@@ -13568,9 +13603,9 @@ function renderChqCartera(){
   });
   // Stats
   var totalMonto=cheques.reduce(function(s,c){return s+Number(c.monto);},0);
-  // Egresado: cheques no en_cartera (full monto ya salió) + usos físicos de en_cartera (las imputaciones son asientos contables, no egreso físico)
+  // Egresado: cheques que salieron de nuestra posesión (excluye rechazado=en espera) + usos físicos de en_cartera
   var totalEgresado=cheques.reduce(function(s,c){
-    if(c.estado!=='en_cartera') return s+Number(c.monto);
+    if(c.estado!=='en_cartera'&&c.estado!=='rechazado') return s+Number(c.monto);
     var usos=CHEQUE_USOS.filter(function(u){return u.cheque_id===c.id;}).reduce(function(ss,u){return ss+Number(u.monto);},0);
     return s+usos;
   },0);
@@ -13613,8 +13648,8 @@ function renderChqCartera(){
   var tb=document.getElementById('chq-tbody');
   if(!tb)return;
   if(!cheques.length){tb.innerHTML='<tr><td colspan="14"><div class="empty"><p>Sin recibos para el período</p></div></td></tr>';return;}
-  var estadoColors={en_cartera:'b-purple',al_cobro:'b-amber',depositado:'b-green',vendido:'b-blue',endosado:'b-yellow',rechazado:'b-red'};
-  var estadoLabels={en_cartera:'En cartera',al_cobro:'Al cobro',depositado:'Acreditado',vendido:'Vendido',endosado:'Endosado',rechazado:'Rechazado'};
+  var estadoColors={en_cartera:'b-purple',al_cobro:'b-amber',depositado:'b-green',vendido:'b-blue',endosado:'b-yellow',rechazado:'b-orange',devuelto_cliente:'b-red'};
+  var estadoLabels={en_cartera:'En cartera',al_cobro:'Al cobro',depositado:'Acreditado',vendido:'Vendido',endosado:'Endosado',rechazado:'⚠️ En espera',devuelto_cliente:'↩ Dev. cliente'};
   // Alerta de cupos a liberar al tope de la lista
   var cuposALiberar=CHEQUES_CARTERA.filter(function(c){return c.estado==='vendido'&&!c.cupo_liberado&&c.fecha_cobro&&c.fecha_cobro<hoy;});
   if(cuposALiberar.length){
@@ -13650,7 +13685,7 @@ function renderChqCartera(){
     }
     var cupoALiberar=c.estado==='vendido'&&!c.cupo_liberado&&vto&&vto<hoy;
     var cupoLiberado=c.estado==='vendido'&&c.cupo_liberado;
-    var rowBg=cupoALiberar?'background:#fffbeb;':vencido?'background:#fff5f5;':pronto?'background:#fffbeb;':'';
+    var rowBg=cupoALiberar?'background:#fffbeb;':vencido?'background:#fff5f5;':pronto?'background:#fffbeb;':c.estado==='rechazado'?'background:#fff7ed;':c.estado==='devuelto_cliente'?'background:#fff5f5;':'';
     // Tooltip de usos
     var usosHtml=usos.length?('<div style="margin-top:6px;font-size:11px;color:#6b7280;">'+usos.map(function(u){return '→ '+u.fecha+' · '+(u.destinatario||'')+(u.concepto?' ('+u.concepto+')':'')+' · '+$p(Number(u.monto));}).join('<br>')+'</div>'):'';
     var tipoBadge=c.tipo==='echeq'
@@ -13679,12 +13714,14 @@ function renderChqCartera(){
         usosHtml+
       '</td>'+
       '<td style="white-space:nowrap;">'+
-        (c.estado==='en_cartera'&&saldo>0?'<button class="btn btn-sm" onclick="openChqAlCobroModal('+c.id+')" title="Depositar al cobro" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">🏦</button> ':'')+
+        ((c.estado==='en_cartera'||c.estado==='rechazado')&&saldo>0?'<button class="btn btn-sm" onclick="openChqAlCobroModal('+c.id+')" title="Depositar al cobro" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">🏦</button> ':'')+
         (c.estado==='al_cobro'?'<button class="btn btn-sm" onclick="openChqDepositarModal('+c.id+')" title="Confirmar acreditación en banco" style="background:#dcfce7;color:#166534;border-color:#bbf7d0;">✅</button> ':'')+
         (c.estado==='endosado'?'<button class="btn btn-sm" onclick="abrirChqDevuelto('+c.id+')" title="Cheque devuelto por proveedor — reingresa a cartera" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5;">↩ Dev.</button> ':'')+
+        (c.estado==='en_cartera'?'<button class="btn btn-sm" onclick="openChqRechazarModal('+c.id+')" title="El banco rechazó este cheque" style="background:#ffedd5;color:#ea580c;border-color:#fed7aa;">⚠️ Rechazar</button> ':'')+
+        (c.estado==='rechazado'?'<button class="btn btn-sm" onclick="openDevolverClienteModal('+c.id+')" title="Devolver al cliente y restaurar deuda" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5;">↩ Dev. cliente</button> ':'')+
         (cupoALiberar?'<button class="btn btn-sm" onclick="liberarCupo('+c.id+')" title="Confirmar liberación de cupo" style="background:#fef3c7;color:#92400e;border-color:#fbbf24;">🔓 Liberar</button> ':'')+
         (c.estado==='en_cartera'&&saldoCheque(c.id)>0?'<button class="btn btn-sm" onclick="openImputarModal('+c.id+')" title="Imputar a factura" style="background:#ede9fe;color:#7c3aed;border-color:#ddd6fe;">🔗 Imputar</button> ':'')+
-        '<button class="btn btn-gray btn-sm" onclick="openChqUsoModal('+c.id+')" title="Registrar uso como pago">💸</button> '+
+        (c.estado!=='rechazado'&&c.estado!=='devuelto_cliente'?'<button class="btn btn-gray btn-sm" onclick="openChqUsoModal('+c.id+')" title="Registrar uso como pago">💸</button> ':'')+
         '<button class="btn btn-gray btn-sm" onclick="openChqCarteraModal('+c.id+')" title="Editar">✏️</button>'+
       '</td>'+
     '</tr>';
@@ -13768,6 +13805,9 @@ function renderChqResumen(){
   // ── Cheques al cobro (depositados en banco, pendientes de acreditar) ──
   var alCobroList=CHEQUES_CARTERA.filter(function(c){return c.estado==='al_cobro';});
   var totalAlCobro=alCobroList.reduce(function(s,c){return s+Number(c.monto);},0);
+  // ── Cheques rechazados por el banco (en espera) ──
+  var rechazadoList=CHEQUES_CARTERA.filter(function(c){return c.estado==='rechazado';});
+  var totalRechazado=rechazadoList.reduce(function(s,c){return s+Number(c.monto);},0);
 
   // ── Cupo: vendidos sin liberar agrupados por tiempo ──
   var cupoOcupado=CHEQUES_CARTERA.filter(function(c){return c.estado==='vendido'&&!c.cupo_liberado&&c.fecha_cobro;});
@@ -13816,6 +13856,14 @@ function renderChqResumen(){
     '<p>Al cobro</p>'+
     '<div style="font-size:11px;color:#b45309;">'+alCobroList.length+' cheque'+(alCobroList.length!==1?'s':'')+' en banco, sin acreditar</div>'+
   '</div>';
+  if(rechazadoList.length){
+    html+='<div class="stat" style="border-top:3px solid #ea580c;background:#fff7ed;">'+
+      '<div class="stat-icon" style="background:#ffedd5;">⚠️</div>'+
+      '<h3 style="color:#ea580c;">'+$p(totalRechazado)+'</h3>'+
+      '<p style="color:#c2410c;font-weight:700;">En espera (rechazados)</p>'+
+      '<div style="font-size:11px;color:#ea580c;">'+rechazadoList.length+' cheque'+(rechazadoList.length!==1?'s':'')+' — no disponibles para vender</div>'+
+    '</div>';
+  }
   html+='<div class="stat" style="border-top:3px solid #0ea5e9;background:#e0f2fe;">'+
     '<div class="stat-icon" style="background:#bae6fd;">🏦</div>'+
     '<h3 style="color:#0284c7;">'+$p(totalCupoOcupado)+'</h3>'+
@@ -14817,7 +14865,7 @@ function renderChqEditar(){
   if(!tbody)return;
   tbody.innerHTML=lista.map(function(c,i){
     var bg=i%2===0?'#fff':'#f9fafb';
-    var estadoOpts=['en_cartera','al_cobro','depositado','vendido','endosado','rechazado'].map(function(s){
+    var estadoOpts=['en_cartera','al_cobro','depositado','vendido','endosado','rechazado','devuelto_cliente'].map(function(s){
       return '<option value="'+s+'"'+(c.estado===s?' selected':'')+'>'+s+'</option>';
     }).join('');
     var tipoOpts=['cheque','echeq'].map(function(s){
@@ -15380,6 +15428,98 @@ async function confirmarChqDevuelto(){
   }catch(e){
     toast('Error: '+(e.message||JSON.stringify(e)),'err');
   }
+}
+
+// ══════════════════════════════════════════════
+// CHEQUE RECHAZADO POR BANCO
+// ══════════════════════════════════════════════
+var _chqRechazarId=null;
+function openChqRechazarModal(id){
+  _chqRechazarId=id;
+  var c=CHEQUES_CARTERA.find(function(x){return x.id===id;})||{};
+  document.getElementById('chqrec-info').innerHTML=
+    '<strong>'+(c.emisor||'')+'</strong>'+(c.numero?' · N° '+c.numero:'')+
+    (c.banco?' · '+c.banco:'')+' · <strong>'+$p(Number(c.monto))+'</strong>';
+  document.getElementById('chqrec-nota').value='';
+  openM('m-chq-rechazar');
+}
+
+async function confirmarEnEspera(){
+  var id=_chqRechazarId;
+  if(!id)return;
+  var nota=document.getElementById('chqrec-nota').value.trim();
+  var {error}=await sb.from('cheques_cartera').update({estado:'rechazado',nota:nota||null,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error){toast('Error: '+error.message,'err');return;}
+  closeM('m-chq-rechazar');
+  await loadChequesCartera();
+  renderChqCartera();
+  renderPanelGeneral();
+  toast('⚠️ Cheque marcado en espera — no se puede vender, sí depositar');
+}
+
+// ══════════════════════════════════════════════
+// DEVOLVER CHEQUE AL CLIENTE
+// ══════════════════════════════════════════════
+var _chqDevolId=null;
+function openDevolverClienteModal(id){
+  _chqDevolId=id;
+  var c=CHEQUES_CARTERA.find(function(x){return x.id===id;})||{};
+  document.getElementById('chqdevol-info').innerHTML=
+    '<strong>'+(c.emisor||'')+'</strong>'+(c.numero?' · N° '+c.numero:'')+
+    (c.banco?' · '+c.banco:'')+' · <strong>'+$p(Number(c.monto))+'</strong>';
+  var cobrosLinked=COBROS.filter(function(cb){return cb.cheque_id===id;});
+  var detHtml='';
+  if(cobrosLinked.length){
+    detHtml='<div style="background:#fef3c7;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:8px;">'+
+      '<div style="font-weight:700;color:#374151;margin-bottom:6px;">Cobros que se van a revertir:</div>'+
+      cobrosLinked.map(function(cb){
+        var v=VENTAS.find(function(x){return x.id===cb.venta_id;})||{};
+        var cli=CLIENTES.find(function(x){return x.id===v.cliente_id;})||{};
+        return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #fde68a;">'+
+          '<span style="color:#6b7280;">'+(cli.nombre||v.cliente_nombre||'?')+' · '+(v.nro_factura||'Vta #'+(v.id||''))+' · '+fmtF(cb.fecha)+'</span>'+
+          '<span style="font-weight:700;color:#dc2626;">'+$p(Number(cb.monto))+'</span>'+
+        '</div>';
+      }).join('')+
+    '</div>';
+  }else{
+    detHtml='<div style="color:#9ca3af;font-size:12px;margin-bottom:8px;">Sin cobros vinculados a ventas — solo se registrará el egreso del cheque.</div>';
+  }
+  document.getElementById('chqdevol-cobros').innerHTML=detHtml;
+  document.getElementById('chqdevol-nota').value='';
+  openM('m-chq-devolver-cliente');
+}
+
+async function confirmarDevolverCliente(){
+  var id=_chqDevolId;
+  if(!id)return;
+  var c=CHEQUES_CARTERA.find(function(x){return x.id===id;})||{};
+  var nota=document.getElementById('chqdevol-nota').value.trim();
+  var fecha=today();
+  try{
+    var cobrosLinked=COBROS.filter(function(cb){return cb.cheque_id===id;});
+    // 1. Revertir cobros y restaurar saldo en ventas
+    for(var i=0;i<cobrosLinked.length;i++){
+      var cb=cobrosLinked[i];
+      if(cb.venta_id){
+        var v=VENTAS.find(function(x){return x.id===cb.venta_id;})||{};
+        var nuevoSaldo=Math.min(Number(v.total||0), Number(v.saldo||0)+Number(cb.monto));
+        var nuevoEst=nuevoSaldo>0.01?'pendiente':'cobrado';
+        await sb.from('ventas').update({saldo:nuevoSaldo,estado:nuevoEst,updated_at:new Date().toISOString()}).eq('id',cb.venta_id);
+      }
+      await sb.from('cobros').delete().eq('id',cb.id);
+    }
+    // 2. Egreso en CHEQUES/ECHEQ — cheque sale de nuestra posesión
+    var det='Cheque devuelto al cliente · '+(c.emisor||'')+(c.numero?' N°'+c.numero:'')+(nota?' · '+nota:'');
+    var {error:eMov}=await sb.from('movimientos').insert({tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:Number(c.monto),concepto:'CHEQUES/TRANSFERENCIAS',detalle:det});
+    if(eMov)throw eMov;
+    // 3. Marcar cheque como devuelto_cliente
+    var {error:eChq}=await sb.from('cheques_cartera').update({estado:'devuelto_cliente',nota:nota||null,updated_at:new Date().toISOString()}).eq('id',id);
+    if(eChq)throw eChq;
+    closeM('m-chq-devolver-cliente');
+    await Promise.all([loadChequesCartera(),loadCobros(),loadVentas(),loadMovs()]);
+    renderChqCartera();renderPanelGeneral();
+    toast('↩ Cheque devuelto al cliente — deuda restaurada en CC');
+  }catch(e){toast('Error: '+(e.message||JSON.stringify(e)),'err');}
 }
 
 // ══════════════════════════════════════════════
@@ -16806,7 +16946,9 @@ function posImprimirTicketCambio(d){
       '.condiciones{font-size:10px;color:#555;line-height:1.5;border-top:1px dashed #ccc;padding-top:10px;margin-top:10px;}'+
       '.firma{margin-top:20px;border-top:1px solid #000;padding-top:6px;font-size:11px;text-align:center;color:#888;}'+
       '@media print{body{padding:0;}button{display:none!important;}}'+
-    '</style></head><body>'+
+    '</style>'+
+    '<script>window.onload=function(){setTimeout(function(){window.print();},350);};window.onafterprint=function(){window.close();}</script>'+
+    '</head><body>'+
     '<div class="ticket">'+
       '<div class="header">'+
         '<div class="tienda">PRÍMULA</div>'+
