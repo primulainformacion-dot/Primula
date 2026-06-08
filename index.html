@@ -9767,11 +9767,32 @@ function renderLocalVentas(){
         (v.estado!=='cobrado'?'<button class="btn btn-sm btn-green" onclick="openCobro('+v.id+','+(v.cliente_id||'null')+','+v.saldo+')">Cobrar</button>':'')+
         '<button class="btn btn-sm btn-outline" onclick="verVenta('+v.id+',\'local\')">Ver</button>'+
         '<button class="btn btn-sm btn-red" title="Registrar devolución" onclick="openDevolucion('+v.id+')">↩️</button>'+
+        '<button class="btn btn-sm" onclick="reimprimirTicketLocal('+v.id+')" title="Reimprimir ticket de cambio" style="background:#f3f4f6;color:#374151;border-color:#e5e7eb;">🖨️</button>'+
         '<button class="btn btn-sm btn-outline" title="Editar fecha/total" onclick="openEditVentaLocal('+v.id+')">✏️</button>'+
         '<button class="btn btn-sm btn-red" title="Eliminar comprobante" onclick="eliminarVentaLocal('+v.id+')">🗑️</button>'+
       '</div></td></tr>';
   }).join('');
 }
+function reimprimirTicketLocal(id){
+  var v=VENTAS.find(function(x){return x.id===id;})||{};
+  var items=ITEMS_VENTA.filter(function(it){return it.venta_id===id;});
+  var cobros=COBROS.filter(function(cb){return cb.venta_id===id;});
+  var medios=[...new Set(cobros.map(function(cb){return cb.medio||'efectivo';}))];
+  var metodoLabel=medios.length?medios.join(' + '):'efectivo';
+  var localMap={llavallol:'Llavallol',monte_grande:'Monte Grande','Monte Grande':'Monte Grande',Llavallol:'Llavallol'};
+  var localLabel=localMap[v.local]||v.local||'Local';
+  var ticketItems=items.map(function(it){
+    return {nombre:it.descripcion||'—',talle:'',color:'',cantidad:Number(it.cantidad||1),precio:Number(it.precio_unitario||0)};
+  });
+  if(!ticketItems.length) ticketItems=[{nombre:'Ver detalle en sistema',talle:'',color:'',cantidad:1,precio:Number(v.total||0)}];
+  posImprimirTicketCambio({
+    id:v.id, fecha:v.fecha||today(), cliente:v.cliente_nombre||'',
+    local:localLabel, items:ticketItems,
+    total:Number(v.total||0), bruto:Number(v.total||0),
+    conDescuento:false, metodo:metodoLabel
+  });
+}
+
 async function eliminarVentaLocal(id){
   var v=VENTAS.find(function(x){return x.id===id;});
   if(!v)return;
@@ -16928,24 +16949,26 @@ function posImprimirTicketCambio(d){
     '<title>Ticket de cambio #'+d.id+'</title>'+
     '<style>'+
       '*{margin:0;padding:0;box-sizing:border-box;}'+
-      'body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#000;background:#fff;padding:10px;}'+
-      '.ticket{max-width:320px;margin:0 auto;padding:16px;}'+
-      '.header{text-align:center;border-bottom:2px solid #000;padding-bottom:12px;margin-bottom:12px;}'+
-      '.tienda{font-size:18px;font-weight:900;letter-spacing:1px;}'+
-      '.local{font-size:12px;color:#555;margin-top:2px;}'+
-      '.titulo{font-size:16px;font-weight:800;background:#000;color:#fff;text-align:center;padding:6px;margin:12px 0;letter-spacing:1px;}'+
-      '.meta{font-size:12px;margin-bottom:10px;line-height:1.6;}'+
-      'table{width:100%;border-collapse:collapse;margin-bottom:10px;}'+
-      'th{font-size:11px;text-align:left;padding:4px 0;border-bottom:2px solid #000;}'+
+      '@page{size:80mm auto;margin:0;}'+
+      'body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#000;background:#fff;width:80mm;max-width:80mm;}'+
+      '.ticket{width:100%;padding:4px 8px;}'+
+      '.header{text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:8px;}'+
+      '.tienda{font-size:16px;font-weight:900;letter-spacing:1px;}'+
+      '.local{font-size:11px;color:#555;margin-top:2px;}'+
+      '.titulo{font-size:13px;font-weight:800;background:#000;color:#fff;text-align:center;padding:5px;margin:8px 0;letter-spacing:1px;}'+
+      '.meta{font-size:11px;margin-bottom:8px;line-height:1.6;}'+
+      'table{width:100%;border-collapse:collapse;margin-bottom:8px;}'+
+      'th{font-size:10px;text-align:left;padding:3px 0;border-bottom:2px solid #000;}'+
       'th:nth-child(2){text-align:center;}'+
       'th:last-child{text-align:right;}'+
-      '.total-row{font-size:14px;font-weight:800;text-align:right;border-top:2px solid #000;padding-top:6px;margin-bottom:12px;}'+
-      '.validez{background:#f0fdf4;border:2px solid #16a34a;border-radius:6px;padding:10px;text-align:center;margin:12px 0;}'+
-      '.validez .lbl{font-size:10px;font-weight:700;color:#166534;letter-spacing:.5px;}'+
-      '.validez .fecha{font-size:20px;font-weight:900;color:#16a34a;}'+
-      '.condiciones{font-size:10px;color:#555;line-height:1.5;border-top:1px dashed #ccc;padding-top:10px;margin-top:10px;}'+
-      '.firma{margin-top:20px;border-top:1px solid #000;padding-top:6px;font-size:11px;text-align:center;color:#888;}'+
-      '@media print{body{padding:0;}button{display:none!important;}}'+
+      'td{font-size:11px;}'+
+      '.total-row{font-size:13px;font-weight:800;text-align:right;border-top:2px solid #000;padding-top:5px;margin-bottom:8px;}'+
+      '.validez{background:#f0fdf4;border:2px solid #16a34a;border-radius:4px;padding:7px;text-align:center;margin:8px 0;}'+
+      '.validez .lbl{font-size:9px;font-weight:700;color:#166534;letter-spacing:.5px;}'+
+      '.validez .fecha{font-size:18px;font-weight:900;color:#16a34a;}'+
+      '.condiciones{font-size:9px;color:#555;line-height:1.5;border-top:1px dashed #ccc;padding-top:8px;margin-top:8px;}'+
+      '@media screen{body{margin:8px auto;}}'+
+      '@media print{body{width:80mm;margin:0;padding:0;}button{display:none!important;}.btn-bar{display:none!important;}}'+
     '</style>'+
     '<script>window.onload=function(){setTimeout(function(){window.print();},350);};window.onafterprint=function(){window.close();}<\/script>'+
     '</head><body>'+
@@ -16980,14 +17003,13 @@ function posImprimirTicketCambio(d){
         '• Un solo cambio por compra. Sujeto a stock disponible.<br>'+
         '• No aplica en artículos en oferta o liquidación.'+
       '</div>'+
-      '<div class="firma">Firma del vendedor: ___________________</div>'+
     '</div>'+
-    '<div style="text-align:center;margin-top:14px;">'+
-      '<button onclick="window.print()" style="padding:10px 28px;background:#000;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;margin-right:8px;">🖨️ Imprimir</button>'+
-      '<button onclick="window.close()" style="padding:10px 18px;background:#f3f4f6;color:#374151;border:1.5px solid #e5e7eb;border-radius:6px;font-size:14px;cursor:pointer;">Cerrar</button>'+
+    '<div class="btn-bar" style="text-align:center;margin-top:10px;padding:0 8px;">'+
+      '<button onclick="window.print()" style="padding:8px 20px;background:#000;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;margin-right:6px;">🖨️ Imprimir</button>'+
+      '<button onclick="window.close()" style="padding:8px 14px;background:#f3f4f6;color:#374151;border:1.5px solid #e5e7eb;border-radius:6px;font-size:13px;cursor:pointer;">Cerrar</button>'+
     '</div>'+
     '</body></html>';
-  var win=window.open('','_blank','width=420,height=680,toolbar=0,menubar=0,scrollbars=1');
+  var win=window.open('','_blank','width=340,height=680,toolbar=0,menubar=0,scrollbars=1');
   if(win){win.document.write(html);win.document.close();}
   else{toast('Activá los popups del navegador para imprimir el ticket','info');}
 }
