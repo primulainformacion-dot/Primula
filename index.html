@@ -16629,7 +16629,7 @@ function posRenderLevel2Grid(type, value, q){
       '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
     talleOrd.forEach(function(s){
       var talleLabel=(s.talle||'Único')+(s.color&&s.color!==s.talle?' '+s.color:'');
-      html+='<button onclick="posAddItem('+p.id+','+posQ(p.nombre)+','+posQ(s.talle||'')+','+posQ(s.color||'')+','+precio+','+s.cantidad+')" '+
+      html+='<button onclick="posAddItem('+p.id+','+posQ(p.nombre)+','+posQ(s.talle||'')+','+posQ(s.color||'')+','+precio+','+s.cantidad+','+posQ(p.colegio||'')+')" '+
         'style="padding:8px 12px;background:#f9fafb;border:2px solid #e5e7eb;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151;" '+
         'onmouseover="this.style.borderColor=\'#6c7ae0\';this.style.background=\'#ede9fe\'" onmouseout="this.style.borderColor=\'#e5e7eb\';this.style.background=\'#f9fafb\'">'+
         talleLabel+
@@ -16665,13 +16665,13 @@ function posFilterSearch(q){
   else posRenderLevel2Grid(posL2Type, posL2Value, q);
 }
 
-function posAddItem(prodId,nombre,talle,color,precio,stockDisp){
+function posAddItem(prodId,nombre,talle,color,precio,stockDisp,colegio){
   var existing=posItems.find(function(it){return it.prodId===prodId&&it.talle===talle&&it.color===color;});
   if(existing){
     if(existing.cantidad>=stockDisp){toast('Stock máximo alcanzado ('+stockDisp+' u.)','info');return;}
     existing.cantidad++;
   }else{
-    posItems.push({prodId:prodId,nombre:nombre,talle:talle,color:color,precio:precio,cantidad:1,stockDisp:stockDisp});
+    posItems.push({prodId:prodId,nombre:nombre,talle:talle,color:color,precio:precio,cantidad:1,stockDisp:stockDisp,colegio:colegio||''});
   }
   posRenderTicket();
 }
@@ -16893,7 +16893,7 @@ async function posSaveVenta(){
 
   // Items (precio de lista, el descuento queda en el total de la venta)
   await sb.from('items_venta').insert(posItems.map(function(it){
-    return{venta_id:v.id,descripcion:it.nombre+(it.talle?' · '+it.talle:'')+(it.color?' · '+it.color:''),cantidad:it.cantidad,precio_unitario:it.precio,subtotal:it.precio*it.cantidad};
+    return{venta_id:v.id,descripcion:it.nombre+(it.talle?' · '+it.talle:'')+(it.color?' · '+it.color:'')+(it.colegio?' ['+it.colegio+']':''),cantidad:it.cantidad,precio_unitario:it.precio,subtotal:it.precio*it.cantidad};
   }));
 
   // Descontar stock
@@ -16941,7 +16941,8 @@ function posImprimirTicketCambio(d){
   var localNom=d.local||'Local';
   var itemsRows=d.items.map(function(it){
     var desc=it.nombre+(it.talle?' · '+it.talle:'')+(it.color?' · '+it.color:'');
-    return '<tr><td style="padding:5px 0;border-bottom:1px dashed #e5e7eb;">'+desc+'</td>'+
+    var colStr=it.colegio?'<div style="font-size:9px;color:#1d4ed8;margin-top:1px;">'+it.colegio+'</div>':'';
+    return '<tr><td style="padding:5px 0;border-bottom:1px dashed #e5e7eb;">'+desc+colStr+'</td>'+
       '<td style="text-align:center;padding:5px;border-bottom:1px dashed #e5e7eb;">'+it.cantidad+'</td>'+
       '<td style="text-align:right;padding:5px 0;border-bottom:1px dashed #e5e7eb;">'+$p(it.precio)+'</td></tr>';
   }).join('');
@@ -16977,6 +16978,7 @@ function posImprimirTicketCambio(d){
         '<div class="tienda">PRÍMULA</div>'+
         '<div class="local">'+localNom+'</div>'+
         '<div style="font-size:11px;color:#888;margin-top:4px;">UNIFORMES ESCOLARES Y ROPA DE TRABAJO</div>'+
+        '<div style="font-size:10px;color:#16a34a;margin-top:3px;">📲 '+(localNom==='Monte Grande'?'11 2388-6238':'11 2399-3062')+'</div>'+
       '</div>'+
       '<div class="titulo">🔄 TICKET DE CAMBIO</div>'+
       '<div class="meta">'+
