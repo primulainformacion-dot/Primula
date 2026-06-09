@@ -267,7 +267,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div style="font-size:42px;margin-bottom:12px;">🌸</div>
     <h1>Prímula ERP</h1>
     <p>Sistema de gestión textil</p>
-    <input class="login-field" id="lg-email" type="email" placeholder="Email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('lg-pass').focus()"/>
+    <input class="login-field" id="lg-email" type="text" placeholder="Usuario" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('lg-pass').focus()"/>
     <div style="position:relative;width:100%;">
       <input class="login-field" id="lg-pass" type="password" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;box-sizing:border-box;padding-right:44px;"/>
       <button onclick="togglePassVis()" id="lg-eye" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:18px;line-height:1;padding:0;" title="Mostrar/ocultar contraseña">👁</button>
@@ -300,48 +300,49 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
   <div class="nav-group">
     <div class="nav-label">General</div>
-    <div class="nav-item active" onclick="nav('inicio',this)"><span class="ni">🏠</span> Inicio</div>
+    <div class="nav-item active" data-sec="inicio" onclick="nav('inicio',this)"><span class="ni">🏠</span> Inicio</div>
   </div>
 
   <div class="nav-group">
     <div class="nav-label">Ventas</div>
-    <div class="nav-item" onclick="navLocal('mayorista','ventas',this)"><span class="ni">🏭</span> Ropa Mayorista</div>
-    <div class="nav-item nav-local-ll" onclick="navLocal('llavallol','ventas',this)"><span class="ni">🏪</span> Local Llavallol</div>
-    <div class="nav-item nav-local-mg" onclick="navLocal('montegrande','ventas',this)"><span class="ni">🏪</span> Local Monte Grande</div>
+    <div class="nav-item" data-sec="mayorista" onclick="navLocal('mayorista','ventas',this)"><span class="ni">🏭</span> Ropa Mayorista</div>
+    <div class="nav-item nav-local-ll" data-sec="local_llavallol" onclick="navLocal('llavallol','ventas',this)"><span class="ni">🏪</span> Local Llavallol</div>
+    <div class="nav-item nav-local-mg" data-sec="local_montegrande" onclick="navLocal('montegrande','ventas',this)"><span class="ni">🏪</span> Local Monte Grande</div>
   </div>
 
   <div class="nav-group">
     <div class="nav-label">Administración</div>
-    <div class="nav-item" onclick="nav('clientes',this)"><span class="ni">👥</span> Clientes</div>
-    <div class="nav-item" onclick="nav('proveedores',this)"><span class="ni">🤝</span> Proveedores</div>
-    <div class="nav-item" onclick="nav('compras',this)"><span class="ni">🛒</span> Compras</div>
-    <div class="nav-item" onclick="nav('talleristas',this)"><span class="ni">🧵</span> Talleristas</div>
-    <div class="nav-item" onclick="nav('personal',this)"><span class="ni">👤</span> Personal</div>
-    <div class="nav-item" onclick="nav('productos',this)"><span class="ni">👔</span> Productos</div>
+    <div class="nav-item" data-sec="clientes" onclick="nav('clientes',this)"><span class="ni">👥</span> Clientes</div>
+    <div class="nav-item" data-sec="proveedores" onclick="nav('proveedores',this)"><span class="ni">🤝</span> Proveedores</div>
+    <div class="nav-item" data-sec="compras" onclick="nav('compras',this)"><span class="ni">🛒</span> Compras</div>
+    <div class="nav-item" data-sec="talleristas" onclick="nav('talleristas',this)"><span class="ni">🧵</span> Talleristas</div>
+    <div class="nav-item" data-sec="personal" onclick="nav('personal',this)"><span class="ni">👤</span> Personal</div>
+    <div class="nav-item" data-sec="productos" onclick="nav('productos',this)"><span class="ni">👔</span> Productos</div>
+    <div class="nav-item" data-sec="usuarios" onclick="nav('usuarios',this)"><span class="ni">🔑</span> Usuarios</div>
   </div>
 
   <div class="nav-group">
     <div class="nav-label">Finanzas</div>
-    <div class="nav-item" onclick="nav('panel',this)"><span class="ni">📊</span> Panel General</div>
-    <div class="nav-item" onclick="nav('finanzas',this)"><span class="ni">💹</span> Movimientos</div>
-    <div class="nav-item" onclick="nav('cheques',this)"><span class="ni">🧾</span> Cheques</div>
-    <div class="nav-item" onclick="nav('moratorias',this)"><span class="ni">📋</span> Moratorias</div>
+    <div class="nav-item" data-sec="panel" onclick="nav('panel',this)"><span class="ni">📊</span> Panel General</div>
+    <div class="nav-item" data-sec="finanzas" onclick="nav('finanzas',this)"><span class="ni">💹</span> Movimientos</div>
+    <div class="nav-item" data-sec="cheques" onclick="nav('cheques',this)"><span class="ni">🧾</span> Cheques</div>
+    <div class="nav-item" data-sec="moratorias" onclick="nav('moratorias',this)"><span class="ni">📋</span> Moratorias</div>
   </div>
 
   <div class="nav-group">
     <div class="nav-label">Producción</div>
-    <div class="nav-item" onclick="nav('pedidos',this)"><span class="ni">📋</span> Pedidos</div>
-    <div class="nav-item" onclick="nav('tizada',this)"><span class="ni">✂️</span> Tizada / Corte</div>
-    <div class="nav-item" onclick="nav('costura',this)"><span class="ni">🧵</span> Costura</div>
-    <div class="nav-item" onclick="nav('entregas',this)"><span class="ni">📦</span> Entregas</div>
-    <div class="nav-item" onclick="nav('materiales',this)"><span class="ni">🎨</span> Materia Prima</div>
-    <div class="nav-item" onclick="nav('costos',this)"><span class="ni">💰</span> Costos</div>
+    <div class="nav-item" data-sec="pedidos" onclick="nav('pedidos',this)"><span class="ni">📋</span> Pedidos</div>
+    <div class="nav-item" data-sec="tizada" onclick="nav('tizada',this)"><span class="ni">✂️</span> Tizada / Corte</div>
+    <div class="nav-item" data-sec="costura" onclick="nav('costura',this)"><span class="ni">🧵</span> Costura</div>
+    <div class="nav-item" data-sec="entregas" onclick="nav('entregas',this)"><span class="ni">📦</span> Entregas</div>
+    <div class="nav-item" data-sec="materiales" onclick="nav('materiales',this)"><span class="ni">🎨</span> Materia Prima</div>
+    <div class="nav-item" data-sec="costos" onclick="nav('costos',this)"><span class="ni">💰</span> Costos</div>
   </div>
 
   <div class="sidebar-footer">
     <div class="user-info">
       <strong id="sb-user">—</strong>
-      <span id="sb-rol">admin</span>
+      <span id="sb-rol"></span>
     </div>
     <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
   </div>
@@ -635,7 +636,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <th style="text-align:right;">Precio</th>
             <th style="text-align:right;">Ganancia</th>
             <th style="text-align:right;">% Gan.</th>
-            <th style="text-align:right;">Stock Dep.</th>
             <th style="text-align:right;">Stock Local</th>
             <th style="text-align:right;font-weight:800;">Stock Total</th>
             <th style="text-align:right;">Valorizado</th>
@@ -3459,8 +3459,53 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
   </div><!-- /sec-estrategia -->
 
+  <!-- ── USUARIOS ── -->
+  <div class="section" id="sec-usuarios">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="margin:0;font-size:20px;font-weight:700;color:#1a1f36;">Usuarios del sistema</h2>
+      <button class="btn" onclick="openModalNuevoUsuario()">+ Nuevo usuario</button>
+    </div>
+    <div id="usu-lista"></div>
+  </div><!-- /sec-usuarios -->
+
 </div><!-- /main -->
 </div><!-- /app -->
+
+<!-- ══ MODAL USUARIO ══ -->
+<div id="m-usuario" class="modal-bg">
+  <div class="modal" style="max-width:420px;">
+    <h3 id="m-usuario-title">Nuevo usuario</h3>
+    <input type="hidden" id="usu-id"/>
+    <div class="grid2">
+      <div class="field full"><label>Nombre completo *</label><input id="usu-nombre" placeholder="Ej: Lucía García"/></div>
+      <div class="field full"><label>Usuario (para iniciar sesión) *</label><input id="usu-usuario" placeholder="Ej: lucia" autocomplete="off"/></div>
+      <div class="field full">
+        <label>Contraseña</label>
+        <input type="password" id="usu-pass" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/>
+        <div id="usu-pass-hint" style="font-size:11px;color:#9ca3af;margin-top:3px;display:none;">Dejá en blanco para no cambiar la contraseña</div>
+      </div>
+      <div class="field full"><label>Rol</label>
+        <select id="usu-rol">
+          <option value="gerencia">Gerencia</option>
+          <option value="administracion">Administración</option>
+          <option value="local_llavallol">Local Llavallol</option>
+          <option value="local_montegrande">Local Monte Grande</option>
+          <option value="produccion">Producción</option>
+        </select>
+      </div>
+      <div id="usu-activo-row" class="field full" style="display:none;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="usu-activo" style="width:auto;" checked/> Usuario activo
+        </label>
+      </div>
+    </div>
+    <div id="usu-err" style="color:#dc2626;font-size:12px;min-height:16px;margin-top:8px;"></div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-usuario')">Cancelar</button>
+      <button class="btn" onclick="guardarUsuario()">Guardar</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ TOAST ══ -->
 <div id="toast"></div>
@@ -6150,6 +6195,70 @@ var currentLocal='llavallol'; // local activo en el módulo POS
 var currentLocalTab='ventas';
 var ventaBackSection=''; // para el botón volver desde detalle venta
 
+// ── USUARIOS & PERMISOS ──
+var currentUser = null;
+var USUARIOS = [];
+var PERMISOS_ROL = {
+  gerencia:          null,
+  administracion:    null,
+  local_llavallol:   {
+    secciones: ['inicio','local','local_llavallol','clientes','productos'],
+    readonly:  ['clientes','productos']
+  },
+  local_montegrande: {
+    secciones: ['inicio','local','local_montegrande','clientes','productos'],
+    readonly:  ['clientes','productos']
+  },
+  produccion: {
+    secciones: ['inicio','pedidos','tizada','costura','entregas','materiales','productos','compras','proveedores','talleristas','venta'],
+    readonly:  ['productos','compras','proveedores','talleristas']
+  }
+};
+function canAccess(sec){
+  if(!currentUser) return true;
+  var p=PERMISOS_ROL[currentUser.rol];
+  if(!p) return true;
+  return p.secciones.indexOf(sec)!==-1;
+}
+function isReadOnly(sec){
+  if(!currentUser) return false;
+  var p=PERMISOS_ROL[currentUser.rol];
+  if(!p) return false;
+  return (p.readonly||[]).indexOf(sec)!==-1;
+}
+function canDo(accion){
+  if(!currentUser) return true;
+  var rol=currentUser.rol;
+  return rol==='gerencia'||rol==='administracion';
+}
+async function hashPassword(pass){
+  var enc=new TextEncoder().encode(pass);
+  var buf=await crypto.subtle.digest('SHA-256',enc);
+  return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+}
+function applyPermisosSidebar(){
+  if(!currentUser) return;
+  var p=PERMISOS_ROL[currentUser.rol];
+  document.querySelectorAll('.nav-item[data-sec]').forEach(function(el){
+    var sec=el.getAttribute('data-sec');
+    el.style.display=(!p||p.secciones.indexOf(sec)!==-1)?'':'none';
+  });
+  document.querySelectorAll('.nav-group').forEach(function(grp){
+    var hasVisible=Array.from(grp.querySelectorAll('.nav-item[data-sec]')).some(function(el){return el.style.display!=='none';});
+    grp.style.display=hasVisible?'':'none';
+  });
+  document.getElementById('sb-user').textContent=currentUser.nombre||currentUser.usuario||'—';
+  document.getElementById('sb-rol').textContent=_rolLabel(currentUser.rol);
+}
+function _rolLabel(rol){
+  return {gerencia:'Gerencia',administracion:'Administración',local_llavallol:'Local Llavallol',local_montegrande:'Local Monte Grande',produccion:'Producción'}[rol]||rol||'';
+}
+function _showApp(){
+  document.getElementById('login-overlay').style.display='none';
+  document.getElementById('app').style.display='block';
+  var bm=document.getElementById('btn-manual'); if(bm) bm.style.display='flex';
+}
+
 // ── INIT ──
 window.addEventListener('DOMContentLoaded', function(){
   var today = new Date().toISOString().split('T')[0];
@@ -6176,6 +6285,16 @@ window.addEventListener('DOMContentLoaded', function(){
 
   sb=supabase.createClient(SB_URL,SB_KEY);
 
+  // Restaurar sesión custom (tabla usuarios) desde sessionStorage
+  var _saved=sessionStorage.getItem('primula_user');
+  if(_saved){try{
+    currentUser=JSON.parse(_saved);
+    sb=supabase.createClient(SB_URL,SB_SERVICE_KEY);
+    _showApp();
+    applyPermisosSidebar();
+    loadAll();
+  }catch(e){sessionStorage.removeItem('primula_user');}}
+
   // Si hay token en la URL (redirect de recuperación), iniciar sesión automáticamente
   var urlHash=new URLSearchParams(window.location.hash.replace('#',''));
   var urlToken=urlHash.get('access_token');
@@ -6187,16 +6306,17 @@ window.addEventListener('DOMContentLoaded', function(){
   }
 
   sb.auth.onAuthStateChange(function(ev,session){
+    if(currentUser) return; // ya logueado con custom auth
     if(session){
-      document.getElementById('sb-user').textContent=session.user.email;
-      document.getElementById('login-overlay').style.display='none';
-      document.getElementById('app').style.display='block';
-      document.getElementById('btn-manual').style.display='flex';
+      currentUser={id:0,nombre:session.user.email,usuario:session.user.email,rol:'gerencia'};
+      sessionStorage.setItem('primula_user',JSON.stringify(currentUser));
+      _showApp();
+      applyPermisosSidebar();
       loadAll();
     } else {
       document.getElementById('login-overlay').style.display='flex';
       document.getElementById('app').style.display='none';
-      document.getElementById('btn-manual').style.display='none';
+      var bm=document.getElementById('btn-manual'); if(bm) bm.style.display='none';
     }
   });
   document.getElementById('tr-fecha').value=today;
@@ -6206,19 +6326,50 @@ window.addEventListener('DOMContentLoaded', function(){
 // ── AUTH ──
 async function doLogin(){
   document.getElementById('lg-err').textContent='';
-  var email=document.getElementById('lg-email').value.trim();
+  var usuario=document.getElementById('lg-email').value.trim();
   var pass=document.getElementById('lg-pass').value;
-  if(email==='juanalonso.6a@gmail.com' && pass==='Primula2025!'){
-    sb=supabase.createClient(SB_URL,SB_SERVICE_KEY);
-    document.getElementById('login-overlay').style.display='none';
-    document.getElementById('app').style.display='block';
-    document.getElementById('btn-manual').style.display='flex';
-    document.getElementById('sb-user').textContent=email;
-    await loadAll();
-    return;
+  if(!usuario||!pass){document.getElementById('lg-err').textContent='Completá usuario y contraseña';return;}
+  var btn=document.querySelector('.login-btn');
+  if(btn){btn.disabled=true;btn.textContent='Verificando...';}
+  try{
+    // 1. Buscar en tabla usuarios (custom auth)
+    var hash=await hashPassword(pass);
+    var sbChk=supabase.createClient(SB_URL,SB_SERVICE_KEY);
+    var {data:uRow}=await sbChk.from('usuarios')
+      .select('id,nombre,usuario,rol')
+      .eq('usuario',usuario)
+      .eq('password_hash',hash)
+      .eq('activo',true)
+      .maybeSingle();
+    if(uRow){
+      currentUser=uRow;
+      sb=sbChk;
+      sessionStorage.setItem('primula_user',JSON.stringify(currentUser));
+      _showApp();
+      applyPermisosSidebar();
+      await loadAll();
+      return;
+    }
+    // 2. Superadmin hardcoded
+    if(usuario==='juanalonso.6a@gmail.com'&&pass==='Primula2025!'){
+      currentUser={id:0,nombre:'Admin',usuario:'juanalonso.6a@gmail.com',rol:'gerencia'};
+      sb=supabase.createClient(SB_URL,SB_SERVICE_KEY);
+      sessionStorage.setItem('primula_user',JSON.stringify(currentUser));
+      _showApp();
+      applyPermisosSidebar();
+      await loadAll();
+      return;
+    }
+    // 3. Fallback Supabase Auth (para usuarios con email)
+    if(usuario.includes('@')){
+      var {error}=await sb.auth.signInWithPassword({email:usuario,password:pass});
+      if(error){document.getElementById('lg-err').textContent='Usuario o contraseña incorrectos';}
+      return;
+    }
+    document.getElementById('lg-err').textContent='Usuario o contraseña incorrectos';
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent='Ingresar';}
   }
-  var {error}=await sb.auth.signInWithPassword({email:email,password:pass});
-  if(error) document.getElementById('lg-err').textContent='Email o contraseña incorrectos';
 }
 function togglePassVis(){
   var inp=document.getElementById('lg-pass');
@@ -6245,7 +6396,18 @@ async function doResetPassword(){
   if(error){document.getElementById('lg-err').textContent='Error: '+error.message;return;}
   document.getElementById('lg-reset-ok').style.display='block';
 }
-async function doLogout(){ await sb.auth.signOut(); }
+async function doLogout(){
+  currentUser=null;
+  sessionStorage.removeItem('primula_user');
+  await sb.auth.signOut();
+  sb=supabase.createClient(SB_URL,SB_KEY);
+  document.getElementById('login-overlay').style.display='flex';
+  document.getElementById('app').style.display='none';
+  var bm=document.getElementById('btn-manual'); if(bm) bm.style.display='none';
+  document.getElementById('lg-email').value='';
+  document.getElementById('lg-pass').value='';
+  document.getElementById('lg-err').textContent='';
+}
 
 // ── LOAD ──
 async function loadAll(){
@@ -6617,6 +6779,7 @@ function closeMobMenu(){
 
 // ── NAV ──
 function nav(sec, el){
+  if(!canAccess(sec)){nav('inicio',document.querySelector('.nav-item[data-sec="inicio"]'));return;}
   closeMobMenu();
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
   var s=document.getElementById('sec-'+sec); if(s) s.classList.add('active');
@@ -6637,6 +6800,7 @@ function nav(sec, el){
   if(sec==='entregas'){setEntTab('activos',document.querySelector('#ent-tabs .tab'));}
   if(sec==='costos'){renderCostos();}
   if(sec==='compras'){renderCompras();}
+  if(sec==='usuarios'){loadUsuarios().then(renderUsuarios);}
   if(sec==='estrategia'){renderEstrategiaProgress();}
   requestAnimationFrame(function(){ window.scrollTo(0,0); });
 }
@@ -10992,7 +11156,6 @@ function renderProductos(){
       '<td style="text-align:right;font-size:12px;font-weight:700;">'+$p(r.precio)+'</td>'+
       '<td style="text-align:right;font-size:12px;color:#16a34a;">'+$p(r.ganancia)+'</td>'+
       '<td style="text-align:right;font-size:12px;font-weight:700;color:'+pctColor+';">'+r.pctGan+'%</td>'+
-      '<td style="text-align:right;font-weight:700;color:'+(r.stDep===0?'#9ca3af':'#374151')+';">'+r.stDep+'</td>'+
       '<td style="text-align:right;font-weight:700;color:'+(r.stLocal===0?'#9ca3af':'#374151')+';">'+r.stLocal+'</td>'+
       '<td style="text-align:right;font-weight:800;color:'+stColor+';">'+r.stTotal+'</td>'+
       '<td style="text-align:right;font-size:12px;">'+$p(r.valorizado)+'</td>'+
@@ -11021,7 +11184,7 @@ function renderProductos(){
       '<td colspan="2" style="font-weight:700;font-size:12px;white-space:nowrap;padding-left:20px;">'+(isOpen?'▼':'▶')+' '+esc(fam)+
         ' <span style="font-size:11px;font-weight:400;color:#6b7280;">'+rows.length+' talle'+(rows.length!==1?'s':'')+'</span></td>'+
       '<td><span class="badge b-gray" style="font-size:10px;">'+cat+'</span></td>'+
-      '<td colspan="5"></td>'+
+      '<td colspan="4"></td>'+
       '<td style="text-align:right;font-weight:700;color:#374151;">'+famTotal+'</td>'+
       '<td style="text-align:right;font-size:12px;font-weight:700;">'+$p(famValor)+'</td>'+
       '<td colspan="3"></td>'+
@@ -14732,6 +14895,118 @@ async function deleteMat(id){
   if(r.error){toast('Error: '+r.error.message,'err');return;}
   toast('Material eliminado','info');
   await loadMateriales();renderMateriales();renderMatPrima();
+}
+
+// ── USUARIOS ──
+var _usuEditId=null;
+
+async function loadUsuarios(){
+  var {data}=await sb.from('usuarios').select('*').order('nombre');
+  USUARIOS=data||[];
+}
+
+function renderUsuarios(){
+  var ROL_LABELS={gerencia:'Gerencia',administracion:'Administración',local_llavallol:'Local Llavallol',local_montegrande:'Local Monte Grande',produccion:'Producción'};
+  var ROL_BADGE={gerencia:'b-purple',administracion:'b-blue',local_llavallol:'b-green',local_montegrande:'b-orange',produccion:'b-gray'};
+  var html='';
+  if(!USUARIOS.length){
+    html='<div class="empty"><p>No hay usuarios. Creá el primero con el botón +.</p></div>';
+  } else {
+    html='<table><thead><tr>'
+      +'<th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th></th>'
+      +'</tr></thead><tbody>';
+    USUARIOS.forEach(function(u){
+      html+='<tr>'
+        +'<td style="font-weight:600;">'+esc(u.nombre)+'</td>'
+        +'<td style="font-family:monospace;color:#4b5563;">'+esc(u.usuario)+'</td>'
+        +'<td><span class="badge '+(ROL_BADGE[u.rol]||'b-gray')+'">'+esc(ROL_LABELS[u.rol]||u.rol)+'</span></td>'
+        +'<td><span class="badge '+(u.activo?'b-green':'b-red')+'">'+(u.activo?'Activo':'Inactivo')+'</span></td>'
+        +'<td style="text-align:right;white-space:nowrap;">'
+          +'<button class="btn btn-sm btn-outline" onclick="openModalEditUsuario('+u.id+')" style="margin-right:4px;">✏️</button>'
+          +'<button class="btn btn-sm btn-gray" onclick="toggleUsuario('+u.id+','+u.activo+')" title="'+(u.activo?'Desactivar':'Activar')+'" style="margin-right:4px;">'+(u.activo?'🔒':'🔓')+'</button>'
+          +'<button class="btn btn-sm btn-red" onclick="deleteUsuario('+u.id+')">🗑️</button>'
+        +'</td>'
+        +'</tr>';
+    });
+    html+='</tbody></table>';
+  }
+  var el=document.getElementById('usu-lista');
+  if(el) el.innerHTML=html;
+}
+
+function openModalNuevoUsuario(){
+  _usuEditId=null;
+  document.getElementById('m-usuario-title').textContent='Nuevo usuario';
+  document.getElementById('usu-id').value='';
+  document.getElementById('usu-nombre').value='';
+  document.getElementById('usu-usuario').value='';
+  document.getElementById('usu-pass').value='';
+  document.getElementById('usu-rol').value='administracion';
+  document.getElementById('usu-activo-row').style.display='none';
+  document.getElementById('usu-pass-hint').style.display='none';
+  document.getElementById('usu-err').textContent='';
+  openM('m-usuario');
+}
+
+function openModalEditUsuario(id){
+  var u=USUARIOS.find(function(x){return x.id===id;});
+  if(!u) return;
+  _usuEditId=id;
+  document.getElementById('m-usuario-title').textContent='Editar usuario';
+  document.getElementById('usu-id').value=id;
+  document.getElementById('usu-nombre').value=u.nombre;
+  document.getElementById('usu-usuario').value=u.usuario;
+  document.getElementById('usu-pass').value='';
+  document.getElementById('usu-rol').value=u.rol;
+  document.getElementById('usu-activo').checked=u.activo;
+  document.getElementById('usu-activo-row').style.display='flex';
+  document.getElementById('usu-pass-hint').style.display='block';
+  document.getElementById('usu-err').textContent='';
+  openM('m-usuario');
+}
+
+async function guardarUsuario(){
+  var nombre=document.getElementById('usu-nombre').value.trim();
+  var usuario=document.getElementById('usu-usuario').value.trim().toLowerCase();
+  var pass=document.getElementById('usu-pass').value;
+  var rol=document.getElementById('usu-rol').value;
+  var activo=document.getElementById('usu-activo').checked;
+  if(!nombre||!usuario){document.getElementById('usu-err').textContent='Nombre y usuario son obligatorios';return;}
+  if(!_usuEditId&&!pass){document.getElementById('usu-err').textContent='La contraseña es obligatoria para nuevo usuario';return;}
+  if(pass&&pass.length<6){document.getElementById('usu-err').textContent='La contraseña debe tener al menos 6 caracteres';return;}
+  var row={nombre:nombre,usuario:usuario,rol:rol};
+  if(pass) row.password_hash=await hashPassword(pass);
+  if(_usuEditId) row.activo=activo;
+  var err;
+  if(_usuEditId){
+    var {error}=await sb.from('usuarios').update(row).eq('id',_usuEditId);
+    err=error;
+  } else {
+    row.activo=true;
+    var {error}=await sb.from('usuarios').insert(row);
+    err=error;
+  }
+  if(err){document.getElementById('usu-err').textContent='Error: '+(err.message||'No se pudo guardar');return;}
+  closeM('m-usuario');
+  toast(_usuEditId?'Usuario actualizado ✔️':'Usuario creado ✔️');
+  await loadUsuarios();
+  renderUsuarios();
+}
+
+async function toggleUsuario(id, activo){
+  await sb.from('usuarios').update({activo:!activo}).eq('id',id);
+  await loadUsuarios();
+  renderUsuarios();
+}
+
+async function deleteUsuario(id){
+  var u=USUARIOS.find(function(x){return x.id===id;});
+  if(!u) return;
+  if(!confirm('¿Eliminar usuario "'+u.nombre+'"? Esta acción no se puede deshacer.')) return;
+  await sb.from('usuarios').delete().eq('id',id);
+  await loadUsuarios();
+  renderUsuarios();
+  toast('Usuario eliminado ✔️');
 }
 
 // ── PERSONAL ──
