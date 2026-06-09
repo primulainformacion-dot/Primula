@@ -3461,11 +3461,23 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 
   <!-- ── USUARIOS ── -->
   <div class="section" id="sec-usuarios">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <h2 style="margin:0;font-size:20px;font-weight:700;color:#1a1f36;">Usuarios del sistema</h2>
-      <button class="btn" onclick="openModalNuevoUsuario()">+ Nuevo usuario</button>
+    <div class="tabs" id="usu-tabs" style="margin-bottom:16px;">
+      <div class="tab active" onclick="setUsuTab('usuarios',this)">👤 Usuarios</div>
+      <div class="tab" onclick="setUsuTab('permisos',this)">🔐 Permisos</div>
     </div>
-    <div id="usu-lista"></div>
+
+    <!-- Tab Usuarios -->
+    <div id="usu-tab-usuarios">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+        <button class="btn" onclick="openModalNuevoUsuario()">+ Nuevo usuario</button>
+      </div>
+      <div id="usu-lista"></div>
+    </div>
+
+    <!-- Tab Permisos -->
+    <div id="usu-tab-permisos" style="display:none;">
+      <div id="usu-permisos-tabla"></div>
+    </div>
   </div><!-- /sec-usuarios -->
 
 </div><!-- /main -->
@@ -6015,7 +6027,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <div style="display:flex;gap:20px;padding:8px 0;">
           <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" id="mprod-loc-llavallol"> Llavallol</label>
           <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" id="mprod-loc-montegrande"> Monte Grande</label>
-          <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" id="mprod-loc-mayorista"> Mayorista</label>
         </div>
       </div>
       <div class="field"><label>Estado</label>
@@ -6101,7 +6112,6 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <div style="display:flex;gap:20px;padding:8px 0;">
           <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" id="mmod-loc-llavallol" checked> Llavallol</label>
           <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" id="mmod-loc-montegrande" checked> Monte Grande</label>
-          <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;cursor:pointer;"><input type="checkbox" id="mmod-loc-mayorista" checked> Mayorista</label>
         </div>
       </div>
     </div>
@@ -6290,9 +6300,7 @@ window.addEventListener('DOMContentLoaded', function(){
   if(_saved){try{
     currentUser=JSON.parse(_saved);
     sb=supabase.createClient(SB_URL,SB_SERVICE_KEY);
-    _showApp();
-    applyPermisosSidebar();
-    loadAll();
+    loginComplete();
   }catch(e){sessionStorage.removeItem('primula_user');}}
 
   // Si hay token en la URL (redirect de recuperación), iniciar sesión automáticamente
@@ -6310,9 +6318,7 @@ window.addEventListener('DOMContentLoaded', function(){
     if(session){
       currentUser={id:0,nombre:session.user.email,usuario:session.user.email,rol:'gerencia'};
       sessionStorage.setItem('primula_user',JSON.stringify(currentUser));
-      _showApp();
-      applyPermisosSidebar();
-      loadAll();
+      loginComplete();
     } else {
       document.getElementById('login-overlay').style.display='flex';
       document.getElementById('app').style.display='none';
@@ -6324,6 +6330,13 @@ window.addEventListener('DOMContentLoaded', function(){
 });
 
 // ── AUTH ──
+async function loginComplete(){
+  await loadConfigSistema();
+  _showApp();
+  applyPermisosSidebar();
+  await loadAll();
+}
+
 async function doLogin(){
   document.getElementById('lg-err').textContent='';
   var usuario=document.getElementById('lg-email').value.trim();
@@ -6345,9 +6358,7 @@ async function doLogin(){
       currentUser=uRow;
       sb=sbChk;
       sessionStorage.setItem('primula_user',JSON.stringify(currentUser));
-      _showApp();
-      applyPermisosSidebar();
-      await loadAll();
+      await loginComplete();
       return;
     }
     // 2. Superadmin hardcoded
@@ -6355,9 +6366,7 @@ async function doLogin(){
       currentUser={id:0,nombre:'Admin',usuario:'juanalonso.6a@gmail.com',rol:'gerencia'};
       sb=supabase.createClient(SB_URL,SB_SERVICE_KEY);
       sessionStorage.setItem('primula_user',JSON.stringify(currentUser));
-      _showApp();
-      applyPermisosSidebar();
-      await loadAll();
+      await loginComplete();
       return;
     }
     // 3. Fallback Supabase Auth (para usuarios con email)
@@ -6802,6 +6811,19 @@ function nav(sec, el){
   if(sec==='compras'){renderCompras();}
   if(sec==='usuarios'){loadUsuarios().then(renderUsuarios);}
   if(sec==='estrategia'){renderEstrategiaProgress();}
+  // Banner de solo lectura
+  var oldBanner=document.getElementById('perm-readonly-banner');
+  if(oldBanner)oldBanner.remove();
+  if(isReadOnly(sec)){
+    var secEl=document.getElementById('sec-'+sec);
+    if(secEl){
+      var banner=document.createElement('div');
+      banner.id='perm-readonly-banner';
+      banner.style.cssText='background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:8px 14px;margin-bottom:14px;font-size:13px;color:#92400e;';
+      banner.textContent='👁 Solo lectura — podés ver esta sección pero no realizar cambios.';
+      secEl.insertBefore(banner,secEl.firstChild);
+    }
+  }
   requestAnimationFrame(function(){ window.scrollTo(0,0); });
 }
 
@@ -11127,7 +11149,7 @@ function renderProductos(){
   function mkRow(p){
     var stProd=STOCK.filter(function(s){return s.producto_id===p.id;});
     var stTotal=stProd.reduce(function(s,x){return s+x.cantidad;},0);
-    var stLocal=stTotal;
+    var stLocal=localFil?stProd.filter(function(s){return s.local===localFil;}).reduce(function(s,x){return s+x.cantidad;},0):stTotal;
     var ideal=Number(p.stock_ideal||0);
     var costo=Number(p.costo||0);
     var precio=Number(p.precio_minorista||0);
@@ -11685,7 +11707,6 @@ function openProdModal(id,famDefault,colDefault){
   var locs=p.locales_disponibles||['llavallol','montegrande','mayorista'];
   document.getElementById('mprod-loc-llavallol').checked=locs.indexOf('llavallol')>=0;
   document.getElementById('mprod-loc-montegrande').checked=locs.indexOf('montegrande')>=0;
-  document.getElementById('mprod-loc-mayorista').checked=locs.indexOf('mayorista')>=0;
   document.getElementById('mprod-activo').value=String(p.activo!==false);
   document.getElementById('mprod-btn-del').style.display=id?'':'none';
   poblarSelectCategorias();
@@ -11712,7 +11733,6 @@ async function saveProd(){
   var locs=[];
   if(document.getElementById('mprod-loc-llavallol').checked)locs.push('llavallol');
   if(document.getElementById('mprod-loc-montegrande').checked)locs.push('montegrande');
-  if(document.getElementById('mprod-loc-mayorista').checked)locs.push('mayorista');
   var d={
     colegio:document.getElementById('mprod-colegio').value||null,
     familia:document.getElementById('mprod-familia').value.trim()||null,
@@ -11789,7 +11809,7 @@ function renderProductosCards(){
   if(estadoFil){
     familias=familias.filter(function(fam){
       return fam.prods.some(function(p){
-        var st=STOCK.filter(function(s){return s.producto_id===p.id;}).reduce(function(s,x){return s+x.cantidad;},0);
+        var st=STOCK.filter(function(s){return s.producto_id===p.id&&(!localFil||s.local===localFil);}).reduce(function(s,x){return s+x.cantidad;},0);
         var ideal=Number(p.stock_ideal||0);
         return ((ideal>0?st<ideal:st===0)?'FALTANTE':'STOCK')===estadoFil;
       });
@@ -11802,14 +11822,14 @@ function renderProductosCards(){
   var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;padding:4px 0;">';
   familias.forEach(function(fam){
     var totalSt=fam.prods.reduce(function(s,p){
-      return s+STOCK.filter(function(st){return st.producto_id===p.id;}).reduce(function(ss,x){return ss+x.cantidad;},0);
+      return s+STOCK.filter(function(st){return st.producto_id===p.id&&(!localFil||st.local===localFil);}).reduce(function(ss,x){return ss+x.cantidad;},0);
     },0);
     var hasFaltante=fam.prods.some(function(p){
-      var st=STOCK.filter(function(s){return s.producto_id===p.id;}).reduce(function(ss,x){return ss+x.cantidad;},0);
+      var st=STOCK.filter(function(s){return s.producto_id===p.id&&(!localFil||s.local===localFil);}).reduce(function(ss,x){return ss+x.cantidad;},0);
       var ideal=Number(p.stock_ideal||0);return ideal>0?st<ideal:st===0;
     });
     var tallesBadges=fam.prods.map(function(p){
-      var st=STOCK.filter(function(s){return s.producto_id===p.id;}).reduce(function(ss,x){return ss+x.cantidad;},0);
+      var st=STOCK.filter(function(s){return s.producto_id===p.id&&(!localFil||s.local===localFil);}).reduce(function(ss,x){return ss+x.cantidad;},0);
       var ideal=Number(p.stock_ideal||0);
       var ok=ideal>0?st>=ideal:st>0;var parcial=!ok&&st>0;
       var bg=ok?'#f0fdf4':parcial?'#fffbeb':'#fff5f5';
@@ -12027,8 +12047,8 @@ function openStockRapido(prodId){
   var p=PRODUCTOS.find(function(x){return x.id===prodId;})||{};
   document.getElementById('msr-titulo').textContent=(p.familia||p.nombre||'—')+(p.talle?' — talle '+p.talle:'');
   document.getElementById('msr-subtitulo').textContent=p.nombre||'';
-  var locs=p.locales_disponibles||['llavallol','montegrande','mayorista'];
-  var LOC_LABEL={llavallol:'Llavallol',montegrande:'Monte Grande',mayorista:'Mayorista'};
+  var locs=(p.locales_disponibles||['llavallol','montegrande']).filter(function(l){return l!=='mayorista';});
+  var LOC_LABEL={llavallol:'Llavallol',montegrande:'Monte Grande'};
   document.getElementById('msr-locales').innerHTML=locs.map(function(loc){
     var stReg=STOCK.find(function(s){return s.producto_id===prodId&&s.local===loc&&(s.talle||'')===(p.talle||'')&&(s.color||'')==='';});
     var qty=stReg?stReg.cantidad:0;
@@ -12046,7 +12066,7 @@ function openStockRapido(prodId){
 async function saveStockRapido(){
   if(!msrProdId)return;
   var p=PRODUCTOS.find(function(x){return x.id===msrProdId;})||{};
-  var locs=p.locales_disponibles||['llavallol','montegrande','mayorista'];
+  var locs=(p.locales_disponibles||['llavallol','montegrande']).filter(function(l){return l!=='mayorista';});
   var ops=locs.map(function(loc){
     var inp=document.getElementById('msr-qty-'+loc);
     var qty=inp?parseInt(inp.value)||0:0;
@@ -12082,7 +12102,6 @@ function openModeloModal(){
   ['mmod-colegio','mmod-cat','mmod-tipo2','mmod-nivel'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('mmod-loc-llavallol').checked=true;
   document.getElementById('mmod-loc-montegrande').checked=true;
-  document.getElementById('mmod-loc-mayorista').checked=true;
   document.getElementById('mmod-error').style.display='none';
   // Generar grilla de talles
   document.getElementById('mmod-talles-grid').innerHTML=TALLES_GRUPOS.map(function(g){
@@ -12124,7 +12143,6 @@ async function saveModelo(){
   var locs=[];
   if(document.getElementById('mmod-loc-llavallol').checked)locs.push('llavallol');
   if(document.getElementById('mmod-loc-montegrande').checked)locs.push('montegrande');
-  if(document.getElementById('mmod-loc-mayorista').checked)locs.push('mayorista');
   var base={
     familia:familia,
     colegio:document.getElementById('mmod-colegio').value||null,
@@ -14895,6 +14913,132 @@ async function deleteMat(id){
   if(r.error){toast('Error: '+r.error.message,'err');return;}
   toast('Material eliminado','info');
   await loadMateriales();renderMateriales();renderMatPrima();
+}
+
+// ── CONFIG SISTEMA ──
+var CONFIG_SISTEMA={};
+
+var PERMISOS_SECCIONES=[
+  {id:'mayorista',       label:'Ropa Mayorista',    grupo:'Ventas'},
+  {id:'local_llavallol', label:'Local Llavallol',   grupo:'Ventas'},
+  {id:'local_montegrande',label:'Local Monte Grande',grupo:'Ventas'},
+  {id:'clientes',   label:'Clientes',      grupo:'Administración'},
+  {id:'proveedores',label:'Proveedores',   grupo:'Administración'},
+  {id:'compras',    label:'Compras',       grupo:'Administración'},
+  {id:'talleristas',label:'Talleristas',   grupo:'Administración'},
+  {id:'personal',   label:'Personal',      grupo:'Administración'},
+  {id:'productos',  label:'Productos',     grupo:'Administración'},
+  {id:'panel',      label:'Panel General', grupo:'Finanzas'},
+  {id:'finanzas',   label:'Movimientos',   grupo:'Finanzas'},
+  {id:'cheques',    label:'Cheques',       grupo:'Finanzas'},
+  {id:'moratorias', label:'Moratorias',    grupo:'Finanzas'},
+  {id:'pedidos',    label:'Pedidos',       grupo:'Producción'},
+  {id:'tizada',     label:'Tizada / Corte',grupo:'Producción'},
+  {id:'costura',    label:'Costura',       grupo:'Producción'},
+  {id:'entregas',   label:'Entregas',      grupo:'Producción'},
+  {id:'materiales', label:'Materia Prima', grupo:'Producción'},
+  {id:'costos',     label:'Costos',        grupo:'Producción'}
+];
+var PERMISOS_ROLES_EDIT=['local_llavallol','local_montegrande','produccion'];
+var PERMISOS_ROLES_LABELS={local_llavallol:'Local\nLlavallol',local_montegrande:'Local\nMonte Grande',produccion:'Producción'};
+
+async function loadConfigSistema(){
+  var {data}=await sb.from('config_sistema').select('*');
+  CONFIG_SISTEMA={};
+  (data||[]).forEach(function(r){CONFIG_SISTEMA[r.clave]=r.valor;});
+  if(CONFIG_SISTEMA.permisos_rol){
+    var saved=CONFIG_SISTEMA.permisos_rol;
+    PERMISOS_ROLES_EDIT.forEach(function(rol){
+      if(saved[rol]) PERMISOS_ROL[rol]=saved[rol];
+    });
+  }
+}
+
+function getPermisoCell(rol,sec){
+  var p=PERMISOS_ROL[rol];
+  if(!p) return 'total';
+  if(p.secciones.indexOf(sec)===-1) return 'ninguno';
+  if((p.readonly||[]).indexOf(sec)!==-1) return 'readonly';
+  return 'total';
+}
+
+function cyclePermiso(rol,sec){
+  var cur=getPermisoCell(rol,sec);
+  var next=cur==='total'?'readonly':cur==='readonly'?'ninguno':'total';
+  var p=PERMISOS_ROL[rol];
+  if(!p){PERMISOS_ROL[rol]={secciones:[],readonly:[]};p=PERMISOS_ROL[rol];}
+  var si=p.secciones.indexOf(sec);
+  if(next==='ninguno'){
+    if(si!==-1)p.secciones.splice(si,1);
+    var ri=(p.readonly||[]).indexOf(sec);if(ri!==-1)p.readonly.splice(ri,1);
+  } else if(next==='readonly'){
+    if(si===-1)p.secciones.push(sec);
+    if(!p.readonly)p.readonly=[];
+    if(p.readonly.indexOf(sec)===-1)p.readonly.push(sec);
+  } else {
+    if(si===-1)p.secciones.push(sec);
+    var ri2=(p.readonly||[]).indexOf(sec);if(ri2!==-1)p.readonly.splice(ri2,1);
+  }
+  // Asegurar que 'local' e 'inicio' siempre estén en las secciones del rol
+  ['inicio','local'].forEach(function(s){if(p.secciones.indexOf(s)===-1)p.secciones.push(s);});
+  savePermisosConfig();
+  applyPermisosSidebar();
+  renderPermisos();
+}
+
+async function savePermisosConfig(){
+  var toSave={};
+  PERMISOS_ROLES_EDIT.forEach(function(rol){toSave[rol]=PERMISOS_ROL[rol];});
+  await sb.from('config_sistema').upsert(
+    {clave:'permisos_rol',valor:toSave,updated_at:new Date().toISOString()},
+    {onConflict:'clave'}
+  );
+  toast('Permisos guardados ✔️');
+}
+
+function renderPermisos(){
+  var CELL={
+    total:   '<span title="Acceso completo" style="font-size:18px;cursor:pointer;">✅</span>',
+    readonly:'<span title="Solo lectura" style="font-size:18px;cursor:pointer;">👁️</span>',
+    ninguno: '<span title="Sin acceso" style="font-size:18px;cursor:pointer;">❌</span>'
+  };
+  var grupos=[...new Set(PERMISOS_SECCIONES.map(function(s){return s.grupo;}))];
+  var html='<div style="overflow-x:auto;">'
+    +'<p style="font-size:12px;color:#9ca3af;margin-bottom:12px;">Hacé clic en cada celda para cambiar el permiso. ✅ acceso completo &nbsp;·&nbsp; 👁️ solo lectura &nbsp;·&nbsp; ❌ sin acceso. Gerencia y Administración tienen acceso total siempre.</p>'
+    +'<table style="border-collapse:collapse;min-width:600px;">'
+    +'<thead><tr>'
+    +'<th style="text-align:left;padding:8px 12px;font-size:11px;color:#9ca3af;font-weight:600;letter-spacing:.5px;min-width:160px;">SECCIÓN</th>'
+    +'<th style="text-align:center;padding:8px 12px;font-size:11px;color:#9ca3af;font-weight:600;letter-spacing:.5px;min-width:90px;">GERENCIA<br>ADMIN</th>';
+  PERMISOS_ROLES_EDIT.forEach(function(rol){
+    html+='<th style="text-align:center;padding:8px 12px;font-size:11px;color:#9ca3af;font-weight:600;letter-spacing:.5px;min-width:90px;">'+esc(PERMISOS_ROLES_LABELS[rol]||rol).replace('\n','<br>')+'</th>';
+  });
+  html+='</tr></thead><tbody>';
+  var lastGrupo='';
+  PERMISOS_SECCIONES.forEach(function(sec){
+    if(sec.grupo!==lastGrupo){
+      lastGrupo=sec.grupo;
+      html+='<tr><td colspan="'+(2+PERMISOS_ROLES_EDIT.length)+'" style="padding:10px 12px 4px;font-size:10px;font-weight:700;color:#6c7ae0;letter-spacing:1px;text-transform:uppercase;background:#f9fafb;border-top:2px solid #e5e7eb;">'+esc(sec.grupo)+'</td></tr>';
+    }
+    html+='<tr>'
+      +'<td style="padding:8px 12px;font-size:13px;color:#374151;border-top:1px solid #f3f4f6;">'+esc(sec.label)+'</td>'
+      +'<td style="text-align:center;padding:8px;border-top:1px solid #f3f4f6;opacity:.4;" title="Siempre acceso total">✅</td>';
+    PERMISOS_ROLES_EDIT.forEach(function(rol){
+      var estado=getPermisoCell(rol,sec.id);
+      html+='<td style="text-align:center;padding:8px;border-top:1px solid #f3f4f6;cursor:pointer;" onclick="cyclePermiso(\''+rol+'\',\''+sec.id+'\')">'+CELL[estado]+'</td>';
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  var el=document.getElementById('usu-permisos-tabla');
+  if(el) el.innerHTML=html;
+}
+
+function setUsuTab(tab,el){
+  document.getElementById('usu-tab-usuarios').style.display=tab==='usuarios'?'block':'none';
+  document.getElementById('usu-tab-permisos').style.display=tab==='permisos'?'block':'none';
+  document.querySelectorAll('#usu-tabs .tab').forEach(function(t){t.classList.remove('active');});
+  if(el)el.classList.add('active');
+  if(tab==='permisos')renderPermisos();
 }
 
 // ── USUARIOS ──
