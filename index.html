@@ -16941,7 +16941,7 @@ function posImprimirTicketCambio(d){
   var localNom=d.local||'Local';
   var itemsRows=d.items.map(function(it){
     var desc=it.nombre+(it.talle?' · '+it.talle:'')+(it.color?' · '+it.color:'');
-    var colStr=it.colegio?'<div style="font-size:9px;color:#1d4ed8;margin-top:1px;">'+it.colegio+'</div>':'';
+    var colStr=it.colegio?'<div style="font-size:9px;color:#000;font-weight:700;margin-top:1px;">'+it.colegio+'</div>':'';
     return '<tr><td style="padding:5px 0;border-bottom:1px dashed #e5e7eb;">'+desc+colStr+'</td>'+
       '<td style="text-align:center;padding:5px;border-bottom:1px dashed #e5e7eb;">'+it.cantidad+'</td>'+
       '<td style="text-align:right;padding:5px 0;border-bottom:1px dashed #e5e7eb;">'+$p(it.precio)+'</td></tr>';
@@ -16955,19 +16955,19 @@ function posImprimirTicketCambio(d){
       '.ticket{width:100%;padding:4px 8px;}'+
       '.header{text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:8px;}'+
       '.tienda{font-size:16px;font-weight:900;letter-spacing:1px;}'+
-      '.local{font-size:11px;color:#555;margin-top:2px;}'+
+      '.local{font-size:11px;color:#000;margin-top:2px;}'+
       '.titulo{font-size:13px;font-weight:800;background:#000;color:#fff;text-align:center;padding:5px;margin:8px 0;letter-spacing:1px;}'+
-      '.meta{font-size:11px;margin-bottom:8px;line-height:1.6;}'+
+      '.meta{font-size:11px;color:#000;margin-bottom:8px;line-height:1.6;}'+
       'table{width:100%;border-collapse:collapse;margin-bottom:8px;}'+
-      'th{font-size:10px;text-align:left;padding:3px 0;border-bottom:2px solid #000;}'+
+      'th{font-size:10px;text-align:left;padding:3px 0;border-bottom:2px solid #000;color:#000;}'+
       'th:nth-child(2){text-align:center;}'+
       'th:last-child{text-align:right;}'+
-      'td{font-size:11px;}'+
+      'td{font-size:11px;color:#000;}'+
       '.total-row{font-size:13px;font-weight:800;text-align:right;border-top:2px solid #000;padding-top:5px;margin-bottom:8px;}'+
-      '.validez{background:#f0fdf4;border:2px solid #16a34a;border-radius:4px;padding:7px;text-align:center;margin:8px 0;}'+
-      '.validez .lbl{font-size:9px;font-weight:700;color:#166534;letter-spacing:.5px;}'+
-      '.validez .fecha{font-size:18px;font-weight:900;color:#16a34a;}'+
-      '.condiciones{font-size:9px;color:#555;line-height:1.5;border-top:1px dashed #ccc;padding-top:8px;margin-top:8px;}'+
+      '.validez{background:#fff;border:2px solid #000;border-radius:4px;padding:7px;text-align:center;margin:8px 0;}'+
+      '.validez .lbl{font-size:9px;font-weight:700;color:#000;letter-spacing:.5px;}'+
+      '.validez .fecha{font-size:18px;font-weight:900;color:#000;}'+
+      '.condiciones{font-size:9px;color:#000;line-height:1.5;border-top:1px dashed #000;padding-top:8px;margin-top:8px;}'+
       '@media screen{body{margin:8px auto;}}'+
       '@media print{body{width:80mm;margin:0;padding:0;}button{display:none!important;}.btn-bar{display:none!important;}}'+
     '</style>'+
@@ -16977,8 +16977,8 @@ function posImprimirTicketCambio(d){
       '<div class="header">'+
         '<div class="tienda">PRÍMULA</div>'+
         '<div class="local">'+localNom+'</div>'+
-        '<div style="font-size:11px;color:#888;margin-top:4px;">UNIFORMES ESCOLARES Y ROPA DE TRABAJO</div>'+
-        '<div style="font-size:10px;color:#16a34a;margin-top:3px;">📲 '+(localNom==='Monte Grande'?'11 2388-6238':'11 2399-3062')+'</div>'+
+        '<div style="font-size:11px;color:#000;margin-top:4px;">UNIFORMES ESCOLARES Y ROPA DE TRABAJO</div>'+
+        '<div style="font-size:10px;color:#000;margin-top:3px;">📲 '+(localNom==='Monte Grande'?'11 2388-6238':'11 2399-3062')+'</div>'+
       '</div>'+
       '<div class="titulo">🔄 TICKET DE CAMBIO</div>'+
       '<div class="meta">'+
