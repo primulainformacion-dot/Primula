@@ -16950,8 +16950,8 @@ function posImprimirTicketCambio(d){
     '<title>Ticket de cambio #'+d.id+'</title>'+
     '<style>'+
       '*{margin:0;padding:0;box-sizing:border-box;}'+
-      '@page{size:80mm auto;margin:2mm 3mm;}'+
-      'body{font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:600;color:#000;background:#fff;width:74mm;max-width:74mm;}'+
+      '@page{size:80mm auto;margin:2mm 6mm;}'+
+      'body{font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:600;color:#000;background:#fff;width:68mm;max-width:68mm;}'+
       '.ticket{width:100%;padding:2px 0;}'+
       '.header{text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:8px;}'+
       '.tienda{font-size:16px;font-weight:900;letter-spacing:1px;}'+
@@ -16972,7 +16972,7 @@ function posImprimirTicketCambio(d){
       '.validez .fecha{font-size:18px;font-weight:900;color:#000;}'+
       '.condiciones{font-size:11px;color:#000;line-height:1.6;border-top:1px dashed #000;padding-top:8px;margin-top:8px;}'+
       '@media screen{body{margin:8px auto;}}'+
-      '@media print{body{width:74mm;margin:0;padding:0;}button{display:none!important;}.btn-bar{display:none!important;}}'+
+      '@media print{body{width:68mm;margin:0;padding:0;}button{display:none!important;}.btn-bar{display:none!important;}}'+
     '</style>'+
     '<script>window.onload=function(){setTimeout(function(){window.print();},350);};window.onafterprint=function(){window.close();}<\/script>'+
     '</head><body>'+
@@ -16999,7 +16999,7 @@ function posImprimirTicketCambio(d){
       '<div class="validez">'+
         '<div class="lbl">VÁLIDO PARA CAMBIO HASTA</div>'+
         '<div class="fecha">'+vencStr+'</div>'+
-        '<div style="font-size:10px;color:#166534;margin-top:2px;">'+DIAS_VALIDEZ+' días desde la compra</div>'+
+        '<div style="font-size:11px;color:#000;font-weight:700;margin-top:2px;">'+DIAS_VALIDEZ+' días desde la compra</div>'+
       '</div>'+
       '<div class="condiciones">'+
         '<strong>Condiciones de cambio:</strong><br>'+
