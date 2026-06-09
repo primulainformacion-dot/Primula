@@ -16975,7 +16975,7 @@ function posImprimirTicketCambio(d){
       '@media screen{body{margin:8px auto;}}'+
       '@media print{body{width:70mm;margin:0 auto;padding:0;}button{display:none!important;}.btn-bar{display:none!important;}.ticket{page-break-after:always;}}'+
     '</style>'+
-    '<script>window.onload=function(){setTimeout(function(){window.print();},350);};window.onafterprint=function(){window.close();}<\/script>'+
+    '<script>window.onload=function(){setTimeout(function(){window.print();},350);};window.onafterprint=function(){var w=window.open("","_blank","width=1,height=1");if(w){w.document.write("<html><body> <scr"+"ipt>window.onload=function(){window.print();};window.onafterprint=function(){window.close();};<\/scr"+"ipt></body></html>");w.document.close();}setTimeout(function(){window.close();},500);};<\/script>'+
     '</head><body>'+
     '<div class="ticket">'+
       '<div class="header">'+
