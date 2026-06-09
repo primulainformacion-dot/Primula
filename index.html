@@ -16954,7 +16954,7 @@ function posImprimirTicketCambio(d){
       'body{font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:600;color:#000;background:#fff;width:76mm;max-width:76mm;margin:0 auto;}'+
       '.ticket{width:100%;padding:2px 0;}'+
       '.header{text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:8px;}'+
-      '.tienda{font-size:16px;font-weight:900;letter-spacing:1px;}'+
+      '.tienda{font-size:12px;font-weight:900;letter-spacing:.5px;line-height:1.4;}'+
       '.local{font-size:11px;color:#000;margin-top:2px;}'+
       '.titulo{font-size:13px;font-weight:900;border:2px solid #000;color:#000;text-align:center;padding:5px;margin:8px 0;letter-spacing:1px;}'+
       '.meta{font-size:11px;color:#000;margin-bottom:8px;line-height:1.6;}'+
@@ -16978,10 +16978,8 @@ function posImprimirTicketCambio(d){
     '</head><body>'+
     '<div class="ticket">'+
       '<div class="header">'+
-        '<div class="tienda">PRÍMULA</div>'+
-        '<div class="local">'+localNom+'</div>'+
-        '<div style="font-size:11px;color:#000;margin-top:4px;">UNIFORMES ESCOLARES Y ROPA DE TRABAJO</div>'+
-        '<div style="font-size:10px;color:#000;margin-top:3px;">📲 '+(localNom==='Monte Grande'?'11 2388-6238':'11 2399-3062')+'</div>'+
+        '<div class="tienda">PRÍMULA · UNIFORMES ESCOLARES Y ROPA DE TRABAJO · '+localNom.toUpperCase()+'</div>'+
+        '<div style="font-size:11px;color:#000;font-weight:700;margin-top:4px;">📲 '+(localNom==='Monte Grande'?'11 2388-6238':'11 2399-3062')+'</div>'+
       '</div>'+
       '<div class="titulo">🔄 TICKET DE CAMBIO</div>'+
       '<div class="meta">'+
