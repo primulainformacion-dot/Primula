@@ -16951,19 +16951,19 @@ function posImprimirTicketCambio(d){
     '<style>'+
       '*{margin:0;padding:0;box-sizing:border-box;}'+
       '@page{size:80mm auto;margin:0;}'+
-      'body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#000;background:#fff;width:80mm;max-width:80mm;}'+
+      'body{font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:600;color:#000;background:#fff;width:80mm;max-width:80mm;}'+
       '.ticket{width:100%;padding:4px 8px;}'+
       '.header{text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:8px;}'+
       '.tienda{font-size:16px;font-weight:900;letter-spacing:1px;}'+
       '.local{font-size:11px;color:#000;margin-top:2px;}'+
-      '.titulo{font-size:13px;font-weight:800;background:#000;color:#fff;text-align:center;padding:5px;margin:8px 0;letter-spacing:1px;}'+
+      '.titulo{font-size:13px;font-weight:900;border:2px solid #000;color:#000;text-align:center;padding:5px;margin:8px 0;letter-spacing:1px;}'+
       '.meta{font-size:11px;color:#000;margin-bottom:8px;line-height:1.6;}'+
       'table{width:100%;border-collapse:collapse;margin-bottom:8px;}'+
       'th{font-size:10px;text-align:left;padding:3px 0;border-bottom:2px solid #000;color:#000;}'+
       'th:nth-child(2){text-align:center;}'+
       'th:last-child{text-align:right;}'+
       'td{font-size:11px;color:#000;}'+
-      '.total-row{font-size:13px;font-weight:800;text-align:right;border-top:2px solid #000;padding-top:5px;margin-bottom:8px;}'+
+      '.total-row{font-size:13px;font-weight:900;display:flex;justify-content:space-between;border-top:2px solid #000;padding-top:5px;margin-bottom:8px;}'+
       '.validez{background:#fff;border:2px solid #000;border-radius:4px;padding:7px;text-align:center;margin:8px 0;}'+
       '.validez .lbl{font-size:9px;font-weight:700;color:#000;letter-spacing:.5px;}'+
       '.validez .fecha{font-size:18px;font-weight:900;color:#000;}'+
@@ -16992,7 +16992,7 @@ function posImprimirTicketCambio(d){
         '<thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th></tr></thead>'+
         '<tbody>'+itemsRows+'</tbody>'+
       '</table>'+
-      '<div class="total-row">TOTAL PAGADO: '+$p(d.total)+'</div>'+
+      '<div class="total-row"><span>TOTAL PAGADO</span><span>'+$p(d.total)+'</span></div>'+
       '<div class="validez">'+
         '<div class="lbl">VÁLIDO PARA CAMBIO HASTA</div>'+
         '<div class="fecha">'+vencStr+'</div>'+
