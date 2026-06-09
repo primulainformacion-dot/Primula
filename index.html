@@ -16973,7 +16973,7 @@ function posImprimirTicketCambio(d){
       '.validez .fecha{font-size:18px;font-weight:900;color:#000;}'+
       '.condiciones{font-size:11px;color:#000;line-height:1.6;border-top:1px dashed #000;padding-top:8px;margin-top:8px;}'+
       '@media screen{body{margin:8px auto;}}'+
-      '@media print{body{width:76mm;margin:0 auto;padding:0;}button{display:none!important;}.btn-bar{display:none!important;}}'+
+      '@media print{body{width:76mm;margin:0 auto;padding:0;}button{display:none!important;}.btn-bar{display:none!important;}.ticket{page-break-after:always;}}'+
     '</style>'+
     '<script>window.onload=function(){setTimeout(function(){window.print();},350);};window.onafterprint=function(){window.close();}<\/script>'+
     '</head><body>'+
@@ -16982,9 +16982,9 @@ function posImprimirTicketCambio(d){
         '<div style="font-size:18px;font-weight:900;letter-spacing:1px;">PRIMULA</div>'+
         '<div style="font-size:11px;font-weight:700;margin-top:8px;">UNIFORMES ESCOLARES Y ROPA DE TRABAJO</div>'+
         '<div style="font-size:12px;font-weight:700;margin-top:6px;">'+localNom.toUpperCase()+'</div>'+
-        '<div style="font-size:11px;font-weight:700;margin-top:4px;">Tel/WhatsApp: '+(localNom==='Monte Grande'?'11 2388-6238':'11 2399-3062')+'</div>'+
+        '<div style="font-size:11px;font-weight:700;margin-top:4px;">Tel/WhatsApp: '+(localNom.toLowerCase().replace(/\s/g,'').includes('montegrande')?'11 2388-6238':'11 2399-3062')+'</div>'+
       '</div>'+
-      '<div class="titulo">🔄 TICKET DE CAMBIO</div>'+
+      '<div class="titulo">TICKET DE CAMBIO</div>'+
       '<div class="meta">'+
         '<strong>N° Venta:</strong> #'+d.id+'<br>'+
         '<strong>Fecha:</strong> '+fechaStr+'<br>'+
@@ -17011,7 +17011,6 @@ function posImprimirTicketCambio(d){
       '</div>'+
       '<div style="text-align:center;font-size:12px;font-weight:900;letter-spacing:1px;border-top:2px solid #000;margin-top:10px;padding-top:8px;">PRECIO, CALIDAD y SERVICIO</div>'+
     '</div>'+
-    '<div style="page-break-before:always;height:1px;overflow:hidden;"></div>'+
     '<div class="btn-bar" style="text-align:center;margin-top:10px;padding:0 8px;">'+
       '<button onclick="window.print()" style="padding:8px 20px;background:#000;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;margin-right:6px;">🖨️ Imprimir</button>'+
       '<button onclick="window.close()" style="padding:8px 14px;background:#f3f4f6;color:#374151;border:1.5px solid #e5e7eb;border-radius:6px;font-size:13px;cursor:pointer;">Cerrar</button>'+
