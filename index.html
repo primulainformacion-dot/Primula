@@ -17944,6 +17944,7 @@ function openTalModal(id){
   document.getElementById('mtal-nombre').value=t?t.nombre:'';
   document.getElementById('mtal-precio').value=t?t.precio_prenda_default:'';
   document.getElementById('mtal-tel').value=t?t.telefono||'':'';
+  document.getElementById('mtal-dir').value=t?t.direccion||'':'';
   document.getElementById('mtal-nota').value=t?t.nota||'':'';
   document.getElementById('mtal-activo').value=t?(t.activo?'true':'false'):'true';
   document.getElementById('mtal-tipo').value=t?(t.tipo||'CONFESIÓN'):'CONFESIÓN';
@@ -17979,6 +17980,90 @@ async function saveTal(){
   toast(editTalId?'Tallerista actualizado':'Tallerista registrado');
   closeM('m-tal');
   await loadTalleristas();renderTalleristas();
+}
+
+// ── MAPA TALLERISTAS ──
+var _talMapInstance=null;
+
+async function renderTalMapa(){
+  var conDireccion=TALLERISTAS.filter(function(t){return t.activo&&t.direccion&&t.direccion.trim();});
+  var statusEl=document.getElementById('tal-mapa-status');
+  if(!conDireccion.length){
+    if(statusEl) statusEl.textContent='Ningún tallerista tiene dirección cargada aún.';
+    document.getElementById('tal-mapa').innerHTML='<div class="empty" style="height:100%;display:flex;align-items:center;justify-content:center;"><p>Cargá la dirección de cada tallerista desde el botón ✏️ para verlos en el mapa.</p></div>';
+    return;
+  }
+
+  // Inicializar mapa (o resetear si ya existía)
+  var container=document.getElementById('tal-mapa');
+  container.innerHTML='';
+  if(_talMapInstance){try{_talMapInstance.remove();}catch(e){} _talMapInstance=null;}
+  // Centro inicial: GBA sur (zona locales)
+  _talMapInstance=L.map('tal-mapa').setView([-34.78,-58.40],12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom:19
+  }).addTo(_talMapInstance);
+
+  var ROL_COLOR={CONFESIÓN:'#6c7ae0',BORDADO:'#16a34a',ESTAMPADO:'#f59e0b',DTF:'#dc2626'};
+  var bounds=[];
+  var pendientes=conDireccion.filter(function(t){return !t.lat||!t.lng;});
+  var total=pendientes.length;
+  var geocoded=0;
+
+  if(statusEl) statusEl.textContent=total>0?'Geocodificando '+total+' dirección'+(total>1?'es':'')+'...':'';
+
+  // Agregar los que ya tienen coordenadas
+  conDireccion.filter(function(t){return t.lat&&t.lng;}).forEach(function(t){
+    _addTalPin(t,bounds);
+  });
+
+  // Geocodificar los que no tienen (1 por segundo para respetar límite Nominatim)
+  for(var i=0;i<pendientes.length;i++){
+    var t=pendientes[i];
+    try{
+      var res=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(t.direccion+', Argentina'),{
+        headers:{'Accept-Language':'es','User-Agent':'PrimulaERP/1.0'}
+      });
+      var data=await res.json();
+      if(data&&data[0]){
+        var lat=parseFloat(data[0].lat);
+        var lng=parseFloat(data[0].lon);
+        // Guardar coordenadas en BD para no volver a geocodificar
+        await sb.from('talleristas').update({lat:lat,lng:lng}).eq('id',t.id);
+        t.lat=lat; t.lng=lng;
+        _addTalPin(t,bounds);
+      }
+      geocoded++;
+      if(statusEl) statusEl.textContent='Geocodificando... '+geocoded+'/'+total;
+    }catch(e){}
+    if(i<pendientes.length-1) await new Promise(function(r){setTimeout(r,1100);});
+  }
+
+  if(statusEl) statusEl.textContent=conDireccion.filter(function(t){return t.lat&&t.lng;}).length+' tallerista(s) en el mapa.';
+  if(bounds.length>1) _talMapInstance.fitBounds(bounds,{padding:[30,30]});
+  else if(bounds.length===1) _talMapInstance.setView(bounds[0],15);
+}
+
+function _addTalPin(t, bounds){
+  if(!t.lat||!t.lng||!_talMapInstance) return;
+  var color='#6c7ae0';
+  var tipo=t.tipo||'CONFESIÓN';
+  var COLORS={CONFESIÓN:'#6c7ae0',BORDADO:'#16a34a',ESTAMPADO:'#f59e0b',DTF:'#dc2626'};
+  color=COLORS[tipo]||color;
+  var icon=L.divIcon({
+    className:'',
+    html:'<div style="background:'+color+';color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid #fff;">🧵<\/div>',
+    iconSize:[34,34],iconAnchor:[17,17]
+  });
+  var popup='<div style="min-width:160px;font-family:Segoe UI,sans-serif;">'
+    +'<div style="font-weight:700;font-size:14px;margin-bottom:4px;">'+esc(t.nombre)+'</div>'
+    +'<div style="font-size:12px;color:#6b7280;margin-bottom:2px;">'+esc(tipo)+'</div>'
+    +(t.telefono?'<div style="font-size:12px;">📞 '+esc(t.telefono)+'<\/div>':'')
+    +(t.direccion?'<div style="font-size:11px;color:#9ca3af;margin-top:4px;">📍 '+esc(t.direccion)+'<\/div>':'')
+    +'<\/div>';
+  L.marker([t.lat,t.lng],{icon:icon}).addTo(_talMapInstance).bindPopup(popup);
+  bounds.push([t.lat,t.lng]);
 }
 
 async function deleteTal(id){
