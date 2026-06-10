@@ -543,27 +543,27 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
     </div>
 
-    <!-- Tab: Historial -->
     <!-- Tab: Historial de Órdenes -->
     <div id="cmp-tab-hist-ord" style="display:none;">
       <div class="panel">
-        <div class="panel-hdr" style="margin-bottom:14px;">
+        <div class="panel-hdr" style="margin-bottom:12px;">
           <h4>🗂️ Historial de órdenes</h4>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <select id="hist-ord-prov" onchange="renderCmpHistorialOrdenes()" style="padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
-              <option value="">Todos los proveedores</option>
-            </select>
-            <select id="hist-ord-est" onchange="renderCmpHistorialOrdenes()" style="padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
-              <option value="">Todos los estados</option>
-              <option value="borrador">Borrador</option>
-              <option value="confirmada">Confirmada</option>
-              <option value="recibida">Recibida</option>
-              <option value="cancelada">Cancelada</option>
-            </select>
-            <select id="hist-ord-anio" onchange="renderCmpHistorialOrdenes()" style="padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
-              <option value="">Todos los años</option>
-            </select>
-          </div>
+          <button class="btn btn-sm btn-outline" onclick="histOrdLimpiarFiltros()">Limpiar filtros</button>
+        </div>
+        <div class="search-row" style="margin-bottom:16px;">
+          <select id="hist-ord-anio" onchange="renderCmpHistorialOrdenes()" style="max-width:130px;">
+            <option value="">Todos los años</option>
+          </select>
+          <select id="hist-ord-prov" onchange="renderCmpHistorialOrdenes()" style="max-width:220px;">
+            <option value="">Todos los proveedores</option>
+          </select>
+          <select id="hist-ord-est" onchange="renderCmpHistorialOrdenes()" style="max-width:170px;">
+            <option value="">Todos los estados</option>
+            <option value="borrador">Borrador</option>
+            <option value="confirmada">Confirmada</option>
+            <option value="recibida">Recibida</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
         </div>
         <div id="cmp-hist-ord-cont"></div>
       </div>
@@ -3680,8 +3680,13 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <h3 id="m-orden-title">Nueva orden de confección</h3>
     <input type="hidden" id="mord-id"/>
     <div class="grid2">
-      <div class="field"><label>Tallerista *</label>
+      <div class="field">
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Tallerista *</span>
+          <button type="button" class="btn btn-sm btn-gray" onclick="ordSugerirTallerista()" style="font-size:11px;padding:2px 8px;">🔍 Sugerir por prenda</button>
+        </label>
         <select id="mord-tal"></select>
+        <div id="mord-tal-sugeridos" style="margin-top:4px;font-size:11px;color:#7c3aed;min-height:0;"></div>
       </div>
       <div class="field"><label>Estado</label>
         <select id="mord-estado">
@@ -4438,6 +4443,13 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="field"><label>Email</label><input type="email" id="mtal-email" placeholder="(Opcional)"/></div>
       <div class="field full"><label>Dirección</label><input id="mtal-dir" placeholder="Ej: Av. San Martín 1234, Llavallol"/></div>
       <div class="field full"><label>Nota</label><textarea id="mtal-nota" style="min-height:52px;" placeholder="Especialidad, condiciones, etc."></textarea></div>
+      <div class="field full">
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Prendas que realiza</span>
+          <button class="btn btn-sm btn-gray" type="button" onclick="openCatPrendas()" style="font-size:11px;padding:2px 8px;">⚙️ Gestionar categorías</button>
+        </label>
+        <div id="mtal-prendas-checks" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;min-height:28px;"></div>
+      </div>
       <div class="field"><label>Estado</label>
         <select id="mtal-activo">
           <option value="true">Activo</option>
@@ -4448,6 +4460,21 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-tal')">Cancelar</button>
       <button class="btn" onclick="saveTal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Gestión categorías de prendas -->
+<div class="modal-bg" id="m-cat-prendas">
+  <div class="modal" style="max-width:380px;">
+    <h3>Categorías de prendas</h3>
+    <div id="cat-prendas-list" style="margin-bottom:12px;max-height:300px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input id="cat-prenda-nueva" placeholder="Nueva categoría..." onkeydown="if(event.key==='Enter')agregarCatPrenda()" style="flex:1;"/>
+      <button class="btn" onclick="agregarCatPrenda()">+ Agregar</button>
+    </div>
+    <div class="modal-foot" style="margin-top:16px;">
+      <button class="btn btn-gray" onclick="closeM('m-cat-prendas')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -4593,8 +4620,24 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <button class="btn btn-sm btn-outline" onclick="cmpAddItem()">+ Agregar ítem</button>
     </div>
     <div id="mcmp-items" style="overflow-x:auto;margin-bottom:12px;"></div>
-    <div style="text-align:right;font-size:14px;font-weight:700;color:#1a1f36;margin-bottom:16px;">
-      Total: <span id="mcmp-total">$0</span>
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">IVA incluido</span>
+        <select id="mcmp-iva" onchange="cmpCalcTotal()" style="padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;outline:none;">
+          <option value="0">Exento (0%)</option>
+          <option value="10.5">10,5%</option>
+          <option value="21" selected>21%</option>
+        </select>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#6b7280;margin-bottom:4px;">
+        <span>Subtotal neto:</span><span id="mcmp-subtotal">$0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#6b7280;margin-bottom:8px;">
+        <span id="mcmp-iva-label">IVA (21%):</span><span id="mcmp-iva-monto">$0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:#1a1f36;border-top:1px solid #e5e7eb;padding-top:8px;">
+        <span>Total con IVA:</span><span id="mcmp-total">$0</span>
+      </div>
     </div>
 
     <div class="modal-foot">
@@ -5933,6 +5976,7 @@ var SB_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // ── ESTADO GLOBAL ──
 var sb, CLIENTES=[], PROVEEDORES=[], PRODUCTOS=[], CATEGORIAS=[], VENTAS=[], STOCK=[], PRESUPUESTOS=[], MOVS=[], MORATORIAS=[], TALLERISTAS=[], PERSONAL=[], TAL_PRECIOS_HIST=[], TAL_PRECIOS_PRENDA=[], TAL_PRECIOS_PRENDA_HIST=[], CHEQUES_PROPIOS=[], CHEQUES_CARTERA=[], CHEQUE_USOS=[], PROV_FACTURAS=[], FACTURA_PAGOS=[], CHQP_IMPUTACIONES=[], CIERRES_CAJA=[], OBJETIVOS=[], OBJ_METAS=[], MATERIALES=[], TELAS_STOCK=[], TELAS_TIPOS=[], ORDENES=[], ORDENES_ITEMS=[], PEDIDOS=[], PEDIDOS_ITEMS=[], TIZADAS=[], TIZADAS_ITEMS=[], ENVIOS_COSTURA=[], ENVIOS_COSTURA_ITEMS=[], ENVIOS_BORDADO=[], ENVIOS_BORDADO_ITEMS=[], ENTREGAS=[], ENTREGAS_ITEMS=[], ITEMS_VENTA=[], AVIOS=[], FICHAS_COSTO=[], FICHAS_COSTO_TELAS=[], FICHAS_COSTO_AVIOS=[], COMPRAS=[], COMPRAS_ITEMS=[], HISTORIAL_PRECIOS=[], TAL_RECEPCIONES=[], TAL_RECEPCIONES_ITEMS=[], TAL_PAGOS=[], MOVIMIENTOS_STOCK=[], DEVOLUCIONES=[], DEVOLUCIONES_ITEMS=[], LOTES_BORD_STOCK=[], LOTES_BORD_STOCK_ITEMS=[], COBROS=[];
+var CAT_PRENDAS=['Remera','Pantalón','Campera','Buzo','Chomba','Chomba Colegio','Remera M/L'];
 var CONCEPTOS_POR_TIPO={
   'CONFESIÓN':['Chombas','Chombas M/L','Remeras','Remera M/L','Musculosa','Delantal','Buzo polar','Buzos Friza','Buzo canguro','Buzo friza 1/2 cierre','Chaleco Polar','Campera Polar','Campera Friza','Campera canguro','Sudadera','Joggins','Pantalón común','Cuellos','Bufandas / Cuellos','Reflectivo','Cofia','Arreglo'],
   'BORDADO':[],
@@ -14701,6 +14745,7 @@ async function loadConfigSistema(){
       if(saved[rol]) PERMISOS_ROL[rol]=saved[rol];
     });
   }
+  if(CONFIG_SISTEMA.cat_prendas&&CONFIG_SISTEMA.cat_prendas.length) CAT_PRENDAS=CONFIG_SISTEMA.cat_prendas;
 }
 
 function getPermisoCell(rol,sec){
@@ -17376,7 +17421,7 @@ function renderTalleristas(){
     var tipoBg={CONFESIÓN:'#f3e8ff',BORDADO:'#fce7f3',ESTAMPADO:'#e0f2fe',DTF:'#fef3c7'}[tipoLabel]||'#f3f4f6';
     var tipoColor={CONFESIÓN:'#7c3aed',BORDADO:'#be185d',ESTAMPADO:'#0369a1',DTF:'#92400e'}[tipoLabel]||'#374151';
     return '<tr>'+
-      '<td style="font-weight:700;">'+t.nombre+'</td>'+
+      '<td style="font-weight:700;">'+t.nombre+(t.prendas&&t.prendas.length?'<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">'+t.prendas.map(function(p){return '<span style="padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;background:#ede9fe;color:#7c3aed;">'+p+'</span>';}).join('')+'</div>':'')+'</td>'+
       '<td><span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:'+tipoBg+';color:'+tipoColor+';">'+tipoLabel+'</span></td>'+
       '<td style="text-align:right;font-weight:700;color:#6c7ae0;">'+$p(t.precio_prenda_default)+'</td>'+
       '<td style="font-size:12px;color:#9ca3af;">'+(t.telefono||'—')+'</td>'+
@@ -17566,6 +17611,37 @@ function ordAgregarFila(prenda,talle,color,cantidad){
     '<button onclick="document.getElementById(\''+id+'\').remove();ordActualizarTotal();" style="width:32px;height:32px;border:none;border-radius:8px;background:#fee2e2;color:#dc2626;cursor:pointer;font-size:16px;line-height:1;">✕</button>';
   document.getElementById('mord-items').appendChild(div);
   ordActualizarTotal();
+}
+
+function ordSugerirTallerista(){
+  var prendasOrden=[];
+  document.querySelectorAll('#mord-items > div').forEach(function(row){
+    var sel=row.querySelector('select');
+    if(sel&&sel.value)prendasOrden.push(sel.value);
+  });
+  var sugeridosDiv=document.getElementById('mord-tal-sugeridos');
+  if(!sugeridosDiv)return;
+  if(!prendasOrden.length){sugeridosDiv.innerHTML='';return;}
+  var activos=TALLERISTAS.filter(function(t){return t.activo;});
+  var compatibles=activos.filter(function(t){
+    var tp=t.prendas||[];
+    return prendasOrden.some(function(p){return tp.indexOf(p)!==-1;});
+  });
+  var completos=compatibles.filter(function(t){
+    var tp=t.prendas||[];
+    return prendasOrden.every(function(p){return tp.indexOf(p)!==-1;});
+  });
+  if(!compatibles.length){sugeridosDiv.innerHTML='<span style="color:#ef4444;">Sin talleristas para esas prendas</span>';return;}
+  var html='✅ ';
+  if(completos.length){
+    html+=completos.map(function(t){return '<strong>'+t.nombre+'</strong>';}).join(', ')+' (hace todas)';
+  } else {
+    html+=compatibles.map(function(t){return '<strong>'+t.nombre+'</strong>';}).join(', ')+' (parcial)';
+  }
+  sugeridosDiv.innerHTML=html;
+  if(completos.length===1){
+    document.getElementById('mord-tal').value=completos[0].id;
+  }
 }
 
 function ordActualizarTotal(){
@@ -17962,6 +18038,62 @@ function addTalPrenda(){
   if(nuevoInp)nuevoInp.focus();
 }
 
+function togglePrendaCheck(el){
+  var lbl=el.parentElement;
+  lbl.style.background=el.checked?'#ede9fe':'#f9fafb';
+  lbl.style.borderColor=el.checked?'#7c3aed':'#e5e7eb';
+}
+
+function openCatPrendas(){
+  var lista=document.getElementById('cat-prendas-list');
+  lista.innerHTML=CAT_PRENDAS.map(function(p,i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f3f4f6;">'+
+      '<span style="flex:1;font-size:13px;font-weight:600;">'+p+'</span>'+
+      '<button class="btn btn-sm btn-red btn-icon" onclick="eliminarCatPrenda('+i+')" title="Eliminar">🗑️</button>'+
+    '</div>';
+  }).join('');
+  document.getElementById('cat-prenda-nueva').value='';
+  openM('m-cat-prendas');
+}
+
+function eliminarCatPrenda(idx){
+  CAT_PRENDAS.splice(idx,1);
+  saveCatPrendas();
+  openCatPrendas();
+  if(document.getElementById('m-tal').classList.contains('open')){
+    var talPrendas=[];
+    document.querySelectorAll('#mtal-prendas-checks input[type="checkbox"]:checked').forEach(function(cb){talPrendas.push(cb.value);});
+    document.getElementById('mtal-prendas-checks').innerHTML=CAT_PRENDAS.map(function(p){
+      var checked=talPrendas.indexOf(p)!==-1;
+      return '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 10px;background:'+(checked?'#ede9fe':'#f9fafb')+';border-radius:20px;border:1.5px solid '+(checked?'#7c3aed':'#e5e7eb')+';font-size:12px;font-weight:600;user-select:none;">'+
+        '<input type="checkbox" value="'+p+'" '+(checked?'checked':'')+' style="width:auto;accent-color:#7c3aed;" onchange="togglePrendaCheck(this)"/>'+
+        ' '+p+'<\/label>';
+    }).join('');
+  }
+}
+
+function agregarCatPrenda(){
+  var v=document.getElementById('cat-prenda-nueva').value.trim();
+  if(!v){toast('Escribí el nombre de la categoría','err');return;}
+  if(CAT_PRENDAS.indexOf(v)!==-1){toast('Ya existe esa categoría','err');return;}
+  CAT_PRENDAS.push(v);
+  saveCatPrendas();
+  openCatPrendas();
+  if(document.getElementById('m-tal').classList.contains('open')){
+    var lbl=document.createElement('label');
+    lbl.style.cssText='display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 10px;background:#f9fafb;border-radius:20px;border:1.5px solid #e5e7eb;font-size:12px;font-weight:600;user-select:none;';
+    lbl.innerHTML='<input type="checkbox" value="'+v+'" style="width:auto;accent-color:#7c3aed;" onchange="togglePrendaCheck(this)"/> '+v;
+    document.getElementById('mtal-prendas-checks').appendChild(lbl);
+  }
+}
+
+async function saveCatPrendas(){
+  await sb.from('config_sistema').upsert(
+    {clave:'cat_prendas',valor:CAT_PRENDAS,updated_at:new Date().toISOString()},
+    {onConflict:'clave'}
+  );
+}
+
 function openTalModal(id){
   editTalId=id||null;
   document.getElementById('m-tal-title').textContent=id?'Editar tallerista':'Nuevo tallerista';
@@ -17975,6 +18107,13 @@ function openTalModal(id){
   document.getElementById('mtal-nota').value=t?t.nota||'':'';
   document.getElementById('mtal-activo').value=t?(t.activo?'true':'false'):'true';
   document.getElementById('mtal-tipo').value=t?(t.tipo||'CONFESIÓN'):'CONFESIÓN';
+  var talPrendas=t?(t.prendas||[]):[];
+  document.getElementById('mtal-prendas-checks').innerHTML=CAT_PRENDAS.map(function(p){
+    var checked=talPrendas.indexOf(p)!==-1;
+    return '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 10px;background:'+(checked?'#ede9fe':'#f9fafb')+';border-radius:20px;border:1.5px solid '+(checked?'#7c3aed':'#e5e7eb')+';font-size:12px;font-weight:600;user-select:none;">'+
+      '<input type="checkbox" value="'+p+'" '+(checked?'checked':'')+' style="width:auto;accent-color:#7c3aed;" onchange="togglePrendaCheck(this)"/>'+
+      ' '+p+'<\/label>';
+  }).join('');
   openM('m-tal');
 }
 
@@ -17993,6 +18132,7 @@ async function saveTal(){
     direccion:nuevaDir,
     nota:document.getElementById('mtal-nota').value.trim()||null,
     activo:document.getElementById('mtal-activo').value==='true',
+    prendas:(function(){var r=[];document.querySelectorAll('#mtal-prendas-checks input[type="checkbox"]').forEach(function(cb){if(cb.checked)r.push(cb.value);});return r;})(),
     updated_at:new Date().toISOString()};
   // Si cambió la dirección, limpiar coordenadas guardadas para forzar re-geocodificación
   if(nuevaDir!==talAnteriorDir){d.lat=null;d.lng=null;}
@@ -23964,6 +24104,11 @@ function renderCmpResumen(){
   document.getElementById('cmp-res-detalle').innerHTML=detHtml;
 }
 
+function histOrdLimpiarFiltros(){
+  ['hist-ord-anio','hist-ord-prov','hist-ord-est'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  renderCmpHistorialOrdenes();
+}
+
 function renderCmpHistorialOrdenes(){
   // Poblar select proveedores
   var selProv=document.getElementById('hist-ord-prov');
@@ -23992,7 +24137,7 @@ function renderCmpHistorialOrdenes(){
     return true;
   }).slice().sort(function(a,b){return (b.fecha||'')>(a.fecha||'')?1:-1;});
   var totalGeneral=0;
-  var html='<div class="tbl"><table><thead><tr><th>Fecha</th><th>Proveedor</th><th>N° Orden</th><th>Estado</th><th style="text-align:right;">Total</th><th>Factura</th><th style="text-align:right;">Saldo</th></tr></thead><tbody>';
+  var html='<div class="tbl"><table><thead><tr><th>Fecha</th><th>Proveedor</th><th>N° Orden</th><th>Estado</th><th style="text-align:right;">Total neto</th><th>Factura</th><th style="text-align:right;">Saldo</th><th></th></tr></thead><tbody>';
   rows.forEach(function(c){
     var items=COMPRAS_ITEMS.filter(function(i){return i.compra_id===c.id;});
     var total=items.reduce(function(s,i){return s+Number(i.cantidad||0)*Number(i.precio_unit||0);},0);
@@ -24000,7 +24145,6 @@ function renderCmpHistorialOrdenes(){
     var prov=PROVEEDORES.find(function(p){return p.id===c.proveedor_id;});
     var badge=ECOL[c.estado]||'b-gray';
     var label=ELAB[c.estado]||c.estado;
-    // Buscar factura vinculada
     var fact=PROV_FACTURAS?PROV_FACTURAS.find(function(f){return f.compra_id===c.id;}):null;
     var factHtml, saldoHtml;
     if(fact){
@@ -24013,6 +24157,10 @@ function renderCmpHistorialOrdenes(){
       saldoHtml='<span style="color:#9ca3af;">—</span>';
     }
     var nroHtml=c.nro_compra?'<span style="font-size:12px;color:#6b7280;">#'+esc(c.nro_compra)+'</span>':'<span style="color:#d1d5db;">—</span>';
+    var canEdit=c.estado==='borrador'||c.estado==='confirmada';
+    var btnAbrir=canEdit
+      ?'<button class="btn btn-sm btn-outline" onclick="openCompraModal('+c.id+')">Editar</button>'
+      :'<button class="btn btn-sm" style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;" onclick="openCompraModal('+c.id+')">Ver</button>';
     html+='<tr>'
       +'<td style="font-size:13px;white-space:nowrap;">'+fmtF(c.fecha)+'</td>'
       +'<td style="font-weight:600;font-size:13px;">'+esc(prov?prov.nombre:'Sin proveedor')+'</td>'
@@ -24021,13 +24169,14 @@ function renderCmpHistorialOrdenes(){
       +'<td style="text-align:right;font-weight:700;">'+$p(total)+'</td>'
       +'<td>'+factHtml+'</td>'
       +'<td style="text-align:right;">'+saldoHtml+'</td>'
+      +'<td>'+btnAbrir+'</td>'
       +'</tr>';
   });
   if(rows.length){
     html+='<tr style="background:#f9fafb;font-weight:700;border-top:2px solid #e5e7eb;">'
       +'<td colspan="4" style="text-align:right;color:#374151;">Total ('+rows.length+' órdenes)</td>'
       +'<td style="text-align:right;color:#1a1f36;">'+$p(totalGeneral)+'</td>'
-      +'<td colspan="2"></td>'
+      +'<td colspan="3"></td>'
       +'</tr>';
   }
   html+='</tbody></table></div>';
@@ -24231,7 +24380,14 @@ function _actualizarRollosHelper(prefix,i,it){
 function cmpAddItem(){cmpItemsTemp.push({tipo:'avio',material_id:null,material_nombre:'',unidad:'unidades',cantidad:0,precio_unit:0});renderCmpItemsModal();}
 function cmpRemItem(i){cmpItemsTemp.splice(i,1);renderCmpItemsModal();}
 function cmpCalcTotal(){
-  var total=cmpItemsTemp.reduce(function(s,it){return s+Number(it.cantidad||0)*Number(it.precio_unit||0);},0);
+  var subtotal=cmpItemsTemp.reduce(function(s,it){return s+Number(it.cantidad||0)*Number(it.precio_unit||0);},0);
+  var ivaRate=Number(((document.getElementById('mcmp-iva')||{}).value)||0)/100;
+  var ivaMonto=Math.round(subtotal*ivaRate);
+  var total=subtotal+ivaMonto;
+  var subEl=document.getElementById('mcmp-subtotal');if(subEl)subEl.textContent=$p(subtotal);
+  var ivaMontoEl=document.getElementById('mcmp-iva-monto');if(ivaMontoEl)ivaMontoEl.textContent=$p(ivaMonto);
+  var ivaLabel=document.getElementById('mcmp-iva-label');
+  if(ivaLabel)ivaLabel.textContent='IVA ('+(ivaRate*100).toString().replace('.',',')+'%):';
   var el=document.getElementById('mcmp-total');if(el)el.textContent=$p(total);
 }
 
