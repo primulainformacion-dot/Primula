@@ -12080,13 +12080,9 @@ function $usd(n){return 'U$S '+Number(n||0).toLocaleString('es-AR',{minimumFract
 var MESES_ARR=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
 
 function saldoCaja(caja){
-  var cierre=ultimoCierreCaja(caja, null);
-  if(cierre){
-    var base=Number(cierre.saldo_real||0);
-    var delta=MOVS.filter(function(m){return m.caja===caja&&m.fecha>cierre.fecha;})
-      .reduce(function(s,m){return s+Number(m.ingreso||0)-Number(m.egreso||0);},0);
-    return base+delta;
-  }
+  // Siempre suma todos los movimientos desde cero.
+  // El movimiento de ajuste del cierre es un ingreso/egreso normal,
+  // así que movimientos cargados con fecha anterior al cierre quedan incluidos.
   return MOVS.filter(function(m){return m.caja===caja;})
     .reduce(function(s,m){return s+Number(m.ingreso||0)-Number(m.egreso||0);},0);
 }
@@ -17583,13 +17579,6 @@ function ultimoCierreCaja(caja, fechaHasta){
 }
 
 function saldoCajaCalculado(caja, fechaHasta){
-  var cierre=ultimoCierreCaja(caja, fechaHasta);
-  if(cierre){
-    var base=Number(cierre.saldo_real||0);
-    var delta=MOVS.filter(function(m){return m.caja===caja&&m.fecha>cierre.fecha&&(!fechaHasta||m.fecha<=fechaHasta);})
-      .reduce(function(s,m){return s+Number(m.ingreso||0)-Number(m.egreso||0);},0);
-    return base+delta;
-  }
   return MOVS.filter(function(m){return m.caja===caja&&(!fechaHasta||m.fecha<=fechaHasta);})
     .reduce(function(s,m){return s+Number(m.ingreso||0)-Number(m.egreso||0);},0);
 }
