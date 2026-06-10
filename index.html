@@ -527,7 +527,10 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <option value="cancelada">Cancelada</option>
           </select>
         </div>
-        <button class="btn" onclick="openCompraModal(null)">+ Nueva compra</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline" onclick="openFacturaModal(null,null)" title="Cargar factura sin orden de compra previa">+ Factura directa</button>
+          <button class="btn" onclick="openCompraModal(null)">+ Nueva compra</button>
+        </div>
       </div>
       <div id="cmp-ordenes-cont"></div>
     </div>
@@ -5502,7 +5505,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <input id="chqdev-nota" placeholder="Ej: proveedor no lo aceptó, fecha muy larga, etc."/>
     </div>
     <p style="font-size:12px;color:#9ca3af;margin:10px 0 14px;">
-      El cheque vuelve a <strong>En cartera</strong> y se registra un ingreso compensatorio en CHEQUES/ECHEQ.
+      El cheque vuelve a <strong>En cartera</strong> y se registra un ingreso compensatorio en ECHEQ/CHEQUE.
       Las facturas de proveedores abonadas con este cheque quedan <strong>pendientes de pago</strong> nuevamente.
     </p>
     <div class="modal-foot">
@@ -5534,7 +5537,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <h3>↩ Devolver cheque al cliente</h3>
     <div id="chqdevol-info" style="background:#fee2e2;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#374151;"></div>
     <div id="chqdevol-cobros" style="margin-bottom:12px;"></div>
-    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Se registra un egreso en <strong>CHEQUES/ECHEQ</strong> y se restauran las deudas vinculadas en CC Mayoristas.</p>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Se registra un egreso en <strong>ECHEQ/CHEQUE</strong> y se restauran las deudas vinculadas en CC Mayoristas.</p>
     <div class="field"><label>Motivo / Nota (opcional)</label>
       <input id="chqdevol-nota" placeholder="Ej: cheque rechazado, devuelto al cliente…"/>
     </div>
@@ -8826,7 +8829,7 @@ async function savePagoFactura(){
   var prov=PROVEEDORES.find(function(p){return p.id===f.proveedor_id;})||{nombre:'Proveedor'};
   var detallePago='Pago a '+prov.nombre+(f.numero?' · Fact. '+f.numero:'');
   if(chequeId){
-    // Cheque de terceros: registrar uso + egreso en CHEQUES/ECHEQ
+    // Cheque de terceros: registrar uso + egreso en ECHEQ/CHEQUE
     var chq=CHEQUES_CARTERA.find(function(x){return x.id===chequeId;})||{};
     await sb.from('cheque_usos').insert({
       cheque_id:chequeId,
@@ -8837,7 +8840,7 @@ async function savePagoFactura(){
       nota:notaVal
     });
     await sb.from('movimientos').insert({
-      tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:monto,
+      tipo:'egreso',caja:'ECHEQ/CHEQUE',fecha,ingreso:0,egreso:monto,
       concepto:'CHEQUES/TRANSFERENCIAS',
       detalle:detallePago+(chq.numero?' · Cheque N°'+chq.numero:''),
       nota:notaVal
@@ -9046,14 +9049,14 @@ async function saveLiqCheques(){
 
   if(liqMode==='pagar'){
     var prov=PROVEEDORES.find(function(p){return p.id===liqEntityId;})||{nombre:'Proveedor'};
-    // Por cada cheque: crear cheque_uso + egreso CHEQUES/ECHEQ + actualizar estado
+    // Por cada cheque: crear cheque_uso + egreso ECHEQ/CHEQUE + actualizar estado
     for(var ci2=0;ci2<liqChequesArr.length;ci2++){
       var chq=liqChequesArr[ci2];
       var asigs=liqAsigArr.filter(function(a){return a.ci===ci2;});
       if(!asigs.length)continue;
       var totalUsado=asigs.reduce(function(s,a){return s+Number(a.monto);},0);
       await sb.from('cheque_usos').insert({cheque_id:chq.cheque_id,proveedor_id:liqEntityId,destinatario:prov.nombre,monto:totalUsado,fecha,concepto:'Liquidación múltiple',nota:null});
-      await sb.from('movimientos').insert({tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:totalUsado,concepto:'CHEQUES/TRANSFERENCIAS',detalle:'Pago a '+prov.nombre+(chq.numero?' · Cheque N°'+chq.numero:'')});
+      await sb.from('movimientos').insert({tipo:'egreso',caja:'ECHEQ/CHEQUE',fecha,ingreso:0,egreso:totalUsado,concepto:'CHEQUES/TRANSFERENCIAS',detalle:'Pago a '+prov.nombre+(chq.numero?' · Cheque N°'+chq.numero:'')});
       if(saldoChequeUso(chq.cheque_id)-totalUsado<=0.01)await sb.from('cheques_cartera').update({estado:'endosado',updated_at:new Date().toISOString()}).eq('id',chq.cheque_id);
     }
     // Una factura_pagos por cada asignación (preserva qué cheque pagó qué factura)
@@ -9076,14 +9079,14 @@ async function saveLiqCheques(){
 
   } else { // cobrar
     var cli2=CLIENTES.find(function(c){return c.id===liqEntityId;})||{nombre:'Cliente'};
-    // Crear cheques en cartera + ingreso CHEQUES/ECHEQ
+    // Crear cheques en cartera + ingreso ECHEQ/CHEQUE
     var chqIdMap=[];
     for(var ci3=0;ci3<liqChequesArr.length;ci3++){
       var nc=liqChequesArr[ci3];
       var {data:ins,error:eins}=await sb.from('cheques_cartera').insert({tipo:nc.chqTipo||'cheque',emisor:nc.emisor,numero:nc.numero||null,banco:nc.banco||null,monto:nc.monto,fecha_recibido:fecha,fecha_cobro:nc.fecha_cobro||null,estado:'en_cartera',nota:null}).select('id');
       if(eins){toast('Error al crear cheque: '+eins.message,'err');return;}
       chqIdMap.push(ins&&ins[0]?ins[0].id:null);
-      await sb.from('movimientos').insert({tipo:'ingreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:Number(nc.monto),egreso:0,concepto:'COBRO CLIENTE',detalle:'Cobro de '+cli2.nombre+(nc.numero?' · Cheque N°'+nc.numero:'')});
+      await sb.from('movimientos').insert({tipo:'ingreso',caja:'ECHEQ/CHEQUE',fecha,ingreso:Number(nc.monto),egreso:0,concepto:'COBRO CLIENTE',detalle:'Cobro de '+cli2.nombre+(nc.numero?' · Cheque N°'+nc.numero:'')});
     }
     // Un cobro por cada asignación (trazabilidad por cheque y venta)
     for(var ai2=0;ai2<liqAsigArr.length;ai2++){
@@ -10213,7 +10216,7 @@ async function saveVenta(){
 // ════════════════════════════════════
 function mcob_onMedio(){
   var medio=document.getElementById('mcob-medio').value;
-  var cajaMap={efectivo:'EFECTIVO ADMINISTRACIÓN',transferencia:'BANCO SRL',tarjeta:'TARJETAS',qr:'MERCADO PAGO',cheque:'CHEQUES/ECHEQ'};
+  var cajaMap={efectivo:'EFECTIVO ADMINISTRACIÓN',transferencia:'BANCO SRL',tarjeta:'TARJETAS',qr:'MERCADO PAGO',cheque:'ECHEQ/CHEQUE'};
   document.getElementById('mcob-caja').value=cajaMap[medio]||'EFECTIVO ADMINISTRACIÓN';
   var chqSec=document.getElementById('mcob-chq-section');
   if(chqSec)chqSec.style.display=medio==='cheque'?'block':'none';
@@ -10284,9 +10287,9 @@ async function saveCobro(){
     if(chequeNuevoId&&cobroId){
       await sb.from('cobros').update({cheque_id:chequeNuevoId}).eq('id',cobroId);
     }
-    // Ingreso en CHEQUES/ECHEQ
+    // Ingreso en ECHEQ/CHEQUE
     await sb.from('movimientos').insert({
-      caja:'CHEQUES/ECHEQ',fecha,tipo:'ingreso',concepto:'COBRO CLIENTE',
+      caja:'ECHEQ/CHEQUE',fecha,tipo:'ingreso',concepto:'COBRO CLIENTE',
       detalle:detalleCobro+(nroChq?' · Cheque N°'+nroChq:''),
       ingreso:monto,egreso:0,nota:nota||null
     });
@@ -12048,7 +12051,7 @@ async function saveModelo(){
 // ════════════════════════════════════
 // FINANZAS
 // ════════════════════════════════════
-var CAJAS_SISTEMA=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','TARJETAS','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL','CAJA USD','CHEQUES AL COBRO'];
+var CAJAS_SISTEMA=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL','CAJA USD','CHEQUES AL COBRO','TARJETAS'];
 var CAJA_COLORES={'EFECTIVO ADMINISTRACIÓN':'#6c7ae0','BANCO SRL':'#0ea5e9','BANCO POLY':'#14b8a6','MERCADO PAGO':'#3b82f6','TARJETAS':'#1d4ed8','ECHEQ/CHEQUE':'#8b5cf6','LOCAL MONTE GRANDE':'#10b981','LOCAL LLAVALLOL':'#f59e0b','CAJA USD':'#16a34a','CHEQUES AL COBRO':'#d97706'};
 // Etiquetas visuales (no afectan el valor guardado en la DB)
 var CAJA_LABELS={'CAJA USD':'$ CAJA USD'};
@@ -13739,7 +13742,7 @@ async function saveImputacion(){
     var nuevoSaldo=Math.max(saldoV-monto,0);
     var nuevoEst=nuevoSaldo<=0?'cobrado':'parcial';
     await sb.from('ventas').update({saldo:nuevoSaldo,estado:nuevoEst,updated_at:new Date().toISOString()}).eq('id',ventaId);
-    // NO se crea movimiento adicional: el ingreso en CHEQUES/ECHEQ
+    // NO se crea movimiento adicional: el ingreso en ECHEQ/CHEQUE
     // ya fue registrado cuando se cargó el cheque a la cartera.
     toast('✅ Cobro registrado: '+$p(monto)+' · '+(cli.nombre||'Vta #'+ventaId));
     closeM('m-imputar');
@@ -13757,7 +13760,7 @@ async function saveImputacion(){
     await actualizarEstadoFactura(facId);
     var detF='Imputado a FAC '+(fac.nro_factura||'S/N')+(fac.cliente_nombre?' · '+fac.cliente_nombre:'')+(chqImp.numero?' · Cheque N°'+chqImp.numero:'');
     await sb.from('movimientos').insert({
-      tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha:fechaImp,
+      tipo:'egreso',caja:'ECHEQ/CHEQUE',fecha:fechaImp,
       ingreso:0,egreso:monto,concepto:'CHEQUES/TRANSFERENCIAS',detalle:detF,nota:notaImp
     });
     if(fac.venta_id){
@@ -15415,7 +15418,7 @@ async function saveChqCartera(){
   if(esNuevo){
     var detalle='Cheque recibido de '+emisor+(d.numero?' N°'+d.numero:'')+(d.nro_factura?' · FAC '+d.nro_factura:'');
     await sb.from('movimientos').insert({
-      tipo:'ingreso',caja:'CHEQUES/ECHEQ',fecha:fecha,
+      tipo:'ingreso',caja:'ECHEQ/CHEQUE',fecha:fecha,
       ingreso:monto,egreso:0,
       concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalle,nota:d.nota||null
     });
@@ -15593,7 +15596,7 @@ async function saveChqMasivo(){
   // Crear un movimiento por cada cheque insertado
   var movs=rows.map(function(row){
     var detalle='Cheque recibido de '+row.emisor+(row.numero?' N°'+row.numero:'')+(row.nro_factura?' · FAC '+row.nro_factura:'');
-    return {tipo:'ingreso',caja:'CHEQUES/ECHEQ',fecha:row.fecha_recibido,ingreso:row.monto,egreso:0,concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalle,nota:null};
+    return {tipo:'ingreso',caja:'ECHEQ/CHEQUE',fecha:row.fecha_recibido,ingreso:row.monto,egreso:0,concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalle,nota:null};
   });
   await sb.from('movimientos').insert(movs);
   toast(rows.length+' recibo'+(rows.length!==1?'s':'')+' registrado'+(rows.length!==1?'s':''));
@@ -15657,7 +15660,7 @@ async function saveChqUso(){
   // Registrar egreso en movimientos
   var detalleUso='Endoso a '+dest+(d.concepto?' · '+d.concepto:'')+(c.numero?' · Cheque N°'+c.numero:'');
   await sb.from('movimientos').insert({
-    tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha:fecha,
+    tipo:'egreso',caja:'ECHEQ/CHEQUE',fecha:fecha,
     ingreso:0,egreso:monto,
     concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleUso,nota:d.nota||null
   });
@@ -15781,7 +15784,7 @@ function abrirChqDevuelto(id){
       párr.innerHTML='El cheque vuelve a <strong>En cartera</strong>. '+
         'Se registra un egreso en la caja del banco para compensar el importe que ya había sido acreditado.';
     }else{
-      párr.innerHTML='El cheque vuelve a <strong>En cartera</strong> y se registra un ingreso compensatorio en CHEQUES/ECHEQ. '+
+      párr.innerHTML='El cheque vuelve a <strong>En cartera</strong> y se registra un ingreso compensatorio en ECHEQ/CHEQUE. '+
         'Las facturas de proveedores abonadas con este cheque quedan <strong>pendientes de pago</strong> nuevamente.';
     }
   }
@@ -15855,11 +15858,11 @@ async function confirmarChqDevuelto(){
           await sb.from('proveedor_facturas').update({saldo:nuevoSaldo,estado:nuevoEst,updated_at:new Date().toISOString()}).eq('id',factIds[fi]);
         }
       }
-      // 3. Movimiento compensatorio ingreso en CHEQUES/ECHEQ
+      // 3. Movimiento compensatorio ingreso en ECHEQ/CHEQUE
       if(totalUsos>0.01){
         var detalleComp='Cheque devuelto/no aceptado · '+(c.emisor||'')+(c.numero?' N°'+c.numero:'')+(nota?' · '+nota:'');
         var {error:eMov}=await sb.from('movimientos').insert({
-          tipo:'ingreso',caja:'CHEQUES/ECHEQ',fecha,
+          tipo:'ingreso',caja:'ECHEQ/CHEQUE',fecha,
           ingreso:totalUsos,egreso:0,
           concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalleComp
         });
@@ -15958,9 +15961,9 @@ async function confirmarDevolverCliente(){
       }
       await sb.from('cobros').delete().eq('id',cb.id);
     }
-    // 2. Egreso en CHEQUES/ECHEQ — cheque sale de nuestra posesión
+    // 2. Egreso en ECHEQ/CHEQUE — cheque sale de nuestra posesión
     var det='Cheque devuelto al cliente · '+(c.emisor||'')+(c.numero?' N°'+c.numero:'')+(nota?' · '+nota:'');
-    var {error:eMov}=await sb.from('movimientos').insert({tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:Number(c.monto),concepto:'CHEQUES/TRANSFERENCIAS',detalle:det});
+    var {error:eMov}=await sb.from('movimientos').insert({tipo:'egreso',caja:'ECHEQ/CHEQUE',fecha,ingreso:0,egreso:Number(c.monto),concepto:'CHEQUES/TRANSFERENCIAS',detalle:det});
     if(eMov)throw eMov;
     // 3. Marcar cheque como devuelto_cliente
     var {error:eChq}=await sb.from('cheques_cartera').update({estado:'devuelto_cliente',nota:nota||null,updated_at:new Date().toISOString()}).eq('id',id);
@@ -15974,7 +15977,7 @@ async function confirmarDevolverCliente(){
 
 // ══════════════════════════════════════════════
 // DEPOSITAR AL COBRO (en_cartera → al_cobro)
-// Sin impacto bancario. Mueve CHEQUES/ECHEQ → CHEQUES AL COBRO
+// Sin impacto bancario. Mueve ECHEQ/CHEQUE → CHEQUES AL COBRO
 // ══════════════════════════════════════════════
 var chqAlCobroId=null;
 function openChqAlCobroModal(id){
@@ -15999,9 +16002,9 @@ async function saveChqAlCobro(){
   if(monto>saldo+0.01){toast('El monto supera el saldo disponible ('+$p(saldo)+')','err');return;}
   var nota=document.getElementById('chqalcobro-nota').value||null;
   var detalle='Depósito al cobro · '+(c.emisor||'')+(c.numero?' N°'+c.numero:'');
-  // Egreso de CHEQUES/ECHEQ
+  // Egreso de ECHEQ/CHEQUE
   var r1=await sb.from('movimientos').insert({
-    tipo:'egreso',caja:'CHEQUES/ECHEQ',fecha,ingreso:0,egreso:monto,
+    tipo:'egreso',caja:'ECHEQ/CHEQUE',fecha,ingreso:0,egreso:monto,
     concepto:'CHEQUES/TRANSFERENCIAS',detalle:detalle
   });
   if(r1.error){toast('Error: '+r1.error.message,'err');return;}
@@ -24492,7 +24495,7 @@ function renderComprasOrdenes(){
     var btnRecibir=c.estado==='confirmada'?'<button class="btn btn-sm btn-green" id="btn-recibir-'+c.id+'" onclick="recibirCompra('+c.id+')">Marcar recibida</button>':'';
     var btnConfirmar=c.estado==='borrador'?'<button class="btn btn-sm btn-amber" onclick="confirmarCompra('+c.id+')">Confirmar</button>':'';
     var btnCancel=(c.estado!=='recibida'&&c.estado!=='cancelada')?'<button class="btn btn-sm btn-red" onclick="cancelarCompra('+c.id+')">Cancelar</button>':'';
-    var btnDel=(c.estado==='borrador'||c.estado==='cancelada')?'<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;" onclick="eliminarCompra('+c.id+')">🗑 Eliminar</button>':'';
+    var btnDel=c.estado!=='confirmada'?'<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;" onclick="eliminarCompra('+c.id+')">'+(c.estado==='recibida'?'🗑 Eliminar y revertir':'🗑 Eliminar')+'</button>':'';
     var itemsHtml='';
     if(items.length>0){
       itemsHtml='<div style="margin-top:12px;border-top:1px solid #f3f4f6;padding-top:10px;overflow-x:auto;"><table style="width:100%;"><thead><tr><th>Tipo</th><th>Material</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead><tbody>';
@@ -24749,15 +24752,56 @@ async function cancelarCompra(id){
 async function eliminarCompra(id){
   var compra=COMPRAS.find(function(c){return c.id===id;});
   if(!compra)return;
-  if(compra.estado==='recibida'||compra.estado==='confirmada'){toast('Solo se pueden eliminar borradores o canceladas','err');return;}
-  if(!confirm('¿Eliminar definitivamente esta orden de compra? Esta acción no se puede deshacer.'))return;
-  // Eliminar ítems primero — si falla, no se toca la compra
+  var esRecibida=compra.estado==='recibida';
+  var msg=esRecibida
+    ?'⚠️ Esta orden ya fue RECIBIDA. Eliminarla revertirá el stock de todos sus ítems.\n\n¿Confirmar eliminación y reversión de stock?'
+    :'¿Eliminar definitivamente esta orden de compra? Esta acción no se puede deshacer.';
+  if(!confirm(msg))return;
+  var items=COMPRAS_ITEMS.filter(function(i){return i.compra_id===id;});
+  // Revertir stock si estaba recibida
+  if(esRecibida){
+    for(var idx=0;idx<items.length;idx++){
+      var it=items[idx];
+      if(it.tipo==='avio'&&it.material_id){
+        var av=AVIOS.find(function(a){return a.id===it.material_id;});
+        if(av){var nuevoAv=Math.max(0,Number(av.stock_actual||0)-Number(it.cantidad||0));await sb.from('avios').update({stock_actual:nuevoAv,updated_at:new Date().toISOString()}).eq('id',it.material_id);}
+      }
+      if(it.tipo==='tela'&&it.material_nombre&&it.material_color){
+        var telaDel=TELAS_TIPOS.find(function(t){return t.nombre===it.material_nombre;});
+        var kgPRDel=Number(telaDel&&telaDel.kg_por_rollo||20);
+        var rollosDel=(it.unidad==='kg')?Number(it.cantidad||0)/kgPRDel:Number(it.cantidad||0);
+        var stDel=TELAS_STOCK.find(function(t){return t.tipo_tela===it.material_nombre&&t.color===it.material_color;});
+        var nuevosRollosDel=Math.max(0,Math.round(Number(stDel?stDel.rollos:0)-rollosDel));
+        await sb.from('telas_stock').upsert({color:it.material_color,tipo_tela:it.material_nombre,rollos:nuevosRollosDel,updated_at:new Date().toISOString()},{onConflict:'color,tipo_tela'});
+      }
+      if(it.tipo==='producto'&&it.material_id){
+        var localDel=it.material_color||'mayorista';
+        var stProdDel=STOCK.filter(function(s){return s.producto_id===it.material_id&&s.local===localDel&&(s.talle||'')===(it.material_talle||'')&&(s.color||'')==='';});
+        var qProdDel=stProdDel.reduce(function(s,x){return s+x.cantidad;},0);
+        await sb.from('stock').upsert({producto_id:it.material_id,local:localDel,talle:it.material_talle||'',color:'',cantidad:Math.max(0,qProdDel-Number(it.cantidad||0))},{onConflict:'producto_id,local,talle,color'});
+      }
+      if(it.tipo==='mat_prima'&&it.material_id){
+        var matDel=MATERIALES.find(function(m){return m.id===it.material_id;});
+        if(matDel){await sb.from('materiales').update({cantidad:Math.max(0,Number(matDel.cantidad||0)-Number(it.cantidad||0)),updated_at:new Date().toISOString()}).eq('id',it.material_id);}
+      }
+    }
+    // Borrar movimientos de stock generados por esta compra
+    await sb.from('movimientos_stock').delete().eq('origen','compra').eq('origen_id',id);
+    // Borrar historial de precios
+    await sb.from('historial_precios').delete().eq('compra_id',id);
+    // Borrar factura vinculada si existe (y sus pagos)
+    var factVinc=PROV_FACTURAS.find(function(f){return f.compra_id===id;});
+    if(factVinc){
+      await sb.from('factura_pagos').delete().eq('factura_id',factVinc.id);
+      await sb.from('proveedor_facturas').delete().eq('id',factVinc.id);
+    }
+  }
   var ri=await sb.from('compras_items').delete().eq('compra_id',id);
   if(ri.error){toast('Error al eliminar ítems: '+ri.error.message,'err');return;}
   var r=await sb.from('compras').delete().eq('id',id);
   if(r.error){toast('Error al eliminar: '+r.error.message,'err');return;}
-  toast('Orden de compra eliminada','info');
-  await Promise.all([loadCompras(),loadComprasItems()]);
+  toast(esRecibida?'Orden eliminada — stock revertido':'Orden de compra eliminada','info');
+  await Promise.all([loadCompras(),loadComprasItems(),loadHistorialPrecios(),loadAvios(),loadTelasTipos(),loadTelasStock(),loadStock(),loadMateriales(),loadProvFacturas(),loadFacturaPagos()]);
   renderCompras();
 }
 
@@ -25139,8 +25183,8 @@ function closeManual(){document.getElementById('man-overlay').classList.remove('
         <div class="man-step"><div class="man-snum">1</div><div><h4>Clic en "💰 Cobrar" en la venta del cliente</h4><p>Se abre el formulario de cobro con el saldo pendiente precargado.</p></div></div>
         <div class="man-step"><div class="man-snum">2</div><div><h4>Seleccioná "Cheque" en Medio de pago</h4><p>Aparece automáticamente una sección azul con los datos del cheque.</p></div></div>
         <div class="man-step"><div class="man-snum">3</div><div><h4>Completá los datos del cheque</h4><p><strong>Tipo:</strong> Cheque físico o ECHEQ. <strong>Emisor:</strong> nombre de quien firmó el cheque (viene con el nombre del cliente por defecto). <strong>N° cheque:</strong> número impreso en el cheque. <strong>Banco:</strong> banco del emisor. <strong>Fecha de cobro:</strong> la fecha que figura en el cheque (cuándo se puede cobrar).</p></div></div>
-        <div class="man-step"><div class="man-snum">4</div><div><h4>Ingresá el monto y confirmá</h4><p>El sistema hace todo solo: reduce el saldo de la venta, crea el cheque en cartera con estado <span class="man-pill mpb">En cartera</span>, y registra un ingreso en la caja CHEQUES/ECHEQ.</p></div></div>
-        <div class="man-call man-call-green"><div class="man-ci">✅</div><div>Después del cobro, el cheque aparece automáticamente en <strong>Cheques → En Cartera</strong>. El dinero figura en la caja "CHEQUES/ECHEQ" hasta que lo depositás.</div></div>
+        <div class="man-step"><div class="man-snum">4</div><div><h4>Ingresá el monto y confirmá</h4><p>El sistema hace todo solo: reduce el saldo de la venta, crea el cheque en cartera con estado <span class="man-pill mpb">En cartera</span>, y registra un ingreso en la caja ECHEQ/CHEQUE.</p></div></div>
+        <div class="man-call man-call-green"><div class="man-ci">✅</div><div>Después del cobro, el cheque aparece automáticamente en <strong>Cheques → En Cartera</strong>. El dinero figura en la caja "ECHEQ/CHEQUE" hasta que lo depositás.</div></div>
         <p class="man-txt" style="font-weight:700;color:#374151;margin-top:8px;">— Parte 2: depositar el cheque (cuando llega la fecha) —</p>
         <div class="man-step"><div class="man-snum">5</div><div><h4>Cuando presentás el cheque al banco → marcá "Al cobro"</h4><p>Andá a <strong>Cheques → En Cartera</strong>, buscá el cheque y cambiá el estado a <span class="man-pill mpy">Al cobro</span>. El cheque pasa a la sección "CHEQUES AL COBRO". El dinero aún no está en el banco.</p></div></div>
         <div class="man-step"><div class="man-snum">6</div><div><h4>Cuando el banco acredita → marcá "Depositado"</h4><p>Una vez que el banco confirma la acreditación, cambiá el estado a <span class="man-pill mpg">Depositado</span>. El sistema registra el ingreso real en el banco y cierra el ciclo.</p></div></div>
