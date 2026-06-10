@@ -510,6 +510,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     <div class="tabs" style="margin-bottom:16px;" id="cmp-tabs">
       <button class="tab active" onclick="setCmpTab('ordenes',this)">📦 Órdenes de Compra</button>
       <button class="tab" onclick="setCmpTab('pendientes',this)" id="cmp-tab-btn-pendientes">⚠️ Pendientes</button>
+      <button class="tab" onclick="setCmpTab('hist-ord',this)">🗂️ Historial</button>
       <button class="tab" onclick="setCmpTab('historial',this)">📈 Historial de Precios</button>
       <button class="tab" onclick="setCmpTab('resumen',this)">📊 Resumen</button>
     </div>
@@ -543,6 +544,30 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     </div>
 
     <!-- Tab: Historial -->
+    <!-- Tab: Historial de Órdenes -->
+    <div id="cmp-tab-hist-ord" style="display:none;">
+      <div class="panel">
+        <div class="panel-hdr" style="margin-bottom:14px;">
+          <h4>🗂️ Historial de órdenes</h4>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="hist-ord-prov" onchange="renderCmpHistorialOrdenes()" style="padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
+              <option value="">Todos los proveedores</option>
+            </select>
+            <select id="hist-ord-est" onchange="renderCmpHistorialOrdenes()" style="padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
+              <option value="">Todos los estados</option>
+              <option value="borrador">Borrador</option>
+              <option value="confirmada">Confirmada</option>
+              <option value="recibida">Recibida</option>
+              <option value="cancelada">Cancelada</option>
+            </select>
+            <select id="hist-ord-anio" onchange="renderCmpHistorialOrdenes()" style="padding:9px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none;">
+              <option value="">Todos los años</option>
+            </select>
+          </div>
+        </div>
+        <div id="cmp-hist-ord-cont"></div>
+      </div>
+    </div>
     <div id="cmp-tab-historial" style="display:none;">
       <div class="panel">
         <div class="panel-hdr" style="margin-bottom:14px;">
@@ -4410,6 +4435,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         </select>
       </div>
       <div class="field"><label>Teléfono</label><input id="mtal-tel" placeholder="(Opcional)"/></div>
+      <div class="field"><label>Email</label><input type="email" id="mtal-email" placeholder="(Opcional)"/></div>
       <div class="field full"><label>Dirección</label><input id="mtal-dir" placeholder="Ej: Av. San Martín 1234, Llavallol"/></div>
       <div class="field full"><label>Nota</label><textarea id="mtal-nota" style="min-height:52px;" placeholder="Especialidad, condiciones, etc."></textarea></div>
       <div class="field"><label>Estado</label>
@@ -17944,6 +17970,7 @@ function openTalModal(id){
   document.getElementById('mtal-nombre').value=t?t.nombre:'';
   document.getElementById('mtal-precio').value=t?t.precio_prenda_default:'';
   document.getElementById('mtal-tel').value=t?t.telefono||'':'';
+  document.getElementById('mtal-email').value=t?t.email||'':'';
   document.getElementById('mtal-dir').value=t?t.direccion||'':'';
   document.getElementById('mtal-nota').value=t?t.nota||'':'';
   document.getElementById('mtal-activo').value=t?(t.activo?'true':'false'):'true';
@@ -17962,6 +17989,7 @@ async function saveTal(){
   var d={nombre,precio_prenda_default:precio,
     tipo:document.getElementById('mtal-tipo').value||'CONFESIÓN',
     telefono:document.getElementById('mtal-tel').value.trim()||null,
+    email:document.getElementById('mtal-email').value.trim()||null,
     direccion:nuevaDir,
     nota:document.getElementById('mtal-nota').value.trim()||null,
     activo:document.getElementById('mtal-activo').value==='true',
@@ -23725,12 +23753,13 @@ function renderCompras(){
 }
 
 function setCmpTab(t,el){
-  ['ordenes','pendientes','historial','resumen'].forEach(function(x){document.getElementById('cmp-tab-'+x).style.display='none';});
+  ['ordenes','pendientes','hist-ord','historial','resumen'].forEach(function(x){document.getElementById('cmp-tab-'+x).style.display='none';});
   document.getElementById('cmp-tab-'+t).style.display='block';
   document.querySelectorAll('#cmp-tabs .tab').forEach(function(b){b.classList.remove('active');});
   if(el)el.classList.add('active');
   if(t==='ordenes')renderComprasOrdenes();
   if(t==='pendientes')renderCmpPendientes();
+  if(t==='hist-ord')renderCmpHistorialOrdenes();
   if(t==='historial')renderComprasHistorial();
   if(t==='resumen')renderCmpResumen();
 }
@@ -23933,6 +23962,77 @@ function renderCmpResumen(){
     detHtml+='</tbody></table></div>';
   }
   document.getElementById('cmp-res-detalle').innerHTML=detHtml;
+}
+
+function renderCmpHistorialOrdenes(){
+  // Poblar select proveedores
+  var selProv=document.getElementById('hist-ord-prov');
+  if(selProv&&selProv.options.length<=1){
+    var provIds=new Set(COMPRAS.map(function(c){return c.proveedor_id;}).filter(Boolean));
+    provIds.forEach(function(pid){
+      var p=PROVEEDORES.find(function(x){return x.id===pid;});
+      if(p){var o=document.createElement('option');o.value=pid;o.textContent=p.nombre;selProv.appendChild(o);}
+    });
+  }
+  // Poblar select años
+  var selAnio=document.getElementById('hist-ord-anio');
+  if(selAnio&&selAnio.options.length<=1){
+    var anios=[...new Set(COMPRAS.map(function(c){return c.fecha?c.fecha.slice(0,4):null;}).filter(Boolean))].sort().reverse();
+    anios.forEach(function(a){var o=document.createElement('option');o.value=a;o.textContent=a;selAnio.appendChild(o);});
+  }
+  var filtProv=(document.getElementById('hist-ord-prov')||{}).value||'';
+  var filtEst=(document.getElementById('hist-ord-est')||{}).value||'';
+  var filtAnio=(document.getElementById('hist-ord-anio')||{}).value||'';
+  var ECOL={borrador:'b-gray',confirmada:'b-blue',recibida:'b-green',cancelada:'b-red'};
+  var ELAB={borrador:'Borrador',confirmada:'Confirmada',recibida:'Recibida',cancelada:'Cancelada'};
+  var rows=COMPRAS.filter(function(c){
+    if(filtProv&&String(c.proveedor_id)!==filtProv)return false;
+    if(filtEst&&c.estado!==filtEst)return false;
+    if(filtAnio&&(!c.fecha||c.fecha.slice(0,4)!==filtAnio))return false;
+    return true;
+  }).slice().sort(function(a,b){return (b.fecha||'')>(a.fecha||'')?1:-1;});
+  var totalGeneral=0;
+  var html='<div class="tbl"><table><thead><tr><th>Fecha</th><th>Proveedor</th><th>N° Orden</th><th>Estado</th><th style="text-align:right;">Total</th><th>Factura</th><th style="text-align:right;">Saldo</th></tr></thead><tbody>';
+  rows.forEach(function(c){
+    var items=COMPRAS_ITEMS.filter(function(i){return i.compra_id===c.id;});
+    var total=items.reduce(function(s,i){return s+Number(i.cantidad||0)*Number(i.precio_unit||0);},0);
+    totalGeneral+=total;
+    var prov=PROVEEDORES.find(function(p){return p.id===c.proveedor_id;});
+    var badge=ECOL[c.estado]||'b-gray';
+    var label=ELAB[c.estado]||c.estado;
+    // Buscar factura vinculada
+    var fact=PROV_FACTURAS?PROV_FACTURAS.find(function(f){return f.compra_id===c.id;}):null;
+    var factHtml, saldoHtml;
+    if(fact){
+      var saldo=factSaldo(fact.id);
+      var saldoCol=saldo>0?'#dc2626':'#16a34a';
+      factHtml='<span style="font-size:12px;color:#374151;">'+(fact.numero?'#'+esc(fact.numero):'Cargada')+'</span>';
+      saldoHtml='<span style="font-weight:700;color:'+saldoCol+';">'+(saldo>0?$p(saldo):'Pagada')+'</span>';
+    } else {
+      factHtml='<span style="font-size:12px;color:#9ca3af;">Sin factura</span>';
+      saldoHtml='<span style="color:#9ca3af;">—</span>';
+    }
+    var nroHtml=c.nro_compra?'<span style="font-size:12px;color:#6b7280;">#'+esc(c.nro_compra)+'</span>':'<span style="color:#d1d5db;">—</span>';
+    html+='<tr>'
+      +'<td style="font-size:13px;white-space:nowrap;">'+fmtF(c.fecha)+'</td>'
+      +'<td style="font-weight:600;font-size:13px;">'+esc(prov?prov.nombre:'Sin proveedor')+'</td>'
+      +'<td>'+nroHtml+'</td>'
+      +'<td><span class="badge '+badge+'">'+label+'</span></td>'
+      +'<td style="text-align:right;font-weight:700;">'+$p(total)+'</td>'
+      +'<td>'+factHtml+'</td>'
+      +'<td style="text-align:right;">'+saldoHtml+'</td>'
+      +'</tr>';
+  });
+  if(rows.length){
+    html+='<tr style="background:#f9fafb;font-weight:700;border-top:2px solid #e5e7eb;">'
+      +'<td colspan="4" style="text-align:right;color:#374151;">Total ('+rows.length+' órdenes)</td>'
+      +'<td style="text-align:right;color:#1a1f36;">'+$p(totalGeneral)+'</td>'
+      +'<td colspan="2"></td>'
+      +'</tr>';
+  }
+  html+='</tbody></table></div>';
+  if(!rows.length)html='<div style="text-align:center;color:#9ca3af;padding:40px;">Sin órdenes de compra</div>';
+  document.getElementById('cmp-hist-ord-cont').innerHTML=html;
 }
 
 function renderComprasOrdenes(){
