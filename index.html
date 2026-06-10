@@ -665,6 +665,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <div style="display:flex;gap:8px;">
           <button class="btn btn-gray" id="btn-prod-vista" onclick="toggleProdVista()" style="font-size:12px;">📋 Ver tabla</button>
           <button class="btn btn-gray" onclick="openM('m-import-prod')" style="font-size:12px;">📥 Importar</button>
+          <button class="btn" style="background:#f59e0b;border-color:#d97706;" onclick="openModeloMayModal()">🏭 Producto mayorista</button>
           <button class="btn" onclick="openModeloModal()">+ Nuevo modelo</button>
         </div>
       </div>
@@ -6052,6 +6053,42 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   </div>
 </div>
 
+<!-- Modal: Nuevo producto mayorista -->
+<div class="modal-bg" id="m-modelo-may">
+  <div class="modal" style="max-width:620px;">
+    <h3>🏭 Nuevo producto mayorista</h3>
+    <div class="grid2">
+      <div class="field full"><label>Familia / Nombre del modelo *</label><input id="mmay-familia" placeholder="Ej: REMERA BÁSICA HOMBRE"/></div>
+      <div class="field"><label>Categoría</label><select id="mmay-cat"><option value="">— Sin categoría —</option></select></div>
+      <div class="field"><label>Tipo</label>
+        <select id="mmay-tipo">
+          <option value="">— Sin tipo —</option>
+          <option value="Compra">Compra</option>
+          <option value="Produccion">Producción</option>
+          <option value="Mixto">Mixto</option>
+        </select>
+      </div>
+      <div class="field"><label>Precio XS–XL $</label><input type="number" id="mmay-pmay" min="0" placeholder="0"/></div>
+      <div class="field"><label>Precio XXL+ $ <span style="font-size:10px;color:#9ca3af;">(0 = igual que base)</span></label><input type="number" id="mmay-pmay-grande" min="0" placeholder="0"/></div>
+      <div class="field"><label>Costo $</label><input type="number" id="mmay-costo" min="0" placeholder="0"/></div>
+      <div class="field"><label>Stock ideal por talle</label><input type="number" id="mmay-stock-ideal" min="0" placeholder="0"/></div>
+    </div>
+    <div style="margin-top:16px;border-top:1px solid #f3f4f6;padding-top:14px;">
+      <div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:10px;letter-spacing:.3px;">SELECCIONÁ LOS TALLES</div>
+      <div id="mmay-talles-grid"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+        <span style="font-size:12px;color:#6b7280;">Talle personalizado:</span>
+        <input id="mmay-talle-custom" placeholder="Ej: 2XS, 18N..." style="width:130px;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:12px;"/>
+      </div>
+    </div>
+    <div id="mmay-error" style="display:none;color:#dc2626;font-size:12px;margin-top:8px;padding:6px 10px;background:#fff5f5;border-radius:6px;"></div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-modelo-may')">Cancelar</button>
+      <button class="btn" style="background:#f59e0b;border-color:#d97706;" onclick="saveModeloMay()">Crear producto mayorista</button>
+    </div>
+  </div>
+</div>
+
 <!-- Importar movimientos CSV -->
 <div class="modal-bg" id="m-import">
   <div class="modal" style="max-width:720px;">
@@ -11030,11 +11067,11 @@ function poblarSelectProveedoresChq(){
 }
 
 function poblarSelectCategorias(){
-  var selectores=['mprod-cat','mmod-cat','pr-cat'];
+  var selectores=['mprod-cat','mmod-cat','mmay-cat','pr-cat'];
   selectores.forEach(function(id){
     var s=document.getElementById(id);if(!s)return;
     var v=s.value;
-    s.innerHTML=(id==='mprod-cat'||id==='mmod-cat')?'<option value="">— Sin categoría —</option>':'<option value="">Todas las categorías</option>';
+    s.innerHTML=(id==='mprod-cat'||id==='mmod-cat'||id==='mmay-cat')?'<option value="">— Sin categoría —</option>':'<option value="">Todas las categorías</option>';
     CATEGORIAS.forEach(function(c){
       var o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;s.appendChild(o);
     });
@@ -12081,6 +12118,70 @@ async function saveModelo(){
   if(r.error){err.textContent='Error: '+r.error.message;err.style.display='block';return;}
   toast('✅ '+talles.length+' talle'+(talles.length!==1?'s':'')+' creado'+(talles.length!==1?'s':'')+' — '+familia);
   closeM('m-modelo');
+  await loadProductos();
+  renderProductos();poblarSelectProductos();
+}
+
+// ── PRODUCTO MAYORISTA ──
+function openModeloMayModal(){
+  ['mmay-familia','mmay-pmay','mmay-pmay-grande','mmay-costo','mmay-stock-ideal','mmay-talle-custom'].forEach(function(id){document.getElementById(id).value='';});
+  ['mmay-cat','mmay-tipo'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('mmay-error').style.display='none';
+  document.getElementById('mmay-talles-grid').innerHTML=TALLES_GRUPOS.map(function(g){
+    return '<div style="margin-bottom:10px;">'+
+      '<div style="font-size:10px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">'+g.label+'</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">'+
+        g.talles.map(function(t){
+          var id='mmay-t-'+t.replace(/\s/g,'_');
+          return '<label id="mmay-lbl-'+id+'" style="display:flex;align-items:center;justify-content:center;background:#f3f4f6;border:1.5px solid #e5e7eb;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600;user-select:none;min-width:44px;">'+
+            '<input type="checkbox" id="'+id+'" onchange="mmayToggleTalle(this,\''+id+'\')" style="display:none;"/>'+t+'<\/label>';
+        }).join('')+
+      '<\/div><\/div>';
+  }).join('');
+  poblarSelectCategorias('mmay-cat');
+  openM('m-modelo-may');
+}
+
+function mmayToggleTalle(cb,id){
+  var lbl=document.getElementById('mmay-lbl-'+id);if(!lbl)return;
+  if(cb.checked){lbl.style.background='#fef3c7';lbl.style.borderColor='#f59e0b';lbl.style.color='#92400e';}
+  else{lbl.style.background='#f3f4f6';lbl.style.borderColor='#e5e7eb';lbl.style.color='';}
+}
+
+async function saveModeloMay(){
+  var familia=(document.getElementById('mmay-familia').value||'').trim();
+  var err=document.getElementById('mmay-error');
+  if(!familia){err.textContent='El nombre del modelo es obligatorio';err.style.display='block';return;}
+  var talles=[];
+  TALLES_GRUPOS.forEach(function(g){
+    g.talles.forEach(function(t){
+      var cb=document.getElementById('mmay-t-'+t.replace(/\s/g,'_'));
+      if(cb&&cb.checked)talles.push(t);
+    });
+  });
+  var custom=(document.getElementById('mmay-talle-custom').value||'').trim();
+  if(custom)talles.push(custom);
+  if(!talles.length){err.textContent='Seleccioná al menos un talle';err.style.display='block';return;}
+  var base={
+    familia:familia,
+    colegio:null,
+    categoria_id:document.getElementById('mmay-cat').value||null,
+    tipo_2:document.getElementById('mmay-tipo').value||null,
+    precio_mayorista:parseFloat(document.getElementById('mmay-pmay').value)||0,
+    precio_mayorista_grande:parseFloat(document.getElementById('mmay-pmay-grande').value)||0,
+    precio_minorista:0,
+    costo:parseFloat(document.getElementById('mmay-costo').value)||0,
+    stock_ideal:parseInt(document.getElementById('mmay-stock-ideal').value)||0,
+    nivel:null,
+    locales_disponibles:['mayorista'],
+    activo:true,
+    updated_at:new Date().toISOString()
+  };
+  var rows=talles.map(function(t){return Object.assign({},base,{talle:t,nombre:familia+' '+t});});
+  var r=await sb.from('productos').insert(rows);
+  if(r.error){err.textContent='Error: '+r.error.message;err.style.display='block';return;}
+  toast('✅ '+talles.length+' talle'+(talles.length!==1?'s':'')+' creado'+(talles.length!==1?'s':'')+' — '+familia);
+  closeM('m-modelo-may');
   await loadProductos();
   renderProductos();poblarSelectProductos();
 }
@@ -19085,6 +19186,26 @@ async function saveMov(){
   };
   var r=editMovId?await sb.from('movimientos').update(d).eq('id',editMovId):await sb.from('movimientos').insert(d);
   if(r.error){toast('Error: '+r.error.message,'err');return;}
+
+  // Auto-generar impuesto/comisión bancaria (0.6%)
+  if(!editMovId&&(tipo==='ingreso'||tipo==='egreso')){
+    var cajasImp=['BANCO SRL','BANCO POLY','MERCADO PAGO'];
+    if(cajasImp.indexOf(d.caja)!==-1){
+      var montoImp=Math.round(monto*0.006*100)/100;
+      var detImp=d.caja==='MERCADO PAGO'?'Comisión MP':(tipo==='ingreso'?'Imp. Ley 25.413 s/créditos':'Imp. Ley 25.413 s/débitos');
+      var baseImp={caja:d.caja,anio:d.anio,mes:d.mes,sem:0,fecha:fecha,tipo:'egreso',concepto:'GASTOS BANCARIOS',detalle:detImp,ingreso:0,egreso:montoImp,updated_at:new Date().toISOString()};
+      if(d.caja==='MERCADO PAGO'){
+        await sb.from('movimientos').insert(baseImp);
+      } else {
+        var exImp=await sb.from('movimientos').select('id,egreso').eq('caja',d.caja).eq('fecha',fecha).eq('concepto','GASTOS BANCARIOS').eq('detalle',detImp).eq('tipo','egreso').maybeSingle();
+        if(exImp.data){
+          await sb.from('movimientos').update({egreso:Math.round((exImp.data.egreso+montoImp)*100)/100,updated_at:new Date().toISOString()}).eq('id',exImp.data.id);
+        } else {
+          await sb.from('movimientos').insert(baseImp);
+        }
+      }
+    }
+  }
 
   // Si es nuevo movimiento con moratoria vinculada → avanzar cuota automáticamente
   if(!editMovId&&morId&&concepto==='MORATORIAS/PLANES'){
