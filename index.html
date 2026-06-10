@@ -19192,7 +19192,7 @@ async function saveMov(){
     var cajasImp=['BANCO SRL','BANCO POLY','MERCADO PAGO'];
     if(cajasImp.indexOf(d.caja)!==-1){
       var montoImp=Math.round(monto*0.006*100)/100;
-      var detImp=d.caja==='MERCADO PAGO'?'Comisión MP':(tipo==='ingreso'?'Imp. Ley 25.413 s/créditos':'Imp. Ley 25.413 s/débitos');
+      var detImp=d.caja==='MERCADO PAGO'?'Comisión MP':(tipo==='ingreso'?'Impuesto Ley 25.413 Ali Gral s/Creditos':'Impuesto Ley 25.413 Ali Gral s/Debitos');
       var baseImp={caja:d.caja,anio:d.anio,mes:d.mes,sem:0,fecha:fecha,tipo:'egreso',concepto:'GASTOS BANCARIOS',detalle:detImp,ingreso:0,egreso:montoImp,updated_at:new Date().toISOString()};
       if(d.caja==='MERCADO PAGO'){
         await sb.from('movimientos').insert(baseImp);
