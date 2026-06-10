@@ -508,6 +508,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
     </div>
     <div class="tabs" style="margin-bottom:16px;" id="cmp-tabs">
       <button class="tab active" onclick="setCmpTab('ordenes',this)">📦 Órdenes de Compra</button>
+      <button class="tab" onclick="setCmpTab('pendientes',this)" id="cmp-tab-btn-pendientes">⚠️ Pendientes</button>
       <button class="tab" onclick="setCmpTab('historial',this)">📈 Historial de Precios</button>
       <button class="tab" onclick="setCmpTab('resumen',this)">📊 Resumen</button>
     </div>
@@ -528,6 +529,18 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       </div>
       <div id="cmp-ordenes-cont"></div>
     </div>
+    <!-- Tab: Pendientes -->
+    <div id="cmp-tab-pendientes" style="display:none;">
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="panel-hdr"><h4>🧾 Compras recibidas sin factura</h4></div>
+        <div id="cmp-pend-sinfact"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><h4>💸 Facturas sin pagar</h4></div>
+        <div id="cmp-pend-sinpagar"></div>
+      </div>
+    </div>
+
     <!-- Tab: Historial -->
     <div id="cmp-tab-historial" style="display:none;">
       <div class="panel">
@@ -23906,16 +23919,88 @@ function renderCompras(){
   document.getElementById('cmp-stat-pend').textContent=pend;
   document.getElementById('cmp-stat-prov').textContent=provMes;
   renderComprasOrdenes();
+  renderCmpPendientes();
 }
 
 function setCmpTab(t,el){
-  ['ordenes','historial','resumen'].forEach(function(x){document.getElementById('cmp-tab-'+x).style.display='none';});
+  ['ordenes','pendientes','historial','resumen'].forEach(function(x){document.getElementById('cmp-tab-'+x).style.display='none';});
   document.getElementById('cmp-tab-'+t).style.display='block';
   document.querySelectorAll('#cmp-tabs .tab').forEach(function(b){b.classList.remove('active');});
   if(el)el.classList.add('active');
   if(t==='ordenes')renderComprasOrdenes();
+  if(t==='pendientes')renderCmpPendientes();
   if(t==='historial')renderComprasHistorial();
   if(t==='resumen')renderCmpResumen();
+}
+
+function renderCmpPendientes(){
+  var hoy=today();
+
+  // — Compras recibidas sin factura —
+  var sinFact=COMPRAS.filter(function(c){
+    if(c.estado!=='recibida')return false;
+    return !PROV_FACTURAS.find(function(f){return f.compra_id===c.id;});
+  });
+  var sfHtml='';
+  if(!sinFact.length){
+    sfHtml='<div style="text-align:center;color:#16a34a;padding:20px;font-weight:600;">✅ Todas las compras recibidas tienen factura</div>';
+  } else {
+    sfHtml='<div class="tbl"><table><thead><tr><th>Proveedor</th><th>Fecha</th><th>N°</th><th style="text-align:right">Total</th><th></th></tr></thead><tbody>';
+    sinFact.forEach(function(c){
+      var prov=PROVEEDORES.find(function(p){return p.id===c.proveedor_id;});
+      var total=COMPRAS_ITEMS.filter(function(i){return i.compra_id===c.id;}).reduce(function(s,i){return s+Number(i.cantidad||0)*Number(i.precio_unit||0);},0);
+      sfHtml+='<tr>'+
+        '<td><strong>'+esc(prov?prov.nombre:'—')+'</strong></td>'+
+        '<td style="font-size:12px;color:#6b7280;">'+fmtF(c.fecha)+'</td>'+
+        '<td style="font-size:12px;color:#9ca3af;">'+(c.nro_compra?'#'+esc(c.nro_compra):'—')+'</td>'+
+        '<td style="text-align:right;font-weight:700;">'+$p(total)+'</td>'+
+        '<td><button class="btn btn-sm btn-outline" onclick="openProvFacturaModal(null,'+c.id+')">+ Cargar factura</button></td>'+
+      '</tr>';
+    });
+    sfHtml+='</tbody></table></div>';
+  }
+  document.getElementById('cmp-pend-sinfact').innerHTML=sfHtml;
+
+  // — Facturas sin pagar —
+  var sinPagar=PROV_FACTURAS.filter(function(f){
+    return f.estado!=='pagada'&&f.estado!=='anulada'&&factSaldo(f.id)>0;
+  }).sort(function(a,b){
+    if(a.fecha_vencimiento&&b.fecha_vencimiento)return a.fecha_vencimiento>b.fecha_vencimiento?1:-1;
+    if(a.fecha_vencimiento)return -1;
+    if(b.fecha_vencimiento)return 1;
+    return 0;
+  });
+  var spHtml='';
+  if(!sinPagar.length){
+    spHtml='<div style="text-align:center;color:#16a34a;padding:20px;font-weight:600;">✅ Sin facturas pendientes de pago</div>';
+  } else {
+    spHtml='<div class="tbl"><table><thead><tr><th>Proveedor</th><th>Factura</th><th>Fecha</th><th>Vencimiento</th><th style="text-align:right">Total</th><th style="text-align:right">Saldo</th><th></th></tr></thead><tbody>';
+    sinPagar.forEach(function(f){
+      var prov=PROVEEDORES.find(function(p){return p.id===f.proveedor_id;});
+      var saldo=factSaldo(f.id);
+      var venc=f.fecha_vencimiento||'';
+      var vencida=venc&&venc<hoy;
+      var vencHtml=venc
+        ?'<span style="color:'+(vencida?'#dc2626':'#374151')+';font-weight:'+(vencida?'700':'400')+';">'+(vencida?'⚠️ ':'')+fmtF(venc)+'</span>'
+        :'<span style="color:#9ca3af;">—</span>';
+      spHtml+='<tr>'+
+        '<td><strong>'+esc(prov?prov.nombre:'—')+'</strong></td>'+
+        '<td style="font-size:12px;">'+(f.numero?'#'+esc(f.numero):'S/N')+'</td>'+
+        '<td style="font-size:12px;color:#6b7280;">'+fmtF(f.fecha)+'</td>'+
+        '<td style="font-size:12px;">'+vencHtml+'</td>'+
+        '<td style="text-align:right;font-size:12px;color:#6b7280;">'+$p(f.monto_total)+'</td>'+
+        '<td style="text-align:right;font-weight:800;color:#dc2626;">'+$p(saldo)+'</td>'+
+        '<td><button class="btn btn-sm btn-outline" onclick="openProvFacturaModal('+f.id+')">Ver / Pagar</button></td>'+
+      '</tr>';
+    });
+    spHtml+='</tbody></table></div>';
+  }
+  document.getElementById('cmp-pend-sinpagar').innerHTML=spHtml;
+
+  // Actualizar badge del tab si hay pendientes
+  var total=sinFact.length+sinPagar.length;
+  var btn=document.getElementById('cmp-tab-btn-pendientes');
+  if(btn)btn.textContent=total>0?'⚠️ Pendientes ('+total+')':'⚠️ Pendientes';
 }
 
 function renderCmpResumen(){
