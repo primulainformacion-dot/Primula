@@ -1251,22 +1251,10 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <h3 id="pg-bancos">$0</h3><p>Bancos</p>
             <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Banco SRL · Banco Poly</div>
           </div>
-          <div class="stat" style="border-top:3px solid #3b82f6;">
+          <div class="stat" style="border-top:3px solid #3b82f6;grid-column:span 2;">
             <div class="stat-icon" style="background:#dbeafe;">📱</div>
             <h3 id="pg-mp">$0</h3><p>Mercado Pago</p>
             <div style="font-size:11px;color:#9ca3af;margin-top:4px;">QR · Tarjetas · Transferencias</div>
-          </div>
-          <div class="stat" style="border-top:3px solid #16a34a;">
-            <div class="stat-icon" style="background:#dcfce7;">💲</div>
-            <h3 id="pg-usd" style="color:#16a34a;font-size:18px;">U$S 0,00</h3>
-            <p>CAJA USD</p>
-            <div style="display:flex;align-items:center;gap:5px;margin-top:8px;">
-              <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">TC $</span>
-              <input id="pg-tc-usd" type="number" min="1" step="1" placeholder="Ej: 1200"
-                     style="width:80px;padding:4px 7px;font-size:12px;border:1.5px solid #d1fae5;border-radius:6px;font-weight:700;color:#166534;outline:none;background:#f0fdf4;"
-                     oninput="actualizarTipoCambio(this.value)"/>
-            </div>
-            <div id="pg-usd-pesos" style="font-size:12px;font-weight:700;color:#166534;margin-top:5px;">Ingresá el TC →</div>
           </div>
 
           <!-- Franja: total líquido -->
@@ -1275,7 +1263,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               <div class="stat-icon" style="background:#dcfce7;margin:0;">💰</div>
               <div>
                 <p style="color:#166534;font-weight:700;font-size:13px;margin:0;">Total disponible</p>
-                <div style="font-size:11px;color:#16a34a;margin-top:2px;">Efectivo + Bancos + MP + $ USD</div>
+                <div style="font-size:11px;color:#16a34a;margin-top:2px;">Efectivo + Bancos + MP</div>
               </div>
             </div>
             <h3 id="pg-saldo-liquido" style="color:#166534;font-size:26px;font-weight:800;margin:0;">$0</h3>
@@ -1315,6 +1303,31 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-stock-mg-u">0 u</div>
           </div>
 
+        </div>
+      </div>
+
+      <!-- CAJA USD — separada, no suma al total ARS -->
+      <div class="panel" style="margin-bottom:16px;border-left:4px solid #16a34a;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="stat-icon" style="background:#dcfce7;margin:0;">💲</div>
+            <div>
+              <div style="font-size:11px;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:.5px;">CAJA USD</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">No incluida en totales ARS</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+            <div style="text-align:right;">
+              <div style="font-size:22px;font-weight:800;color:#16a34a;" id="pg-usd">U$S 0,00</div>
+              <div style="font-size:12px;font-weight:700;color:#166534;margin-top:2px;" id="pg-usd-pesos">Ingresá el TC →</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:11px;color:#9ca3af;white-space:nowrap;">TC $</span>
+              <input id="pg-tc-usd" type="number" min="1" step="1" placeholder="Ej: 1200"
+                style="width:90px;padding:6px 8px;font-size:13px;border:1.5px solid #d1fae5;border-radius:6px;font-weight:700;color:#166534;outline:none;background:#f0fdf4;"
+                oninput="actualizarTipoCambio(this.value)"/>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -12080,17 +12093,49 @@ function saldoCaja(caja){
 
 function renderFinCajas(){
   var grid=document.getElementById('pan-cajas-grid');
-  grid.style.gridTemplateColumns='repeat(3,1fr)';
-  grid.innerHTML=CAJAS_SISTEMA.map(function(caja){
+  grid.style.gridTemplateColumns='repeat(4,1fr)';
+
+  function cajaCard(caja){
     var saldo=saldoCaja(caja);
     var color=CAJA_COLORES[caja]||'#6c7ae0';
     var pos=saldo>=0;
     return '<div class="stat" style="cursor:pointer;border-top:3px solid '+color+';" onclick="filtrarPorCaja(\''+caja+'\')">'+
       '<div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">'+cajaNombre(caja)+'</div>'+
       '<div style="font-size:20px;font-weight:800;color:'+(pos?'#1a1f36':'#dc2626')+';">'+$p(saldo)+'</div>'+
-      '<div style="font-size:11px;color:#9ca3af;margin-top:3px;">'+(pos?'saldo disponible':'saldo negativo')+'</div>'+
+      '<div style="font-size:11px;color:#9ca3af;margin-top:3px;">'+(pos?'saldo disponible':'negativo')+'</div>'+
     '</div>';
-  }).join('');
+  }
+
+  function totalCard(label, saldo, color){
+    var pos=saldo>=0;
+    return '<div class="stat" style="border-top:3px solid '+color+';background:'+(pos?'#f8faff':'#fff5f5')+';">'+
+      '<div style="font-size:11px;font-weight:800;color:'+color+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">'+label+'</div>'+
+      '<div style="font-size:20px;font-weight:800;color:'+(pos?color:'#dc2626')+';">'+$p(saldo)+'</div>'+
+      '<div style="font-size:11px;color:#9ca3af;margin-top:3px;">total fila</div>'+
+    '</div>';
+  }
+
+  var efTotal=saldoCaja('EFECTIVO ADMINISTRACIÓN')+saldoCaja('LOCAL LLAVALLOL')+saldoCaja('LOCAL MONTE GRANDE');
+  var banTotal=saldoCaja('BANCO SRL')+saldoCaja('BANCO POLY')+saldoCaja('MERCADO PAGO');
+
+  var html='';
+  // Fila 1: efectivo
+  html+=cajaCard('EFECTIVO ADMINISTRACIÓN');
+  html+=cajaCard('LOCAL LLAVALLOL');
+  html+=cajaCard('LOCAL MONTE GRANDE');
+  html+=totalCard('Total efectivo',efTotal,'#6c7ae0');
+  // Fila 2: bancos
+  html+=cajaCard('BANCO SRL');
+  html+=cajaCard('BANCO POLY');
+  html+=cajaCard('MERCADO PAGO');
+  html+=totalCard('Total bancos + MP',banTotal,'#0ea5e9');
+  // Fila 3: otros (sin total)
+  html+=cajaCard('CHEQUES AL COBRO');
+  html+=cajaCard('TARJETAS');
+  html+=cajaCard('CAJA USD');
+  html+='<div></div>';
+
+  grid.innerHTML=html;
 }
 
 // ── TARJETAS ──
@@ -12413,7 +12458,7 @@ function renderPanelGeneral(){
   var stockTotal=stockMay+stockLL+stockMG; // mayorista a precio mayorista, locales a precio minorista
   var byTipoMP=_telasByTipo();
   var valorMatPrima=Object.values(byTipoMP).reduce(function(s,d){return s+d.valor;},0);
-  var totalActivos=efectivo+bancos+mp+usdPesos+chqCartTotal+acobrar+stockTotal+valorMatPrima;
+  var totalActivos=efectivo+bancos+mp+chqCartTotal+acobrar+stockTotal+valorMatPrima;
   var el=function(id){return document.getElementById(id);};
   if(!el('pg-efectivo'))return;
   el('pg-efectivo').textContent=$p(efectivo);
@@ -12422,7 +12467,7 @@ function renderPanelGeneral(){
   if(el('pg-usd'))el('pg-usd').textContent=$usd(usd);
   if(el('pg-usd-pesos'))el('pg-usd-pesos').textContent=tipoCambioUSD>0?('≈ '+$p(Math.round(usdPesos))):'Ingresá el TC →';
   var tcInput=el('pg-tc-usd');if(tcInput&&document.activeElement!==tcInput)tcInput.value=tipoCambioUSD||'';
-  if(el('pg-saldo-liquido'))el('pg-saldo-liquido').textContent=$p(efectivo+bancos+mp+usdPesos);
+  if(el('pg-saldo-liquido'))el('pg-saldo-liquido').textContent=$p(efectivo+bancos+mp);
   el('pg-echeq-act').textContent=$p(chqCartTotal);
   if(el('pg-chq-cartera-count'))el('pg-chq-cartera-count').textContent=chqCartDisp.length+' cheque'+(chqCartDisp.length!==1?'s':'')+' disponible'+(chqCartDisp.length!==1?'s':'');
   el('pg-acobrar').textContent=$p(acobrar);
