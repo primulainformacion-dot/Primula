@@ -12051,7 +12051,7 @@ async function saveModelo(){
 // ════════════════════════════════════
 // FINANZAS
 // ════════════════════════════════════
-var CAJAS_SISTEMA=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL','CAJA USD','CHEQUES AL COBRO','TARJETAS'];
+var CAJAS_SISTEMA=['EFECTIVO ADMINISTRACIÓN','LOCAL LLAVALLOL','LOCAL MONTE GRANDE','BANCO SRL','BANCO POLY','MERCADO PAGO','CHEQUES AL COBRO','TARJETAS','CAJA USD'];
 var CAJA_COLORES={'EFECTIVO ADMINISTRACIÓN':'#6c7ae0','BANCO SRL':'#0ea5e9','BANCO POLY':'#14b8a6','MERCADO PAGO':'#3b82f6','TARJETAS':'#1d4ed8','ECHEQ/CHEQUE':'#8b5cf6','LOCAL MONTE GRANDE':'#10b981','LOCAL LLAVALLOL':'#f59e0b','CAJA USD':'#16a34a','CHEQUES AL COBRO':'#d97706'};
 // Etiquetas visuales (no afectan el valor guardado en la DB)
 var CAJA_LABELS={'CAJA USD':'$ CAJA USD'};
@@ -12080,6 +12080,7 @@ function saldoCaja(caja){
 
 function renderFinCajas(){
   var grid=document.getElementById('pan-cajas-grid');
+  grid.style.gridTemplateColumns='repeat(3,1fr)';
   grid.innerHTML=CAJAS_SISTEMA.map(function(caja){
     var saldo=saldoCaja(caja);
     var color=CAJA_COLORES[caja]||'#6c7ae0';
