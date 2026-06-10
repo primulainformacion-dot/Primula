@@ -1410,6 +1410,9 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div id="obj-content"></div>
     </div>
 
+    <!-- Tab: Estrategia -->
+    <div id="pan-tab-estrategia" style="display:none;"></div>
+
     <!-- IDs de reportes (compatibilidad) -->
     <div style="display:none;">
       <input id="rep-desde"/><input id="rep-hasta"/>
@@ -5420,24 +5423,24 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 <!-- Modal: depositar cheque en banco -->
 <!-- Modal: liquidar tarjetas al banco -->
 <div class="modal-bg" id="m-liquidar-tarjetas">
-  <div class="modal" style="max-width:420px;">
+  <div class="modal" style="max-width:540px;">
     <h3>💳 Liquidar tarjetas al banco</h3>
-    <div id="mliq-saldo-info" style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;color:#1d4ed8;"></div>
+    <div style="font-size:11px;font-weight:800;color:#374151;letter-spacing:.5px;margin-bottom:8px;">COBROS PENDIENTES DE LIQUIDAR</div>
+    <div id="mliq-lista" style="max-height:260px;overflow-y:auto;border:1.5px solid #e5e7eb;border-radius:8px;margin-bottom:12px;"></div>
+    <div id="mliq-resumen" style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;color:#1d4ed8;text-align:center;"></div>
     <div class="grid2">
-      <div class="field"><label>N° Lote *</label><input id="mliq-lote" placeholder="Ej: 000123" style="font-size:15px;font-weight:700;"/></div>
+      <div class="field"><label>N° Lote terminal *</label><input id="mliq-lote" placeholder="Ej: 000123" style="font-size:15px;font-weight:700;"/></div>
       <div class="field"><label>Fecha *</label><input type="date" id="mliq-fecha"/></div>
-      <div class="field"><label>Monto liquidado $*</label><input type="number" id="mliq-monto" min="0" placeholder="0" style="font-size:16px;font-weight:700;"/></div>
-      <div class="field"><label>Banco destino</label>
+      <div class="field full"><label>Banco destino</label>
         <select id="mliq-banco">
           <option>BANCO SRL</option>
           <option>BANCO POLY</option>
         </select>
       </div>
-      <div class="field full"><label>Nota (opcional)</label><input id="mliq-nota" placeholder="Observaciones..."/></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-liquidar-tarjetas')">Cancelar</button>
-      <button class="btn" style="background:#1d4ed8;border-color:#1e40af;" onclick="saveLiquidarTarjetas()">Registrar liquidación</button>
+      <button class="btn" id="mliq-btn-confirmar" style="background:#1d4ed8;border-color:#1e40af;" onclick="saveLiquidarTarjetas()">Registrar liquidación</button>
     </div>
   </div>
 </div>
@@ -12088,25 +12091,25 @@ function renderFinCajas(){
 
 // ── TARJETAS ──
 function renderFinTarjetas(){
-  var cobros=MOVS.filter(function(m){return m.caja==='TARJETAS'&&Number(m.ingreso||0)>0;});
+  var pendientes=MOVS.filter(function(m){return m.caja==='TARJETAS'&&Number(m.ingreso||0)>0&&!m.liquidado;});
+  var liquidados=MOVS.filter(function(m){return m.caja==='TARJETAS'&&Number(m.ingreso||0)>0&&m.liquidado;});
   var liquidaciones=MOVS.filter(function(m){return m.caja==='TARJETAS'&&Number(m.egreso||0)>0;});
-  var totalCobrado=cobros.reduce(function(s,m){return s+Number(m.ingreso||0);},0);
-  var totalLiquidado=liquidaciones.reduce(function(s,m){return s+Number(m.egreso||0);},0);
-  var saldo=totalCobrado-totalLiquidado;
+  var saldo=pendientes.reduce(function(s,m){return s+Number(m.ingreso||0);},0);
   document.getElementById('tarj-saldo').textContent=$p(saldo);
   document.getElementById('tarj-saldo').style.color=saldo>0?'#1d4ed8':'#9ca3af';
-  // Cobros
+  // Cobros pendientes
   var cobEl=document.getElementById('tarj-cobros');
-  if(!cobros.length){cobEl.innerHTML='<div class="empty"><p>Sin cobros con tarjeta</p></div>';}
+  var todos=MOVS.filter(function(m){return m.caja==='TARJETAS'&&Number(m.ingreso||0)>0;}).slice().reverse();
+  if(!todos.length){cobEl.innerHTML='<div class="empty"><p>Sin cobros con tarjeta</p></div>';}
   else{
     cobEl.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;"><tbody>'+
-      cobros.slice().reverse().slice(0,50).map(function(m){
-        var lote=m.detalle&&m.detalle.includes('Lote')?m.detalle.match(/Lote ([^\)]+)/)?m.detalle.match(/Lote ([^\)]+)/)[1]:'':'';
-        return '<tr style="border-bottom:1px solid #f3f4f6;">'+
-          '<td style="padding:6px 4px;color:#374151;">'+fmtF(m.fecha)+'</td>'+
-          '<td style="padding:6px 4px;color:#6b7280;font-size:11px;">'+(m.detalle||'')+(lote?'':'')+'</td>'+
-          '<td style="padding:6px 4px;text-align:right;font-weight:700;color:#1d4ed8;">'+$p(Number(m.ingreso||0))+'</td>'+
-        '</tr>';
+      todos.slice(0,60).map(function(m){
+        var esPend=!m.liquidado;
+        var loteRef=m.referencia&&m.referencia.startsWith('Lote')?m.referencia:'';
+        return '<tr style="border-bottom:1px solid #f3f4f6;opacity:'+(esPend?'1':'0.55')+';"><td style="padding:6px 4px;white-space:nowrap;">'+fmtF(m.fecha)+'</td>'+
+          '<td style="padding:6px 4px;color:#6b7280;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(m.detalle||'—')+'</td>'+
+          '<td style="padding:6px 4px;font-size:10px;color:'+(esPend?'#f59e0b':'#16a34a')+';white-space:nowrap;">'+(esPend?'Pendiente':loteRef||'Liquidado')+'</td>'+
+          '<td style="padding:6px 4px;text-align:right;font-weight:700;color:#1d4ed8;">'+$p(Number(m.ingreso||0))+'</td></tr>';
       }).join('')+
     '</tbody></table>';
   }
@@ -12117,7 +12120,7 @@ function renderFinTarjetas(){
     liqEl.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;"><tbody>'+
       liquidaciones.slice().reverse().map(function(m){
         return '<tr style="border-bottom:1px solid #f3f4f6;">'+
-          '<td style="padding:6px 4px;color:#374151;">'+fmtF(m.fecha)+'</td>'+
+          '<td style="padding:6px 4px;white-space:nowrap;">'+fmtF(m.fecha)+'</td>'+
           '<td style="padding:6px 4px;color:#6b7280;font-size:11px;">'+(m.detalle||'—')+'</td>'+
           '<td style="padding:6px 4px;text-align:right;font-weight:700;color:#16a34a;">'+$p(Number(m.egreso||0))+'</td>'+
         '</tr>';
@@ -12127,34 +12130,63 @@ function renderFinTarjetas(){
 }
 
 function openLiquidarTarjetas(){
-  var cobros=MOVS.filter(function(m){return m.caja==='TARJETAS'&&Number(m.ingreso||0)>0;});
-  var liquidaciones=MOVS.filter(function(m){return m.caja==='TARJETAS'&&Number(m.egreso||0)>0;});
-  var saldo=cobros.reduce(function(s,m){return s+Number(m.ingreso||0);},0)-liquidaciones.reduce(function(s,m){return s+Number(m.egreso||0);},0);
-  document.getElementById('mliq-saldo-info').textContent='Saldo pendiente: '+$p(saldo);
-  document.getElementById('mliq-monto').value=saldo>0?saldo:'';
+  var pendientes=MOVS.filter(function(m){return m.caja==='TARJETAS'&&Number(m.ingreso||0)>0&&!m.liquidado;});
+  var lista=document.getElementById('mliq-lista');
+  if(!pendientes.length){
+    lista.innerHTML='<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">No hay cobros pendientes de liquidar</div>';
+  } else {
+    lista.innerHTML=pendientes.slice().reverse().map(function(m){
+      var lote=m.detalle&&m.detalle.includes('Lote')?(' · '+(m.detalle.match(/Lote ([^\)·]+)/)||['',''])[1].trim()):'';
+      return '<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;">'+
+        '<input type="checkbox" value="'+m.id+'" data-monto="'+Number(m.ingreso||0)+'" checked onchange="mliqActualizar()" style="width:auto;accent-color:#1d4ed8;flex-shrink:0;"/>'+
+        '<span style="flex:1;font-size:12px;color:#374151;">'+fmtF(m.fecha)+'<span style="color:#9ca3af;margin-left:6px;font-size:11px;">'+(m.detalle||'Mostrador')+'</span></span>'+
+        '<span style="font-weight:700;color:#1d4ed8;white-space:nowrap;">'+$p(Number(m.ingreso||0))+'</span>'+
+      '<\/label>';
+    }).join('');
+  }
   document.getElementById('mliq-lote').value='';
   document.getElementById('mliq-fecha').value=today();
   document.getElementById('mliq-banco').value='BANCO SRL';
-  document.getElementById('mliq-nota').value='';
+  mliqActualizar();
   openM('m-liquidar-tarjetas');
 }
 
+function mliqActualizar(){
+  var checks=document.querySelectorAll('#mliq-lista input[type="checkbox"]:checked');
+  var total=0,count=0;
+  checks.forEach(function(cb){total+=parseFloat(cb.dataset.monto)||0;count++;});
+  var res=document.getElementById('mliq-resumen');
+  var btn=document.getElementById('mliq-btn-confirmar');
+  if(count===0){
+    res.textContent='Seleccioná al menos un cobro';
+    res.style.color='#dc2626';res.style.background='#fef2f2';res.style.borderColor='#fca5a5';
+    if(btn)btn.textContent='Registrar liquidación';
+  } else {
+    res.textContent=count+' pago'+(count!==1?'s':'')+' seleccionado'+(count!==1?'s':'')+' → '+$p(total);
+    res.style.color='#1d4ed8';res.style.background='#eff6ff';res.style.borderColor='#bfdbfe';
+    if(btn)btn.textContent='Registrar liquidación '+$p(total);
+  }
+}
+
 async function saveLiquidarTarjetas(){
-  var monto=parseFloat(document.getElementById('mliq-monto').value)||0;
+  var checks=document.querySelectorAll('#mliq-lista input[type="checkbox"]:checked');
+  var ids=[],total=0;
+  checks.forEach(function(cb){ids.push(parseInt(cb.value));total+=parseFloat(cb.dataset.monto)||0;});
+  if(!ids.length){toast('Seleccioná al menos un cobro','err');return;}
   var lote=document.getElementById('mliq-lote').value.trim();
   var banco=document.getElementById('mliq-banco').value;
   var fecha=document.getElementById('mliq-fecha').value;
-  var nota=document.getElementById('mliq-nota').value.trim();
-  if(!monto||monto<=0){toast('Ingresá el monto a liquidar','err');return;}
   if(!lote){toast('El número de lote es obligatorio','err');return;}
   if(!fecha){toast('Ingresá la fecha','err');return;}
-  var detalle='Liqidación Lote '+lote+(nota?' · '+nota:'');
-  // Egreso de TARJETAS
+  var detalle='Liquidación Lote '+lote+' ('+ids.length+' pago'+(ids.length!==1?'s':'')+')';
+  // Marcar cobros como liquidados
+  await sb.from('movimientos').update({liquidado:true,referencia:'Lote '+lote}).in('id',ids);
+  // Registrar egreso TARJETAS + ingreso banco
   await sb.from('movimientos').insert([
-    {tipo:'egreso',caja:'TARJETAS',fecha:fecha,ingreso:0,egreso:monto,concepto:'LIQUIDACIÓN TARJETAS',detalle:detalle,referencia:'Lote '+lote},
-    {tipo:'ingreso',caja:banco,fecha:fecha,ingreso:monto,egreso:0,concepto:'LIQUIDACIÓN TARJETAS',detalle:detalle,referencia:'Lote '+lote}
+    {tipo:'egreso',caja:'TARJETAS',fecha:fecha,ingreso:0,egreso:total,concepto:'LIQUIDACIÓN TARJETAS',detalle:detalle,referencia:'Lote '+lote},
+    {tipo:'ingreso',caja:banco,fecha:fecha,ingreso:total,egreso:0,concepto:'LIQUIDACIÓN TARJETAS',detalle:detalle,referencia:'Lote '+lote}
   ]);
-  toast('✅ Liquidación registrada — Lote '+lote+' · '+$p(monto)+' → '+banco);
+  toast('✅ Liquidación registrada — Lote '+lote+' · '+$p(total)+' → '+banco);
   closeM('m-liquidar-tarjetas');
   await loadMovs();
   renderFin();
@@ -12479,6 +12511,14 @@ function renderFlujoCajas(anio,mes){
 
 // ── PANEL TABS ──
 function setPanTab(tab,el){
+  // Al primer click en Estrategia, migrar contenido de sec-estrategia a pan-tab-estrategia
+  if(tab==='estrategia'){
+    var src=document.getElementById('sec-estrategia');
+    var dst=document.getElementById('pan-tab-estrategia');
+    if(src&&dst&&dst.children.length===0){
+      while(src.firstChild)dst.appendChild(src.firstChild);
+    }
+  }
   ['semana','resumen','objetivos','prevision','canal','estrategia'].forEach(function(t){
     var el2=document.getElementById('pan-tab-'+t);
     if(el2)el2.style.display=t===tab?'block':'none';
