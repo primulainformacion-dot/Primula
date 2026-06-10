@@ -1281,6 +1281,18 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <div style="font-size:11px;color:#9ca3af;margin-top:4px;">Deudas de clientes activas</div>
           </div>
 
+          <!-- Franja: próximo disponible -->
+          <div class="stat" style="grid-column:span 4;border-top:3px solid #2563eb;background:#eff6ff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:14px 20px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="stat-icon" style="background:#dbeafe;margin:0;">📅</div>
+              <div>
+                <p style="color:#1d4ed8;font-weight:700;font-size:13px;margin:0;">Próximo disponible</p>
+                <div style="font-size:11px;color:#3b82f6;margin-top:2px;">Cheques en cartera + Cuentas a cobrar</div>
+              </div>
+            </div>
+            <h3 id="pg-proximo-disp" style="color:#1d4ed8;font-size:26px;font-weight:800;margin:0;">$0</h3>
+          </div>
+
           <!-- Fila 3: stock -->
           <div class="stat" style="border-top:3px solid #0d9488;">
             <div class="stat-icon" style="background:#ccfbf1;">🧶</div>
@@ -1301,6 +1313,18 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             <div class="stat-icon" style="background:#d1fae5;">🏪</div>
             <h3 id="pg-stock-mg">$0</h3><p>Stock Monte Grande</p>
             <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="pg-stock-mg-u">0 u</div>
+          </div>
+
+          <!-- Franja: mercadería -->
+          <div class="stat" style="grid-column:span 4;border-top:3px solid #0d9488;background:#f0fdfa;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:14px 20px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="stat-icon" style="background:#ccfbf1;margin:0;">👗</div>
+              <div>
+                <p style="color:#0f766e;font-weight:700;font-size:13px;margin:0;">Mercadería</p>
+                <div style="font-size:11px;color:#0d9488;margin-top:2px;">Materia prima + Stock mayorista + Locales</div>
+              </div>
+            </div>
+            <h3 id="pg-mercaderia" style="color:#0f766e;font-size:26px;font-weight:800;margin:0;">$0</h3>
           </div>
 
         </div>
@@ -12474,6 +12498,8 @@ function renderPanelGeneral(){
   if(el('pg-stock-mg'))el('pg-stock-mg').textContent=$p(stockMG);
   if(el('pg-stock-mg-u'))el('pg-stock-mg-u').textContent=uMG.toLocaleString('es-AR')+' u · precio minorista';
   el('pg-total-activos').textContent=$p(totalActivos);
+  if(el('pg-proximo-disp'))el('pg-proximo-disp').textContent=$p(chqCartTotal+acobrar);
+  if(el('pg-mercaderia'))el('pg-mercaderia').textContent=$p(Math.round(stockTotal+valorMatPrima));
   if(el('pg-mat-prima'))el('pg-mat-prima').textContent=$p(Math.round(valorMatPrima));
   if(el('pg-mat-prima-sub')){var rollosTot=Object.values(byTipoMP).reduce(function(s,d){return s+d.rollos;},0);el('pg-mat-prima-sub').textContent=rollosTot+' rollo'+(rollosTot!==1?'s':'')+' en stock';}
   el('pg-echeq-pas').textContent=$p(echeqPasivo);
