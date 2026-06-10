@@ -2518,6 +2518,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="tab active" onclick="setFinTab('movimientos',this)">📋 Movimientos</div>
       <div class="tab" onclick="setFinTab('resumen',this)">📊 Resumen de gastos</div>
       <div class="tab" onclick="setFinTab('transferencia',this)">🔄 Transferencias</div>
+      <div class="tab" onclick="setFinTab('tarjetas',this)">💳 Tarjetas</div>
       <div class="tab" onclick="setFinTab('gastosfijos',this)">📌 Gastos fijos</div>
       <div class="tab" onclick="setFinTab('cierre',this)">🔒 Cierre de caja</div>
     </div>
@@ -2533,6 +2534,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               <option>BANCO SRL</option>
               <option>BANCO POLY</option>
               <option>MERCADO PAGO</option>
+              <option>TARJETAS</option>
               <option>ECHEQ/CHEQUE</option>
               <option>LOCAL MONTE GRANDE</option>
               <option>LOCAL LLAVALLOL</option>
@@ -2594,7 +2596,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               <select id="tr-origen">
                 <option>EFECTIVO ADMINISTRACIÓN</option>
                 <option>BANCO SRL</option><option>BANCO POLY</option>
-                <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
+                <option>MERCADO PAGO</option><option>TARJETAS</option><option>ECHEQ/CHEQUE</option>
                 <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
                 <option value="CAJA USD">$ CAJA USD</option>
               </select>
@@ -2604,7 +2606,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
               <select id="tr-destino">
                 <option>BANCO SRL</option><option>BANCO POLY</option>
                 <option>EFECTIVO ADMINISTRACIÓN</option>
-                <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
+                <option>MERCADO PAGO</option><option>TARJETAS</option><option>ECHEQ/CHEQUE</option>
                 <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
                 <option value="CAJA USD">$ CAJA USD</option>
               </select>
@@ -2637,6 +2639,31 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
             </select>
           </div>
           <div id="tr-historial"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Tarjetas -->
+    <div id="ft-tarjetas" style="display:none;">
+      <div class="panel" style="margin-bottom:16px;">
+        <div class="panel-hdr" style="justify-content:space-between;">
+          <div>
+            <div style="font-size:11px;font-weight:800;color:#9ca3af;letter-spacing:.5px;margin-bottom:4px;">SALDO PENDIENTE DE LIQUIDACIÓN</div>
+            <div id="tarj-saldo" style="font-size:32px;font-weight:800;color:#1d4ed8;">$0</div>
+          </div>
+          <button class="btn" onclick="openLiquidarTarjetas()" style="background:#1d4ed8;border-color:#1e40af;">💳 Liquidar al banco</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <!-- Cobros pendientes -->
+        <div class="panel">
+          <div style="font-size:11px;font-weight:800;color:#374151;letter-spacing:.5px;margin-bottom:12px;">COBROS CON TARJETA</div>
+          <div id="tarj-cobros"></div>
+        </div>
+        <!-- Historial de liquidaciones -->
+        <div class="panel">
+          <div style="font-size:11px;font-weight:800;color:#374151;letter-spacing:.5px;margin-bottom:12px;">HISTORIAL DE LIQUIDACIONES</div>
+          <div id="tarj-liquidaciones"></div>
         </div>
       </div>
     </div>
@@ -3448,7 +3475,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <select id="mcob-caja">
           <option>EFECTIVO ADMINISTRACIÓN</option>
           <option>BANCO SRL</option><option>BANCO POLY</option>
-          <option>MERCADO PAGO</option>
+          <option>MERCADO PAGO</option><option>TARJETAS</option>
           <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
         </select>
       </div>
@@ -4132,6 +4159,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
           <option>LOCAL LLAVALLOL</option>
           <option>LOCAL MONTE GRANDE</option>
           <option>MERCADO PAGO</option>
+          <option>TARJETAS</option>
           <option>BANCO SRL</option>
         </select>
       </div>
@@ -4208,7 +4236,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <select id="mm-caja" onchange="mm_onCaja()">
           <option>EFECTIVO ADMINISTRACIÓN</option>
           <option>BANCO SRL</option><option>BANCO POLY</option>
-          <option>MERCADO PAGO</option><option>ECHEQ/CHEQUE</option>
+          <option>MERCADO PAGO</option><option>TARJETAS</option><option>ECHEQ/CHEQUE</option>
           <option>LOCAL MONTE GRANDE</option><option>LOCAL LLAVALLOL</option>
           <option value="CAJA USD">$ CAJA USD</option>
         </select>
@@ -4369,7 +4397,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <select id="mpago-caja">
           <option>EFECTIVO ADMINISTRACIÓN</option>
           <option>BANCO SRL</option><option>BANCO POLY</option>
-          <option>MERCADO PAGO</option>
+          <option>MERCADO PAGO</option><option>TARJETAS</option>
           <option>LOCAL LLAVALLOL</option><option>LOCAL MONTE GRANDE</option>
           <option value="CAJA USD">$ CAJA USD</option>
         </select>
@@ -4773,7 +4801,7 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
       <div class="field"><label>Caja desde la que se pagó</label><select id="gfp-caja">
         <option>EFECTIVO ADMINISTRACIÓN</option>
         <option>BANCO SRL</option><option>BANCO POLY</option>
-        <option>MERCADO PAGO</option><option>LOCAL MONTE GRANDE</option>
+        <option>MERCADO PAGO</option><option>TARJETAS</option><option>LOCAL MONTE GRANDE</option>
         <option>LOCAL LLAVALLOL</option><option value="CAJA USD">$ CAJA USD</option>
       </select></div>
       <div class="field full"><label>Nota (opcional)</label><input id="gfp-nota" placeholder="Referencia, Nº de comprobante..."/></div>
@@ -5075,13 +5103,18 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
   <div class="modal" style="max-width:440px;">
     <h3>💳 Cobrar</h3>
     <div id="mpc-resumen" style="background:#f9fafb;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.6;"></div>
-    <div style="margin-bottom:16px;">
+    <div style="margin-bottom:12px;">
       <div style="font-size:11px;font-weight:800;color:#374151;letter-spacing:.5px;margin-bottom:8px;">MÉTODO DE PAGO</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <button class="btn pos-metodo-btn" data-metodo="efectivo" onclick="posSelectMetodo(this)" style="padding:14px 8px;font-size:13px;background:#f0fdf4;color:#16a34a;border-color:#bbf7d0;">💵 Efectivo</button>
         <button class="btn pos-metodo-btn" data-metodo="tarjeta" onclick="posSelectMetodo(this)" style="padding:14px 8px;font-size:13px;background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;">💳 Tarjeta</button>
         <button class="btn pos-metodo-btn" data-metodo="mercadopago" onclick="posSelectMetodo(this)" style="padding:14px 8px;font-size:13px;background:#ede9fe;color:#6d28d9;border-color:#ddd6fe;">📱 Mercado Pago</button>
         <button class="btn pos-metodo-btn" data-metodo="transferencia" onclick="posSelectMetodo(this)" style="padding:14px 8px;font-size:13px;background:#fff7ed;color:#c2410c;border-color:#fed7aa;">🏦 Transferencia</button>
+      </div>
+      <!-- Lote tarjeta pago 1 -->
+      <div id="mpc-lote-wrap" style="display:none;margin-top:10px;">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">N° Lote tarjeta</label>
+        <input id="mpc-lote" type="text" placeholder="Ej: 000123" style="width:100%;padding:7px 10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:14px;font-weight:700;box-sizing:border-box;"/>
       </div>
     </div>
     <div id="mpc-descuento-info" style="display:none;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:13px;"></div>
@@ -5093,6 +5126,34 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <div style="font-size:18px;font-weight:800;padding-top:6px;" id="mpc-vuelto">—</div>
       </div>
       <div class="field full"><label>Nota (opcional)</label><input id="mpc-nota" placeholder=""/></div>
+    </div>
+    <!-- Segunda forma de pago -->
+    <div style="margin-top:8px;">
+      <button type="button" id="mpc-btn-pago2" class="btn btn-sm btn-gray" onclick="posTogglePago2()" style="width:100%;font-size:12px;">＋ Segunda forma de pago</button>
+      <div id="mpc-pago2" style="display:none;margin-top:10px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px;">
+        <div style="font-size:11px;font-weight:800;color:#374151;letter-spacing:.5px;margin-bottom:8px;">SEGUNDO PAGO</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div class="field" style="margin:0;">
+            <label style="font-size:12px;">Método</label>
+            <select id="mpc-metodo2" onchange="posOnMetodo2()" style="width:100%;padding:7px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;">
+              <option value="tarjeta">💳 Tarjeta</option>
+              <option value="efectivo">💵 Efectivo</option>
+              <option value="mercadopago">📱 Mercado Pago</option>
+              <option value="transferencia">🏦 Transferencia</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0;">
+            <label style="font-size:12px;">Monto $</label>
+            <input type="number" id="mpc-monto2" min="0" placeholder="0" oninput="mpcActualizar()" style="width:100%;padding:7px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:15px;font-weight:700;box-sizing:border-box;"/>
+          </div>
+        </div>
+        <!-- Lote tarjeta pago 2 -->
+        <div id="mpc-lote2-wrap" style="margin-top:4px;">
+          <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">N° Lote tarjeta</label>
+          <input id="mpc-lote2" type="text" placeholder="Ej: 000123" style="width:100%;padding:7px 10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:14px;font-weight:700;box-sizing:border-box;"/>
+        </div>
+        <button type="button" onclick="posTogglePago2()" style="margin-top:8px;background:none;border:none;color:#9ca3af;font-size:12px;cursor:pointer;padding:0;">✕ Quitar segundo pago</button>
+      </div>
     </div>
     <!-- Sección factura (visible solo al facturar) -->
     <div id="mpc-factura-section" style="display:none;border-top:1.5px solid #e5e7eb;margin-top:12px;padding-top:14px;">
@@ -5357,6 +5418,30 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
 </div>
 
 <!-- Modal: depositar cheque en banco -->
+<!-- Modal: liquidar tarjetas al banco -->
+<div class="modal-bg" id="m-liquidar-tarjetas">
+  <div class="modal" style="max-width:420px;">
+    <h3>💳 Liquidar tarjetas al banco</h3>
+    <div id="mliq-saldo-info" style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;color:#1d4ed8;"></div>
+    <div class="grid2">
+      <div class="field"><label>N° Lote *</label><input id="mliq-lote" placeholder="Ej: 000123" style="font-size:15px;font-weight:700;"/></div>
+      <div class="field"><label>Fecha *</label><input type="date" id="mliq-fecha"/></div>
+      <div class="field"><label>Monto liquidado $*</label><input type="number" id="mliq-monto" min="0" placeholder="0" style="font-size:16px;font-weight:700;"/></div>
+      <div class="field"><label>Banco destino</label>
+        <select id="mliq-banco">
+          <option>BANCO SRL</option>
+          <option>BANCO POLY</option>
+        </select>
+      </div>
+      <div class="field full"><label>Nota (opcional)</label><input id="mliq-nota" placeholder="Observaciones..."/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeM('m-liquidar-tarjetas')">Cancelar</button>
+      <button class="btn" style="background:#1d4ed8;border-color:#1e40af;" onclick="saveLiquidarTarjetas()">Registrar liquidación</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: depositar cheque al cobro (en_cartera → al_cobro, sin impacto bancario) -->
 <div class="modal-bg" id="m-chqalcobro">
   <div class="modal" style="max-width:420px;">
@@ -10125,7 +10210,7 @@ async function saveVenta(){
 // ════════════════════════════════════
 function mcob_onMedio(){
   var medio=document.getElementById('mcob-medio').value;
-  var cajaMap={efectivo:'EFECTIVO ADMINISTRACIÓN',transferencia:'BANCO SRL',tarjeta:'EFECTIVO ADMINISTRACIÓN',qr:'MERCADO PAGO',cheque:'CHEQUES/ECHEQ'};
+  var cajaMap={efectivo:'EFECTIVO ADMINISTRACIÓN',transferencia:'BANCO SRL',tarjeta:'TARJETAS',qr:'MERCADO PAGO',cheque:'CHEQUES/ECHEQ'};
   document.getElementById('mcob-caja').value=cajaMap[medio]||'EFECTIVO ADMINISTRACIÓN';
   var chqSec=document.getElementById('mcob-chq-section');
   if(chqSec)chqSec.style.display=medio==='cheque'?'block':'none';
@@ -11960,8 +12045,8 @@ async function saveModelo(){
 // ════════════════════════════════════
 // FINANZAS
 // ════════════════════════════════════
-var CAJAS_SISTEMA=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL','CAJA USD','CHEQUES AL COBRO'];
-var CAJA_COLORES={'EFECTIVO ADMINISTRACIÓN':'#6c7ae0','BANCO SRL':'#0ea5e9','BANCO POLY':'#14b8a6','MERCADO PAGO':'#3b82f6','ECHEQ/CHEQUE':'#8b5cf6','LOCAL MONTE GRANDE':'#10b981','LOCAL LLAVALLOL':'#f59e0b','CAJA USD':'#16a34a','CHEQUES AL COBRO':'#d97706'};
+var CAJAS_SISTEMA=['EFECTIVO ADMINISTRACIÓN','BANCO SRL','BANCO POLY','MERCADO PAGO','TARJETAS','ECHEQ/CHEQUE','LOCAL MONTE GRANDE','LOCAL LLAVALLOL','CAJA USD','CHEQUES AL COBRO'];
+var CAJA_COLORES={'EFECTIVO ADMINISTRACIÓN':'#6c7ae0','BANCO SRL':'#0ea5e9','BANCO POLY':'#14b8a6','MERCADO PAGO':'#3b82f6','TARJETAS':'#1d4ed8','ECHEQ/CHEQUE':'#8b5cf6','LOCAL MONTE GRANDE':'#10b981','LOCAL LLAVALLOL':'#f59e0b','CAJA USD':'#16a34a','CHEQUES AL COBRO':'#d97706'};
 // Etiquetas visuales (no afectan el valor guardado en la DB)
 var CAJA_LABELS={'CAJA USD':'$ CAJA USD'};
 function cajaNombre(c){return CAJA_LABELS[c]||c;}
@@ -12001,6 +12086,81 @@ function renderFinCajas(){
   }).join('');
 }
 
+// ── TARJETAS ──
+function renderFinTarjetas(){
+  var cobros=MOVS.filter(function(m){return m.caja==='TARJETAS'&&Number(m.ingreso||0)>0;});
+  var liquidaciones=MOVS.filter(function(m){return m.caja==='TARJETAS'&&Number(m.egreso||0)>0;});
+  var totalCobrado=cobros.reduce(function(s,m){return s+Number(m.ingreso||0);},0);
+  var totalLiquidado=liquidaciones.reduce(function(s,m){return s+Number(m.egreso||0);},0);
+  var saldo=totalCobrado-totalLiquidado;
+  document.getElementById('tarj-saldo').textContent=$p(saldo);
+  document.getElementById('tarj-saldo').style.color=saldo>0?'#1d4ed8':'#9ca3af';
+  // Cobros
+  var cobEl=document.getElementById('tarj-cobros');
+  if(!cobros.length){cobEl.innerHTML='<div class="empty"><p>Sin cobros con tarjeta</p></div>';}
+  else{
+    cobEl.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;"><tbody>'+
+      cobros.slice().reverse().slice(0,50).map(function(m){
+        var lote=m.detalle&&m.detalle.includes('Lote')?m.detalle.match(/Lote ([^\)]+)/)?m.detalle.match(/Lote ([^\)]+)/)[1]:'':'';
+        return '<tr style="border-bottom:1px solid #f3f4f6;">'+
+          '<td style="padding:6px 4px;color:#374151;">'+fmtF(m.fecha)+'</td>'+
+          '<td style="padding:6px 4px;color:#6b7280;font-size:11px;">'+(m.detalle||'')+(lote?'':'')+'</td>'+
+          '<td style="padding:6px 4px;text-align:right;font-weight:700;color:#1d4ed8;">'+$p(Number(m.ingreso||0))+'</td>'+
+        '</tr>';
+      }).join('')+
+    '</tbody></table>';
+  }
+  // Liquidaciones
+  var liqEl=document.getElementById('tarj-liquidaciones');
+  if(!liquidaciones.length){liqEl.innerHTML='<div class="empty"><p>Sin liquidaciones registradas</p></div>';}
+  else{
+    liqEl.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;"><tbody>'+
+      liquidaciones.slice().reverse().map(function(m){
+        return '<tr style="border-bottom:1px solid #f3f4f6;">'+
+          '<td style="padding:6px 4px;color:#374151;">'+fmtF(m.fecha)+'</td>'+
+          '<td style="padding:6px 4px;color:#6b7280;font-size:11px;">'+(m.detalle||'—')+'</td>'+
+          '<td style="padding:6px 4px;text-align:right;font-weight:700;color:#16a34a;">'+$p(Number(m.egreso||0))+'</td>'+
+        '</tr>';
+      }).join('')+
+    '</tbody></table>';
+  }
+}
+
+function openLiquidarTarjetas(){
+  var cobros=MOVS.filter(function(m){return m.caja==='TARJETAS'&&Number(m.ingreso||0)>0;});
+  var liquidaciones=MOVS.filter(function(m){return m.caja==='TARJETAS'&&Number(m.egreso||0)>0;});
+  var saldo=cobros.reduce(function(s,m){return s+Number(m.ingreso||0);},0)-liquidaciones.reduce(function(s,m){return s+Number(m.egreso||0);},0);
+  document.getElementById('mliq-saldo-info').textContent='Saldo pendiente: '+$p(saldo);
+  document.getElementById('mliq-monto').value=saldo>0?saldo:'';
+  document.getElementById('mliq-lote').value='';
+  document.getElementById('mliq-fecha').value=today();
+  document.getElementById('mliq-banco').value='BANCO SRL';
+  document.getElementById('mliq-nota').value='';
+  openM('m-liquidar-tarjetas');
+}
+
+async function saveLiquidarTarjetas(){
+  var monto=parseFloat(document.getElementById('mliq-monto').value)||0;
+  var lote=document.getElementById('mliq-lote').value.trim();
+  var banco=document.getElementById('mliq-banco').value;
+  var fecha=document.getElementById('mliq-fecha').value;
+  var nota=document.getElementById('mliq-nota').value.trim();
+  if(!monto||monto<=0){toast('Ingresá el monto a liquidar','err');return;}
+  if(!lote){toast('El número de lote es obligatorio','err');return;}
+  if(!fecha){toast('Ingresá la fecha','err');return;}
+  var detalle='Liqidación Lote '+lote+(nota?' · '+nota:'');
+  // Egreso de TARJETAS
+  await sb.from('movimientos').insert([
+    {tipo:'egreso',caja:'TARJETAS',fecha:fecha,ingreso:0,egreso:monto,concepto:'LIQUIDACIÓN TARJETAS',detalle:detalle,referencia:'Lote '+lote},
+    {tipo:'ingreso',caja:banco,fecha:fecha,ingreso:monto,egreso:0,concepto:'LIQUIDACIÓN TARJETAS',detalle:detalle,referencia:'Lote '+lote}
+  ]);
+  toast('✅ Liquidación registrada — Lote '+lote+' · '+$p(monto)+' → '+banco);
+  closeM('m-liquidar-tarjetas');
+  await loadMovs();
+  renderFin();
+  renderFinTarjetas();
+}
+
 function filtrarPorCaja(caja){
   document.getElementById('fin-caja').value=caja;
   nav('finanzas',document.querySelector('.nav-item[onclick*="finanzas"]'));
@@ -12012,6 +12172,7 @@ function setFinTab(tab,el){
   document.getElementById('ft-movimientos').style.display=tab==='movimientos'?'block':'none';
   document.getElementById('ft-resumen').style.display=tab==='resumen'?'block':'none';
   document.getElementById('ft-transferencia').style.display=tab==='transferencia'?'block':'none';
+  document.getElementById('ft-tarjetas').style.display=tab==='tarjetas'?'block':'none';
   document.getElementById('ft-gastosfijos').style.display=tab==='gastosfijos'?'block':'none';
   document.getElementById('ft-cierre').style.display=tab==='cierre'?'block':'none';
   var fab=document.getElementById('btn-fab-mov');
@@ -12022,6 +12183,7 @@ function setFinTab(tab,el){
   if(tab==='resumen')renderFinResumen();
   if(tab==='cierre')renderCierreCaja();
   if(tab==='gastosfijos'){renderGastosFijos();renderGfPagos();}
+  if(tab==='tarjetas')renderFinTarjetas();
 }
 
 function renderFin(){
@@ -16992,6 +17154,9 @@ function posSelectMetodo(btn){
   document.querySelectorAll('.pos-metodo-btn').forEach(function(b){b.style.outline='';b.style.fontWeight='600';});
   btn.style.outline='3px solid #6c7ae0'; btn.style.fontWeight='800';
   posMetodo=btn.dataset.metodo;
+  // Mostrar campo lote si es tarjeta
+  var loteWrap=document.getElementById('mpc-lote-wrap');
+  if(loteWrap) loteWrap.style.display=posMetodo==='tarjeta'?'block':'none';
   // Actualizar total mostrado y monto sugerido
   var bruto=posGetTotalBruto();
   var final=posGetTotalFinal();
@@ -17010,14 +17175,52 @@ function posSelectMetodo(btn){
   document.getElementById('mpc-monto').focus();
 }
 
+function posTogglePago2(){
+  var wrap=document.getElementById('mpc-pago2');
+  var btn=document.getElementById('mpc-btn-pago2');
+  var show=wrap.style.display==='none';
+  wrap.style.display=show?'block':'none';
+  btn.style.display=show?'none':'';
+  if(show){
+    document.getElementById('mpc-monto2').value='';
+    document.getElementById('mpc-lote2').value='';
+    posOnMetodo2();
+    document.getElementById('mpc-monto2').focus();
+  } else {
+    mpcActualizar();
+  }
+}
+
+function posOnMetodo2(){
+  var m=document.getElementById('mpc-metodo2').value;
+  var wrap=document.getElementById('mpc-lote2-wrap');
+  if(wrap) wrap.style.display=m==='tarjeta'?'block':'none';
+}
+
 function mpcActualizar(){
   var totalFinal=posGetTotalFinal();
+  var monto2=0;
+  var pago2Visible=document.getElementById('mpc-pago2')&&document.getElementById('mpc-pago2').style.display!=='none';
+  if(pago2Visible) monto2=parseFloat(document.getElementById('mpc-monto2').value)||0;
+  var restante=Math.max(totalFinal-monto2,0);
   var monto=parseFloat(document.getElementById('mpc-monto').value)||0;
   var el=document.getElementById('mpc-vuelto');
-  var vuelto=monto-totalFinal;
-  if(monto<=0){el.textContent='—';el.style.color='#9ca3af';}
-  else if(vuelto>=0){el.textContent='Vuelto: '+$p(vuelto);el.style.color='#16a34a';}
-  else{el.textContent='Faltan: '+$p(-vuelto);el.style.color='#dc2626';}
+  if(pago2Visible&&monto2>0){
+    // Mostrar cuánto queda para el primer pago
+    var saldo=totalFinal-monto2;
+    if(saldo<=0){el.textContent='Cubierto con 2do pago';el.style.color='#16a34a';}
+    else{
+      var vuelto=monto-saldo;
+      if(monto<=0){el.textContent=$p(saldo)+' restante';el.style.color='#6c7ae0';}
+      else if(vuelto>=0){el.textContent='Vuelto: '+$p(vuelto);el.style.color='#16a34a';}
+      else{el.textContent='Faltan: '+$p(-vuelto);el.style.color='#dc2626';}
+    }
+  } else {
+    var vuelto2=monto-totalFinal;
+    if(monto<=0){el.textContent='—';el.style.color='#9ca3af';}
+    else if(vuelto2>=0){el.textContent='Vuelto: '+$p(vuelto2);el.style.color='#16a34a';}
+    else{el.textContent='Faltan: '+$p(-vuelto2);el.style.color='#dc2626';}
+  }
 }
 
 var posConFactura=false;
@@ -17066,6 +17269,14 @@ function posCobrar(conFactura){
   document.getElementById('mpc-monto').value=bruto;
   document.getElementById('mpc-nota').value='';
   document.getElementById('mpc-vuelto').textContent='—';
+  document.getElementById('mpc-lote').value='';
+  document.getElementById('mpc-lote-wrap').style.display='none';
+  document.getElementById('mpc-pago2').style.display='none';
+  document.getElementById('mpc-btn-pago2').style.display='';
+  document.getElementById('mpc-monto2').value='';
+  document.getElementById('mpc-lote2').value='';
+  document.getElementById('mpc-metodo2').value='tarjeta';
+  posOnMetodo2();
   var descEl=document.getElementById('mpc-descuento-info');
   if(descEl)descEl.style.display='none';
   document.getElementById('mpc-resumen').innerHTML=
@@ -17090,12 +17301,25 @@ async function posSaveVenta(){
   var bruto=posGetTotalBruto();
   var totalFinal=posGetTotalFinal();
   var conDescuento=posMetodo==='efectivo'&&bruto!==totalFinal;
-  var cajaMap={efectivo:currentLocal==='montegrande'?'LOCAL MONTE GRANDE':'LOCAL LLAVALLOL',tarjeta:currentLocal==='montegrande'?'LOCAL MONTE GRANDE':'LOCAL LLAVALLOL',mercadopago:'MERCADO PAGO',transferencia:'BANCO SRL'};
+  // Segundo pago
+  var pago2Visible=document.getElementById('mpc-pago2').style.display!=='none';
+  var metodo2=pago2Visible?document.getElementById('mpc-metodo2').value:null;
+  var monto2=pago2Visible?(parseFloat(document.getElementById('mpc-monto2').value)||0):0;
+  var monto1=pago2Visible?Math.max(totalFinal-monto2,0):totalFinal;
+  if(pago2Visible&&monto2<=0){toast('Ingresá el monto del segundo pago','err');return;}
+  if(pago2Visible&&monto2>=totalFinal){toast('El segundo pago no puede cubrir el total completo','err');return;}
+  // Lote tarjeta
+  var lote1=posMetodo==='tarjeta'?document.getElementById('mpc-lote').value.trim():'';
+  var lote2=metodo2==='tarjeta'?document.getElementById('mpc-lote2').value.trim():'';
+  var cajaMap={efectivo:currentLocal==='montegrande'?'LOCAL MONTE GRANDE':'LOCAL LLAVALLOL',tarjeta:'TARJETAS',mercadopago:'MERCADO PAGO',transferencia:'BANCO SRL'};
   var caja=cajaMap[posMetodo];
-  var metodoLabel={efectivo:'Efectivo (20% dto.)',tarjeta:'Tarjeta',mercadopago:'Mercado Pago',transferencia:'Transferencia'}[posMetodo];
+  var metodoLabelMap={efectivo:'Efectivo (20% dto.)',tarjeta:'Tarjeta',mercadopago:'Mercado Pago',transferencia:'Transferencia'};
+  var metodoLabel=metodoLabelMap[posMetodo]+(lote1?' (Lote '+lote1+')':'');
+  var metodoLabel2=metodo2?(metodoLabelMap[metodo2]+(lote2?' (Lote '+lote2+')':'')):'';
   var localLabel=currentLocal==='montegrande'?'Monte Grande':'Llavallol';
   var notaExtra=document.getElementById('mpc-nota').value||null;
   var notaVenta=conDescuento?('Efectivo 20% dto. — Lista: '+$p(bruto)+(notaExtra?' · '+notaExtra:'')):(notaExtra||null);
+  if(pago2Visible) notaVenta=(notaVenta?notaVenta+' · ':'')+'Pago mixto: '+$p(monto1)+' '+metodoLabel+' + '+$p(monto2)+' '+metodoLabel2;
 
   // Crear venta
   var ventaD={cliente_id:posClienteId||null,cliente_nombre:posClienteNombre||null,local:currentLocal,tipo:'minorista',fecha:today(),estado:'cobrado',total:totalFinal,saldo:0,nota:notaVenta};
@@ -17114,9 +17338,16 @@ async function posSaveVenta(){
     if(s) await sb.from('stock').update({cantidad:Math.max(0,s.cantidad-it.cantidad)}).eq('id',s.id);
   }
 
-  // Movimiento en caja (por el monto efectivamente cobrado)
-  var detalle=(posClienteNombre||'Mostrador')+' · '+metodoLabel+(caja==='MERCADO PAGO'?' · '+localLabel:'');
-  await sb.from('movimientos').insert({tipo:'ingreso',caja:caja,fecha:today(),ingreso:totalFinal,egreso:0,concepto:'VENTA MINORISTA',detalle:detalle,referencia:'Venta #'+v.id});
+  // Movimiento(s) en caja
+  var clienteStr=posClienteNombre||'Mostrador';
+  var detalle1=clienteStr+' · '+metodoLabel+(caja==='MERCADO PAGO'?' · '+localLabel:'');
+  var movsInsert=[{tipo:'ingreso',caja:caja,fecha:today(),ingreso:monto1,egreso:0,concepto:'VENTA MINORISTA',detalle:detalle1,referencia:'Venta #'+v.id}];
+  if(pago2Visible&&monto2>0&&metodo2){
+    var caja2=cajaMap[metodo2]||caja;
+    var detalle2=clienteStr+' · '+metodoLabel2+(caja2==='MERCADO PAGO'?' · '+localLabel:'');
+    movsInsert.push({tipo:'ingreso',caja:caja2,fecha:today(),ingreso:monto2,egreso:0,concepto:'VENTA MINORISTA',detalle:detalle2,referencia:'Venta #'+v.id});
+  }
+  await sb.from('movimientos').insert(movsInsert);
 
   // Factura (si se pidió)
   if(posConFactura){
@@ -17133,10 +17364,11 @@ async function posSaveVenta(){
       nota:'IVA 21% · POS · Venta #'+v.id+(cuit?' · CUIT: '+cuit:'')
     });
   }
-  toast('✓ Venta registrada — '+$p(totalFinal)+(conDescuento?' (20% dto. efectivo)':'')+' · '+metodoLabel+(posConFactura?' · Factura '+posFacturaTipo:''));
+  var metodoResumen=pago2Visible?($p(monto1)+' '+metodoLabel+' + '+$p(monto2)+' '+metodoLabel2):metodoLabel;
+  toast('✓ Venta registrada — '+$p(totalFinal)+(conDescuento?' (20% dto. efectivo)':'')+' · '+metodoResumen+(posConFactura?' · Factura '+posFacturaTipo:''));
   closeM('m-pos-cobro');
   // Guardar datos antes de limpiar para imprimir ticket
-  var ticketData={id:v.id,fecha:today(),cliente:posClienteNombre||'',local:localLabel,items:posItems.slice(),total:totalFinal,bruto:bruto,conDescuento:conDescuento,metodo:metodoLabel};
+  var ticketData={id:v.id,fecha:today(),cliente:posClienteNombre||'',local:localLabel,items:posItems.slice(),total:totalFinal,bruto:bruto,conDescuento:conDescuento,metodo:metodoResumen};
   posItems=[]; posRenderTicket(); posClearCliente();
   posImprimirTicketCambio(ticketData);
   await Promise.all([loadVentas(),loadStock(),loadMovs()]);
