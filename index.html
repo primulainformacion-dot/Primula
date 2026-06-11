@@ -16668,7 +16668,7 @@ function renderChqOperaciones(){
 
   var opsConCosto=OPERACIONES_VENTA.filter(function(o){return o.descuento!=null;});
   var opsSinCosto=OPERACIONES_VENTA.filter(function(o){return o.descuento==null;});
-  var totalBruto=OPERACIONES_VENTA.reduce(function(s,o){return s+Number(o.monto_bruto||0);},0);
+  var totalBruto=OPERACIONES_VENTA.reduce(function(s,o){return s+CHEQUES_CARTERA.filter(function(c){return c.venta_id===o.id;}).reduce(function(ss,c){return ss+Number(c.monto);},0);},0);
   var totalComisiones=opsConCosto.reduce(function(s,o){return s+Number(o.descuento||0);},0);
   var totalNeto=opsConCosto.reduce(function(s,o){return s+Number(o.monto_neto||0);},0);
   var pctMedio=totalBruto>0?(totalComisiones/totalBruto*100):0;
@@ -16728,9 +16728,10 @@ function renderChqOperaciones(){
 
     OPERACIONES_VENTA.forEach(function(op){
       var chOp=CHEQUES_CARTERA.filter(function(c){return c.venta_id===op.id;});
+      var brutoReal=chOp.reduce(function(s,c){return s+Number(c.monto);},0);
       var aLiberar=chOp.filter(function(c){return !c.cupo_liberado&&c.fecha_cobro&&c.fecha_cobro<hoy;});
-      var pct=op.descuento!=null&&Number(op.monto_bruto)>0
-        ?(Number(op.descuento)/Number(op.monto_bruto)*100).toFixed(2)
+      var pct=op.descuento!=null&&brutoReal>0
+        ?(Number(op.descuento)/brutoReal*100).toFixed(2)
         :null;
 
       var diasDif=op.fecha_venta&&op.fecha_acreditacion?Math.round((new Date(op.fecha_acreditacion+'T12:00:00')-new Date(op.fecha_venta+'T12:00:00'))/86400000):null;
@@ -16746,7 +16747,7 @@ function renderChqOperaciones(){
           '<span style="font-weight:700;color:#7c3aed;">'+chOp.length+'</span>'+
           (op.nota?'<div style="font-size:10px;color:#9ca3af;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+op.nota+'">'+op.nota+'</div>':'')+
         '</td>'+
-        '<td style="text-align:right;font-weight:600;">'+$p(Number(op.monto_bruto||0))+'</td>'+
+        '<td style="text-align:right;font-weight:600;">'+$p(brutoReal)+'</td>'+
         '<td style="text-align:right;">'+
           (op.descuento!=null
             ?'<span style="color:#dc2626;font-weight:700;">'+$p(Number(op.descuento))+'</span>'
@@ -16817,7 +16818,7 @@ function mvcRefreshDinamico(ventaId){
     '<span style="font-weight:700;font-size:14px;">'+op.banco+'</span>'+
     '<span style="color:#6b7280;">'+fmtF(op.fecha_venta)+'</span>'+
     '<span class="badge b-purple">'+chequesOp.length+' cheque'+(chequesOp.length!==1?'s':'')+'</span>'+
-    '<span style="font-weight:700;color:#374151;">Bruto: '+$p(Number(op.monto_bruto||0))+'</span>'+
+    '<span style="font-weight:700;color:#374151;">Bruto: '+$p(chequesOp.reduce(function(s,c){return s+Number(c.monto);},0))+'</span>'+
     (op.mov_id?'<span class="badge b-green">✓ Ingreso registrado</span>':'<span class="badge b-amber">Sin ingreso aún</span>')+
     '</div>';
 
@@ -16885,7 +16886,7 @@ function mvcActualizar(){
   var op=OPERACIONES_VENTA.find(function(o){return o.id===editVentaCostoId;});
   if(!op)return;
   var desc=parseFloat(document.getElementById('mvc-descuento').value)||0;
-  var bruto=Number(op.monto_bruto||0);
+  var bruto=CHEQUES_CARTERA.filter(function(c){return c.venta_id===op.id;}).reduce(function(s,c){return s+Number(c.monto);},0);
   document.getElementById('mvc-neto').textContent=desc>0?$p(bruto-desc):(bruto>0?$p(bruto)+' (sin desc.)':'—');
 }
 
@@ -16980,7 +16981,7 @@ async function saveVentaCosto(){
   var fechaVenta=document.getElementById('mvc-fecha-venta').value||op.fecha_venta;
   var fechaAcred=document.getElementById('mvc-fecha-acred').value||null;
   var desc=parseFloat(document.getElementById('mvc-descuento').value)||null;
-  var brutoFinal=Number(op.monto_bruto||0);
+  var brutoFinal=CHEQUES_CARTERA.filter(function(c){return c.venta_id===editVentaCostoId;}).reduce(function(s,c){return s+Number(c.monto);},0)||Number(op.monto_bruto||0);
   var movId=op.mov_id||null;
   if(!movId&&!desc){toast('Ingresá el descuento','err');return;}
   if(!fechaVenta){toast('Ingresá la fecha de venta','err');return;}
@@ -17007,7 +17008,7 @@ async function saveVentaCosto(){
     await sb.from('movimientos').update({fecha:fechaVenta,anio:anioV,mes:mesV,updated_at:new Date().toISOString()}).eq('id',movId);
   }
 
-  var opUpdate={fecha_venta:fechaVenta,fecha_acreditacion:fechaAcred,mov_id:movId,nota:nota||op.nota,updated_at:new Date().toISOString()};
+  var opUpdate={fecha_venta:fechaVenta,fecha_acreditacion:fechaAcred,mov_id:movId,nota:nota||op.nota,monto_bruto:brutoFinal,updated_at:new Date().toISOString()};
   if(desc!=null){opUpdate.descuento=desc;opUpdate.monto_neto=neto;opUpdate.caja_destino=cajaDestino;}
   var {error}=await sb.from('operaciones_venta_cheques').update(opUpdate).eq('id',editVentaCostoId);
   if(error){toast('Error: '+error.message,'err');return;}
