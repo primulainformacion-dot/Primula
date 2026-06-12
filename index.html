@@ -19198,9 +19198,10 @@ async function saveMov(){
       if(d.caja==='MERCADO PAGO'){
         await sb.from('movimientos').insert(baseImp);
       } else {
-        var exImp=await sb.from('movimientos').select('id,egreso').eq('caja',d.caja).eq('fecha',fecha).eq('concepto','GASTOS BANCARIOS').eq('detalle',detImp).eq('tipo','egreso').maybeSingle();
-        if(exImp.data){
-          await sb.from('movimientos').update({egreso:Math.round((exImp.data.egreso+montoImp)*100)/100,updated_at:new Date().toISOString()}).eq('id',exImp.data.id);
+        var exImp=await sb.from('movimientos').select('id,egreso').eq('caja',d.caja).eq('fecha',fecha).eq('concepto','GASTOS BANCARIOS').eq('detalle',detImp).eq('tipo','egreso').limit(1);
+        var exRow=exImp.data&&exImp.data.length>0?exImp.data[0]:null;
+        if(exRow){
+          await sb.from('movimientos').update({egreso:Math.round((Number(exRow.egreso)+montoImp)*100)/100,updated_at:new Date().toISOString()}).eq('id',exRow.id);
         } else {
           await sb.from('movimientos').insert(baseImp);
         }
