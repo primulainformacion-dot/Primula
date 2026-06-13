@@ -6081,6 +6081,14 @@ td{font-size:13px;padding:9px 4px;border-top:1px solid #f3f4f6;color:#374151;ver
         <input id="mmay-talle-custom" placeholder="Ej: 2XS, 18N..." style="width:130px;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:12px;"/>
       </div>
     </div>
+    <div style="margin-top:16px;border-top:1px solid #f3f4f6;padding-top:14px;">
+      <div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:8px;letter-spacing:.3px;">COLORES <span style="font-size:10px;font-weight:400;color:#9ca3af;">(opcional — dejá sin marcar si no maneja colores)</span></div>
+      <div id="mmay-colores-grid" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+        <span style="font-size:12px;color:#6b7280;">Color personalizado:</span>
+        <input id="mmay-color-custom" placeholder="Ej: VERDE MILITAR..." style="width:160px;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:12px;"/>
+      </div>
+    </div>
     <div id="mmay-error" style="display:none;color:#dc2626;font-size:12px;margin-top:8px;padding:6px 10px;background:#fff5f5;border-radius:6px;"></div>
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="closeM('m-modelo-may')">Cancelar</button>
@@ -6276,6 +6284,7 @@ window.addEventListener('DOMContentLoaded', function(){
     if(currentUser) return; // ya logueado con custom auth
     if(session){
       currentUser={id:0,nombre:session.user.email,usuario:session.user.email,rol:'gerencia'};
+      sb=supabase.createClient(SB_URL,SB_SERVICE_KEY);
       sessionStorage.setItem('primula_user',JSON.stringify(currentUser));
       loginComplete();
     } else {
@@ -11784,18 +11793,43 @@ function renderProductosCards(){
       var st=STOCK.filter(function(s){return s.producto_id===p.id&&(!localFil||s.local===localFil);}).reduce(function(ss,x){return ss+x.cantidad;},0);
       var ideal=Number(p.stock_ideal||0);return ideal>0?st<ideal:st===0;
     });
-    var tallesBadges=fam.prods.map(function(p){
-      var st=STOCK.filter(function(s){return s.producto_id===p.id&&(!localFil||s.local===localFil);}).reduce(function(ss,x){return ss+x.cantidad;},0);
-      var ideal=Number(p.stock_ideal||0);
-      var ok=ideal>0?st>=ideal:st>0;var parcial=!ok&&st>0;
-      var bg=ok?'#f0fdf4':parcial?'#fffbeb':'#fff5f5';
-      var col=ok?'#16a34a':parcial?'#d97706':'#dc2626';
-      var bord=ok?'#bbf7d0':parcial?'#fde68a':'#fca5a5';
-      return '<span style="display:inline-flex;flex-direction:column;align-items:center;background:'+bg+';border:1.5px solid '+bord+';border-radius:7px;overflow:hidden;min-width:44px;">'+
-        '<span onclick="openProdModal('+p.id+')" title="Editar producto" style="font-size:10px;font-weight:700;color:#374151;padding:4px 10px 2px;cursor:pointer;width:100%;text-align:center;">'+(p.talle||'—')+'</span>'+
-        '<span onclick="openStockRapido('+p.id+')" title="Ajustar stock" style="font-size:14px;font-weight:800;color:'+col+';padding:2px 10px 4px;cursor:pointer;width:100%;text-align:center;">'+st+'</span>'+
-        '</span>';
-    }).join('');
+    var hasColors=fam.prods.some(function(p){return p.color;});
+    var stockBlock;
+    if(hasColors){
+      var uTalles=[];fam.prods.forEach(function(p){if(p.talle&&uTalles.indexOf(p.talle)<0)uTalles.push(p.talle);});
+      uTalles.sort(function(a,b){var ia=TALLE_ORDER.indexOf(a),ib=TALLE_ORDER.indexOf(b);if(ia<0)ia=999;if(ib<0)ib=999;return ia-ib;});
+      var uColors=[];fam.prods.forEach(function(p){if(p.color&&uColors.indexOf(p.color)<0)uColors.push(p.color);});
+      var tHdr='<th style="padding:2px 4px;border-bottom:1px solid #e5e7eb;"></th>'+uTalles.map(function(t){return '<th style="padding:2px 4px;text-align:center;font-size:10px;font-weight:700;color:#6b7280;border-bottom:1px solid #e5e7eb;">'+esc(t)+'</th>';}).join('');
+      var tRows=uColors.map(function(color){
+        var cells=uTalles.map(function(t){
+          var prod=fam.prods.find(function(p){return p.talle===t&&p.color===color;});
+          if(!prod)return '<td style="padding:2px 3px;text-align:center;"><span style="color:#e5e7eb;font-size:10px;">—</span></td>';
+          var st=STOCK.filter(function(s){return s.producto_id===prod.id&&(!localFil||s.local===localFil);}).reduce(function(ss,x){return ss+x.cantidad;},0);
+          var ideal=Number(prod.stock_ideal||0);
+          var ok=ideal>0?st>=ideal:st>0;var parcial=!ok&&st>0;
+          var bg=ok?'#f0fdf4':parcial?'#fffbeb':'#fff5f5';
+          var clr=ok?'#16a34a':parcial?'#d97706':'#dc2626';
+          var bord=ok?'#bbf7d0':parcial?'#fde68a':'#fca5a5';
+          return '<td style="padding:2px 3px;text-align:center;"><span onclick="openStockRapido('+prod.id+')" title="Ajustar stock" style="display:inline-block;background:'+bg+';border:1.5px solid '+bord+';border-radius:5px;padding:2px 5px;font-size:11px;font-weight:800;color:'+clr+';cursor:pointer;min-width:24px;text-align:center;">'+st+'</span></td>';
+        }).join('');
+        return '<tr><td style="padding:2px 8px 2px 0;font-size:10px;font-weight:700;color:#374151;white-space:nowrap;">'+esc(color)+'</td>'+cells+'</tr>';
+      }).join('');
+      stockBlock='<div style="overflow-x:auto;margin-bottom:10px;"><table style="border-collapse:collapse;width:100%;"><thead><tr>'+tHdr+'</tr></thead><tbody>'+tRows+'</tbody></table></div>';
+    }else{
+      var tallesBadges=fam.prods.map(function(p){
+        var st=STOCK.filter(function(s){return s.producto_id===p.id&&(!localFil||s.local===localFil);}).reduce(function(ss,x){return ss+x.cantidad;},0);
+        var ideal=Number(p.stock_ideal||0);
+        var ok=ideal>0?st>=ideal:st>0;var parcial=!ok&&st>0;
+        var bg=ok?'#f0fdf4':parcial?'#fffbeb':'#fff5f5';
+        var col=ok?'#16a34a':parcial?'#d97706':'#dc2626';
+        var bord=ok?'#bbf7d0':parcial?'#fde68a':'#fca5a5';
+        return '<span style="display:inline-flex;flex-direction:column;align-items:center;background:'+bg+';border:1.5px solid '+bord+';border-radius:7px;overflow:hidden;min-width:44px;">'+
+          '<span onclick="openProdModal('+p.id+')" title="Editar producto" style="font-size:10px;font-weight:700;color:#374151;padding:4px 10px 2px;cursor:pointer;width:100%;text-align:center;">'+(p.talle||'—')+'</span>'+
+          '<span onclick="openStockRapido('+p.id+')" title="Ajustar stock" style="font-size:14px;font-weight:800;color:'+col+';padding:2px 10px 4px;cursor:pointer;width:100%;text-align:center;">'+st+'</span>'+
+          '</span>';
+      }).join('');
+      stockBlock='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">'+tallesBadges+'</div>';
+    }
     var catBadge=fam.cat&&fam.cat!=='—'?'<span class="badge b-gray" style="font-size:10px;">'+esc(fam.cat)+'</span> ':'';
     var colBadge=fam.colegio?'<span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:10px;">'+esc(fam.colegio)+'</span>':'';
     var famEsc=fam.familia.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -11811,7 +11845,7 @@ function renderProductosCards(){
           '<div style="font-size:10px;color:#9ca3af;">unidades</div>'+
         '</div>'+
       '</div>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">'+tallesBadges+'</div>'+
+      stockBlock+
       '<div style="border-top:1px solid #f3f4f6;padding-top:8px;display:flex;justify-content:flex-end;">'+
         '<button class="btn btn-sm btn-gray" style="font-size:11px;" onclick="openProdModal(null,\''+famEsc+'\',\''+colEsc+'\')">+ Talle</button>'+
       '</div>'+
@@ -11994,6 +12028,7 @@ var TALLES_GRUPOS=[
   {label:'NUMÉRICO',talles:['36','38','40','42','44','46','48','50','52','54','56']},
   {label:'ESPECIAL',talles:['8G','Único']},
 ];
+var COLORES_MAY=['NEGRO','BLANCO','GRIS','AZUL MARINO','AZUL','CELESTE','ROJO','BORDÓ','VERDE','NARANJA','AMARILLO','ROSA','BEIGE'];
 
 // ── STOCK RÁPIDO DESDE TARJETA ──
 var msrProdId=null;
@@ -12124,9 +12159,14 @@ async function saveModelo(){
 
 // ── PRODUCTO MAYORISTA ──
 function openModeloMayModal(){
-  ['mmay-familia','mmay-pmay','mmay-pmay-grande','mmay-costo','mmay-stock-ideal','mmay-talle-custom'].forEach(function(id){document.getElementById(id).value='';});
+  ['mmay-familia','mmay-pmay','mmay-pmay-grande','mmay-costo','mmay-stock-ideal','mmay-talle-custom','mmay-color-custom'].forEach(function(id){document.getElementById(id).value='';});
   ['mmay-cat','mmay-tipo'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('mmay-error').style.display='none';
+  document.getElementById('mmay-colores-grid').innerHTML=COLORES_MAY.map(function(c){
+    var cid='mmay-c-'+c.replace(/\s/g,'_');
+    return '<label id="mmay-clbl-'+cid+'" style="display:flex;align-items:center;justify-content:center;background:#f3f4f6;border:1.5px solid #e5e7eb;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600;user-select:none;">'+
+      '<input type="checkbox" id="'+cid+'" onchange="mmayToggleColor(this,\''+cid+'\')" style="display:none;"/>'+c+'<\/label>';
+  }).join('');
   document.getElementById('mmay-talles-grid').innerHTML=TALLES_GRUPOS.map(function(g){
     return '<div style="margin-bottom:10px;">'+
       '<div style="font-size:10px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">'+g.label+'</div>'+
@@ -12145,6 +12185,11 @@ function openModeloMayModal(){
 function mmayToggleTalle(cb,id){
   var lbl=document.getElementById('mmay-lbl-'+id);if(!lbl)return;
   if(cb.checked){lbl.style.background='#fef3c7';lbl.style.borderColor='#f59e0b';lbl.style.color='#92400e';}
+  else{lbl.style.background='#f3f4f6';lbl.style.borderColor='#e5e7eb';lbl.style.color='';}
+}
+function mmayToggleColor(cb,id){
+  var lbl=document.getElementById('mmay-clbl-'+id);if(!lbl)return;
+  if(cb.checked){lbl.style.background='#e0f2fe';lbl.style.borderColor='#0ea5e9';lbl.style.color='#0369a1';}
   else{lbl.style.background='#f3f4f6';lbl.style.borderColor='#e5e7eb';lbl.style.color='';}
 }
 
@@ -12177,10 +12222,20 @@ async function saveModeloMay(){
     activo:true,
     updated_at:new Date().toISOString()
   };
-  var rows=talles.map(function(t){return Object.assign({},base,{talle:t,nombre:familia+' '+t});});
+  var colores=[];
+  COLORES_MAY.forEach(function(c){var cb=document.getElementById('mmay-c-'+c.replace(/\s/g,'_'));if(cb&&cb.checked)colores.push(c);});
+  var customColor=(document.getElementById('mmay-color-custom').value||'').trim().toUpperCase();
+  if(customColor)colores.push(customColor);
+  var rows=[];
+  if(colores.length>0){
+    talles.forEach(function(t){colores.forEach(function(c){rows.push(Object.assign({},base,{talle:t,color:c,nombre:familia+' '+t+' '+c}));});});
+  }else{
+    rows=talles.map(function(t){return Object.assign({},base,{talle:t,nombre:familia+' '+t});});
+  }
   var r=await sb.from('productos').insert(rows);
   if(r.error){err.textContent='Error: '+r.error.message;err.style.display='block';return;}
-  toast('✅ '+talles.length+' talle'+(talles.length!==1?'s':'')+' creado'+(talles.length!==1?'s':'')+' — '+familia);
+  var resumen=colores.length>0?(talles.length+' talles × '+colores.length+' colores = '+rows.length+' variantes'):(talles.length+' talle'+(talles.length!==1?'s':''));
+  toast('✅ '+resumen+' creado'+(rows.length!==1?'s':'')+' — '+familia);
   closeM('m-modelo-may');
   await loadProductos();
   renderProductos();poblarSelectProductos();
